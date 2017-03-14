@@ -2,21 +2,23 @@
 
 	<!-- OPERATION LIST -->
 	<div id="trace-info-form" class="row">
+		blockHead: <input type="text" ng-model="blockHead" />
+		traceInfo: <input type="text" ng-model="traceInfo" />
 		
 		<div class="col-sm-4 col-sm-offset-4 text-center">
 			<!-- LOOP OVER THE BLOCK info IN $scope.traceInfo -->
 			<div class="text-center" ng-repeat="traceInfo in block">
 				<div class="col-xs-6">
 					<span class="label label-default pull-right" 
-						  ng-class="{'label-danger': block.traceInfo.length == 0, 'label-success': block.traceInfo.length > 0 }">
-						  {{ block.traceInfo }} {{ block.traceInfo }}
+						  ng-class="{'label-danger': $scope.traceInfo.length == 0, 'label-success': $scope.traceInfo.length > 0 }">
+						  {{ $scope.blockHead }} {{ $scope.traceInfo }}
 					</span>
 				</div>
 			</div>
 		</div>
 	</div>
 
-	<!-- FORM TO ADD AMOUNTS -->
+	<!-- FORM TO ADD NEW TRADE -->
 	<div id="transaction-form" class="row">
 		<!-- <div class="col-sm-2">
 

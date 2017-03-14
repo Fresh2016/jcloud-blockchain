@@ -31,7 +31,7 @@
 	<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
 	
 	<!-- load up controllers and services -->
-	<script src="js/controllers/blockchainCtrl.js"></script>
+	<script src="js/controllers/queryCtrl.js"></script>
 	<script src="js/controllers/transactionCtrl.js"></script>
 	<script src="js/services/querySrvc.js"></script>
 	<script src="js/services/transactionSrvc.js"></script>
@@ -52,39 +52,14 @@
 			</div>
 			<div class="navbar-collapse collapse in">
 				<ul class="nav navbar-nav">
-					<li class="active"><a href="#" ng-click="viewType='query'">查询</a></li>
-					<li><a href="#" ng-click="resetBlockInfo(); viewType='transaction'">交易</a></li>
+					<li class="active"><a href="#" ng-click="get(); viewType='query'">查询</a></li>
+					<li><a href="#" ng-click="get(); viewType='transaction'">交易</a></li>
 				</ul>
 			</div><!--/.nav-collapse -->
 		</div><!--/.container -->
 	</div>
 	
 	<div class="container">
-
-		<!-- OPERATION HEADER -->
-		<div class="jumbotron text-center">
-			<h1>
-				<div class="form-group">
-					<div class="row">
-						<div class="col-sm-6 col-xs-4"><h2>当前区块: </h2> </div>
-						<div class="col-sm-4 col-xs-6">
-							<span class="label label-info" style="">
-								{{ blockHead }} 
-							</span>
-						</div>
-					</div>
-					<div class="row">
-						<div class="col-sm-6 col-xs-4"><h3>溯源信息: </h3></div>
-						<div class="col-sm-4 col-xs-6">
-							<span class="label label-info" style="">
-								{{ traceInfo }} 
-							</span>
-						</div>
-					</div>
-				</div>
-			</h1>
-		</div>
-		
 		
 		<div class="view" ng-switch on="viewType">
 			<div ng-switch-when="query"><div ng-include="'views/query-view.html'"></div></div>
