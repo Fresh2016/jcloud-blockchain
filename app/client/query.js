@@ -31,7 +31,7 @@ var testUtil = require('./util.js');
 var logger = utils.getLogger('install-chaincode');
 
 var e2e = testUtil.END2END;
-hfc.addConfigFile(path.join(__dirname, './config.json'));
+hfc.addConfigFile('../config/config.json');
 var ORGS = hfc.getConfigSetting('test-network');
 
 var tx_id = null;
