@@ -2,7 +2,7 @@
 
 Mail to: s015348@aliyun.com
 
-# Node Wallet App
+# Blockchain Node App
 
 A Node app for demonstrating blockchain application.
 
