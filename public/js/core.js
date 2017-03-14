@@ -18,6 +18,6 @@
 angular.module('jcloud-blockchain', 
 			['queryController', 
 			'transactionController',
-			'blockchainService', 
+			'queryService', 
 			'transactionService'
 			]);

@@ -19,7 +19,8 @@
  * Inject the BlockInfo service factory defined in querySrvc.js into controller
  */
 angular.module('queryController', [])
-	.controller('queryController', ['$scope', '$http', 'BlockInfo', function($scope, $http, Balance) {
+//	.controller('queryController', function($scope) {
+	.controller('queryController', ['$scope', '$http', 'Query', function($scope, $http, Query) {
 		
 		console.log('Inside queryController');
 
@@ -29,7 +30,7 @@ angular.module('queryController', [])
 		
 		// GET method
 		// TODO: pass real data from hfc client
-		BlockInfo.get()
+		Query.get()
 			.success(function(data) {
 				console.log(data);
 				//$scope.loading = false;

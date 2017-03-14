@@ -26,6 +26,9 @@ angular.module('transactionService', [])
 		return {
 			post : function(data) {
 				return $http.post('/api/transaction', data);
+			},
+			addNewTrade : function(data) {
+				return $http.post('/api/transaction', data);
 			}
 		}
 	}]);

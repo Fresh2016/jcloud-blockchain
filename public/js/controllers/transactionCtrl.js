@@ -39,5 +39,10 @@ angular.module('transactionController', [])
 				$scope.blockHead = 'invoke test block head';
 				$scope.traceInfo = 'invoke test trace info';
 			});	
-			
+		
+		Transaction.addNewTrade()
+			.success(function(data) {
+				console.log('addNewTrade');
+			});	
+
 	}]);

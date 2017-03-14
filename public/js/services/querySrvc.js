@@ -18,14 +18,14 @@
  * Query service
  * To be injected into queryController defined in queryCtl.js
  */
-angular.module('blockchainService', [])
+angular.module('queryService', [])
 
 	// super simple service
 	// each function returns a promise object 
-	.factory('BlockInfo', ['$http',function($http) {
+	.factory('Query', ['$http',function($http) {
 		return {
 			get : function() {
-				return $http.get('/api/blockinfo');
+				return $http.get('/api/query');
 			}
 		}
 	}]);
