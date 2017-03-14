@@ -41,15 +41,17 @@ angular.module('transactionController', [])
 			});	
 
 		// INVOKE method, refresh data when click query button
-		// TODO: pass real data from hfc client
+		// TODO: pass real data to hfc client
 		$scope.invoke = function() {
 				Transaction.post()
 				.success(function(data) {
 					console.log('INVOKE New Trade in transaction controller');
+					data = $scope.traceInfo;
 					console.log(data);
 					//$scope.loading = false;
 					$scope.blockHead = 'Insert your encrypted blockhead here';
 					$scope.traceInfo = 'Insert your encrypted TraceInfo here';
+					$scope.traceInfo = data;
 				});	
 			};	
 
