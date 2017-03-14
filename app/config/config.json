@@ -1,0 +1,31 @@
+{
+	"test-network": {
+		"orderer": "grpc://202.77.131.29:7050",
+		"org1": {
+			"name": "peerOrg1",
+			"mspid": "Org1MSP",
+			"ca": "http://202.77.131.29:7054",
+			"peer1": {
+				"requests": "grpc://202.77.131.29:7051",
+				"events": "grpc://202.77.131.29:7053"
+			},
+			"peer2": {
+				"requests": "grpc://202.77.131.29:7056",
+				"events": "grpc://202.77.131.29:7058"
+			}
+		},
+		"org2": {
+			"name": "peerOrg2",
+			"mspid": "Org2MSP",
+			"ca": "http://202.77.131.29:8054",
+			"peer1": {
+				"requests": "grpc://202.77.131.29:8051",
+				"events": "grpc://202.77.131.29:8053"
+			},
+			"peer2": {
+				"requests": "grpc://202.77.131.29:8056",
+				"events": "grpc://202.77.131.29:8058"
+			}
+		}
+	}
+}
