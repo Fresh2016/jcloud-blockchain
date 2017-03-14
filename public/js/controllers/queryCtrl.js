@@ -28,7 +28,7 @@ angular.module('queryController', [])
 		$scope.blockHead = '';
 		$scope.traceInfo = '';
 		
-		// GET method
+		// GET method, initial data when loading query page
 		// TODO: pass real data from hfc client
 		Query.get()
 			.success(function(data) {
@@ -38,4 +38,12 @@ angular.module('queryController', [])
 				$scope.traceInfo = 'empty trace info';
 			});	
 		
+		// QUERY method, refresh data when click query button
+		// TODO: pass real data from hfc client
+		$scope.query = function() {
+				//$scope.loading = false;
+				$scope.blockHead = 'refreshed block head';
+				$scope.traceInfo = 'refreshed trace info';
+			};	
+
 	}]);

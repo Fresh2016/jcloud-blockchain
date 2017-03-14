@@ -24,6 +24,9 @@ angular.module('transactionService', [])
 	// each function returns a promise object 
 	.factory('Transaction', ['$http',function($http) {
 		return {
+			get : function() {
+				return $http.get('/api/query');
+			},
 			post : function(data) {
 				return $http.post('/api/transaction', data);
 			}
