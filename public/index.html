@@ -20,7 +20,6 @@
 		html 					{ overflow-y:scroll; }
 		query-form 				{ margin-bottom:50px; }
 		transaction-form 	 	{ margin-bottom:50px; }
-		trace-info-form 	 	{ margin-bottom:50px; }
 	</style>
 
 	<!-- SPELLS -->
@@ -52,7 +51,7 @@
 			<div class="navbar-collapse collapse in">
 				<ul class="nav navbar-nav">
 					<li class="active"><a href="#" ng-click="get(); viewType='query'">查询</a></li>
-					<li><a href="#" ng-click="get(); viewType='transaction'">交易</a></li>
+					<li class="active"><a href="#" ng-click="post(); viewType='transaction'">交易</a></li>
 				</ul>
 			</div><!--/.nav-collapse -->
 		</div><!--/.container -->

@@ -34,15 +34,11 @@ angular.module('transactionController', [])
 		// TODO: pass real data to hfc client
 		Transaction.post()
 			.success(function(data) {
+				console.log('Add New Trade in POST method');
 				console.log(data);
 				//$scope.loading = false;
 				$scope.blockHead = 'invoke test block head';
 				$scope.traceInfo = 'invoke test trace info';
-			});	
-		
-		Transaction.addNewTrade()
-			.success(function(data) {
-				console.log('addNewTrade');
 			});	
 
 	}]);
