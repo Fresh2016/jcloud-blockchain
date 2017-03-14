@@ -1,41 +1,16 @@
 <div class="transaction-view" ng-controller="transactionController">
 
-	<!-- OPERATION LIST -->
-	<div id="trace-info-form" class="row">
-		blockHead: <input type="text" ng-model="blockHead" />
-		traceInfo: <input type="text" ng-model="traceInfo" />
-		
-		<div class="col-sm-4 col-sm-offset-4 text-center">
-			<!-- LOOP OVER THE BLOCK info IN $scope.traceInfo -->
-			<div class="text-center" ng-repeat="traceInfo in block">
-				<div class="col-xs-6">
-					<span class="label label-default pull-right" 
-						  ng-class="{'label-danger': $scope.traceInfo.length == 0, 'label-success': $scope.traceInfo.length > 0 }">
-						  {{ $scope.blockHead }} {{ $scope.traceInfo }}
-					</span>
-				</div>
-			</div>
-		</div>
-	</div>
-
 	<!-- FORM TO ADD NEW TRADE -->
 	<div id="transaction-form" class="row">
-		<!-- <div class="col-sm-2">
-
-			<p class="text-center" ng-show="loading">
-				<span class="fa fa-spinner fa-spin fa-3x"></span>
-			</p>
-
-		</div> -->
 		<div class="col-sm-12 col-xs-8 text-center">
 			<form>
 				<div class="form-group">
 					<!-- BIND THIS VALUE TO formData.traceInfo IN ANGULAR -->
-					<input type="text" class="form-control input-lg text-center" placeholder="Insert your encrypted TraceInfo here" ng-model="formData.traceInfo">
+					<input type="text" class="form-control input-lg text-center" placeholder="Insert your encrypted TraceInfo here" ng-model="traceInfo">
 				</div>
 
 				<!-- addNewTrade() WILL CREATE NEW AMOUNTS -->
-				<button type="submit" class="btn btn-primary btn-lg" ng-click="invoke()">记入交易</button>
+				<button type="submit" class="btn btn-primary btn-lg" ng-click="post()">记入交易</button>
 			</form>
 		</div>
 	</div>
