@@ -1,0 +1,106 @@
+<!doctype html>
+
+<!-- ASSIGN OUR ANGULAR MODULE -->
+<html ng-app="jcloud-blockchain">
+<head>
+	<!-- META -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1"><!-- Optimize mobile viewport -->
+
+	<title>JCloud Blockchain App</title>
+
+	<!-- SCROLLS -->
+	<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css"><!-- load bootstrap -->
+	<link rel="stylesheet" href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css">
+	<style>
+		html 					{ overflow-y:scroll; }
+		#amount-list 				{ margin-bottom:30px; }
+		#wallet-form 	 			{ margin-bottom:50px; }
+	</style>
+
+	<!-- SPELLS -->
+	<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.2.16/angular.min.js"></script><!-- load angular -->
+
+	<!-- Latest compiled and minified JavaScript -->
+	<script src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
+	<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+	
+	<script src="js/controllers/walletCtrl.js"></script> <!-- load up wallet controller -->
+	<script src="js/controllers/transactionCtrl.js"></script> <!-- load up transaction controller -->
+	<script src="js/controllers/viewSourceCtrl.js"></script> <!-- load up viewSource controller -->
+	<script src="js/services/walletSrvc.js"></script> <!-- load our wallet service -->
+	<script src="js/services/transactionSrvc.js"></script> <!-- load our transaction service -->
+	<script src="js/core.js"></script> <!-- load our main application -->
+
+</head>
+<!-- SET THE CONTROLLER -->
+<body ng-controller="walletController">
+
+	<!-- RESPONSIVE HEADER -->
+	<div class="navbar navbar-default" role="navigation">
+		<div class="container">
+			<div class="navbar-header">
+				<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+					<span class="sr-only">Toggle navigation</span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+				</button>
+				<a class="navbar-brand" href="#">京东区块链</a>
+			</div>
+			<div class="navbar-collapse collapse in">
+				<ul class="nav navbar-nav">
+					<li class="active"><a href="#" ng-click="viewType='query'">查询余额</a></li>
+					<li><a href="#" ng-click="resetWallet(); viewType='transaction'">转账</a></li>
+					<li><a href="#" ng-click="viewType='view-source'">源码</a></li>
+				</ul>
+			</div><!--/.nav-collapse -->
+		</div><!--/.container -->
+	</div>
+	
+	<div class="container">
+
+		<!-- WALLET HEADER AND OPERATION COUNT -->
+		<div class="jumbotron text-center">
+			<h1>
+				<div class="form-group">
+					<div class="row">
+						<div class="col-sm-4 col-xs-12">余额: </div>
+						<div class="col-sm-4 col-xs-6">
+							<span class="label label-info" style="">
+								{{ evalTotal | number:2 }} 
+								<span class="fa" 
+									  ng-class="{'fa-cny': currency.select.value == '¥',
+												 'fa-usd': currency.select.value == '$',
+												 'fa-eur': currency.select.value == '€' }">
+								</span>
+							</span>
+						</div>
+						<div class="col-sm-4 col-xs-6">
+							<select class="input-lg"
+									ng-model="currency.select"
+									ng-options="opt as opt.label for opt in currency.options"
+									ng-change="convert()">
+							</select>
+						</div>
+					</div>
+				</div>
+			</h1>
+		</div>
+		
+		
+		<div class="view-source-view" ng-switch on="viewType">
+			<div ng-switch-when="query"><div ng-include="'views/operation-list-view.html'"></div></div>
+			<div ng-switch-when="transaction"><div ng-include="'views/transaction-view.html'"></div></div>
+			<div ng-switch-when="view-source"><div ng-include="'views/view-source-view.html'"></div></div>
+			<div ng-switch-default><div ng-include="'views/operation-list-view.html'"></div></div>
+		</div>
+
+		<div class="text-center text-muted">
+			<p>A blockchain demo by <a href="http://www.jcloud.com/">JCloud</a>.</p>
+		</div>
+
+	</div>
+
+</body>
+</html>
