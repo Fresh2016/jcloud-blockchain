@@ -19,13 +19,13 @@
  * Map services of public/services into application interfaces
  */
 
-createClient = require('./client/create-channel.js');
-joinClient = require('./client/join-channel.js');
-installClient = require('./client/install-chaincode.js');
-instantiateClient = require('./client/instantiate-chaincode.js');
+//createClient = require('./client/create-channel.js');
+//joinClient = require('./client/join-channel.js');
+//installClient = require('./client/install-chaincode.js');
+//instantiateClient = require('./client/instantiate-chaincode.js');
 invokeClient = require('./client/invoke-transaction.js');
 queryClient = require('./client/query.js');
-queryBlockClient = require('./client/query-block.js');
+//queryBlockClient = require('./client/query-block.js');
 
 module.exports = function(app) {
 
