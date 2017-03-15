@@ -32,8 +32,8 @@ RUN cd / && \
     npm install
 
 # Replace node_modules with latest codes
-COPY docker-buile-packages/fabric-client /jcloud-blockchain/node_modules/
-COPY docker-buile-packages/fabric-ca-client /jcloud-blockchain/node_modules/
+COPY docker-buile-packages/fabric-client /jcloud-blockchain/node_modules/fabric-client
+COPY docker-buile-packages/fabric-ca-client /jcloud-blockchain/node_modules/fabric-ca-client
 
 WORKDIR /jcloud-blockchain
 
