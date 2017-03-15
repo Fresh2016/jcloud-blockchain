@@ -25,10 +25,10 @@ angular.module('transactionService', [])
 	.factory('Transaction', ['$http', function($http) {
 		return {
 			get : function() {
-				return $http.get('/v1/supplychain/query');
+				return $http.get('/v1/supplychain');
 			},
 			post : function(data) {
-				return $http.post('/v1/supplychain/transaction', data);
+				return $http.post('/v1/supplychain', data);
 			}
 		}
 	}]);

@@ -25,7 +25,7 @@ angular.module('queryService', [])
 	.factory('Query', ['$http',function($http) {
 		return {
 			get : function() {
-				return $http.get('/v1/supplychain/query');
+				return $http.get('/v1/supplychain');
 			}
 		}
 	}]);

@@ -52,7 +52,7 @@ var result = {
 	};
 
 
-module.exports.queryTransaction = function() {
+module.exports.queryTransaction = function(transactionId) {
 	// this is a transaction, will just use org1's identity to
 	// submit the request. intentionally we are using a different org
 	// than the one that submitted the "move" transaction, although either org
@@ -111,15 +111,15 @@ module.exports.queryTransaction = function() {
 		logger.info('checking query results are correct that we got zero block back: %s', block.header.number.toString());
 
 		//TODO: pass id from web ui
-		tx_id = '6dec5d177400e712f3f32c86ddd55b94080a55834485ca3a76710ee70935876c';
-		if (tx_id === 'notfound') {
+		tx_id = transactionId;
+		if (!tx_id) {
 			logger.info('Transaction ID not found.');
-			throw new Error('Transaction ID not found');
-		} else {
-			logger.info('Got tx_id %s', tx_id);
-			// send query
-			return chain.queryTransaction(tx_id); //assumes the end-to-end has run first
+			tx_id = 'ebaee52e1994d93232b94322557f9348777f9d8b74c91398f8fcc896aa212b88';
+			//throw new Error('Transaction ID not found');
 		}
+		logger.info('Got tx_id %s', tx_id);
+		// send query
+		return chain.queryTransaction(tx_id); //assumes the end-to-end has run first
 	}).then((processed_transaction) => {
 		// set to be able to decode grpc objects
 		var grpc = require('grpc');
@@ -190,7 +190,6 @@ module.exports.queryTransaction = function() {
 			for(let i = 0; i < response_payloads.length; i++) {
 				console.log('Query results [' + i + ']: %s' + response_payloads[i]);
 				var res_list = response_payloads[i].toString('utf8').split(',');
-				result.transactionId = res_list[0];
 				result.sku = res_list[1];
 				result.tradeDate = res_list[2];
 				result.traceInfo = res_list[3];

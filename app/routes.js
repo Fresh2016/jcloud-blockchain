@@ -36,9 +36,13 @@ module.exports = function(app) {
 	this.traceInfo = 'init value in routes.js';
 	
 	// API: query blockinfo
-	app.get('/v1/supplychain/query', function(req, res) {
+	app.get('/v1/supplychain', function(req, res) {
 		console.log('API: query blockinfo');
-		queryClient.queryTransaction()
+		console.dir(req);
+		console.dir(req.query);
+		console.dir(req._parsedUrl);
+		/*
+		queryClient.queryTransaction(req.body.transactionId)
 			.then((result) => {
 				console.log('API: query result %s', JSON.stringify(result));
 				res.json(result); // return all amounts in JSON format
@@ -50,10 +54,11 @@ module.exports = function(app) {
 			console.error('API: query result %s', result);
 			return 'failed';
 		});
+		*/
 	});	
 	
 	// API: invoke transaction
-	app.post('/v1/supplychain/transaction', function(req, res) {
+	app.post('/v1/supplychain', function(req, res) {
 		console.log('API: invoke transaction');
 		console.dir(req.body);
 		invokeClient.invokeChaincode(req.body.traceInfo)
