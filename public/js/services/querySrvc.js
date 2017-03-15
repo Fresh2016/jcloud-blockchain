@@ -24,8 +24,8 @@ angular.module('queryService', [])
 	// each function returns a promise object 
 	.factory('Query', ['$http',function($http) {
 		return {
-			get : function() {
-				return $http.get('/v1/supplychain');
+			get : function(data) {
+				return $http.get('/v1/supplychain', data);
 			}
 		}
 	}]);

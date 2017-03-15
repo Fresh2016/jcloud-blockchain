@@ -24,8 +24,8 @@ angular.module('transactionService', [])
 	// each function returns a promise object 
 	.factory('Transaction', ['$http', function($http) {
 		return {
-			get : function() {
-				return $http.get('/v1/supplychain');
+			get : function(data) {
+				return $http.get('/v1/supplychain', data);
 			},
 			post : function(data) {
 				return $http.post('/v1/supplychain', data);
