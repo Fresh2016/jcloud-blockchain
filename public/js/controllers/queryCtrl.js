@@ -19,29 +19,40 @@
  * Inject the BlockInfo service factory defined in querySrvc.js into controller
  */
 angular.module('queryController', [])
-//	.controller('queryController', function($scope) {
 	.controller('queryController', ['$scope', '$http', 'Query', function($scope, $http, Query) {
 		
 		console.log('Inside queryController');
 
-		$scope.loading = true;
-		$scope.blockHead = '';
+		$scope.blockNumber = '';
+		$scope.sku = '';
+		$scope.tradeDate = '';
 		$scope.traceInfo = '';
+		$scope.currentBlockHash = '';
+		$scope.previousBlockHash = '';
+		$scope.transactionId = '';
 		
 		// GET method, initial data when loading query page
 		Query.get()
 			.success(function(data) {
-				$scope.blockHead = data.blockHead;
-				$scope.traceInfo = data.traceInfo;
+				bindData($scope, data);
 			});	
 		
 		// QUERY method, refresh data when click query button
 		$scope.query = function() {
 				Query.get()
 				.success(function(data) {
-					$scope.blockHead = data.blockHead;
-					$scope.traceInfo = data.traceInfo;
+					bindData($scope, data);
 				});	
 			};	
 
+		function bindData($scope, data) {
+			$scope.blockNumber = data.blockNumber;
+			$scope.sku = data.sku;
+			$scope.tradeDate = data.tradeDate;
+			$scope.traceInfo = data.traceInfo;
+			$scope.currentBlockHash = data.currentBlockHash;
+			$scope.previousBlockHash = data.previousBlockHash;
+			$scope.transactionId = data.transactionId;
+		}
+		
 	}]);

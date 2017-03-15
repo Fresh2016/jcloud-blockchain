@@ -40,6 +40,17 @@ var tx_id = null;
 var nonce = null;
 var the_user = null;
 
+// Default response is all empty
+var result = {
+		blockNumber : '',
+		sku : '',
+		tradeDate : '',
+		traceInfo : '',
+		previousBlockHash : '',
+		currentBlockHash : '',
+		transactionId : ''
+	};
+
 
 module.exports.queryTransaction = function() {
 	// this is a transaction, will just use org1's identity to
@@ -93,9 +104,8 @@ module.exports.queryTransaction = function() {
 	(err) => {
 		console.error('Failed to get submitter \'admin\'');
 		console.error('Failed to get submitter \'admin\'. Error: ' + err.stack ? err.stack : err );
-		return 'failed';
+		return result;
 	})
-	
 	.then((block) => {
 		logger.info(' Chain getBlock() returned block number=%s',block.header.number);
 		logger.info('checking query results are correct that we got zero block back: %s', block.header.number.toString());
@@ -137,32 +147,68 @@ module.exports.queryTransaction = function() {
 		logger.info(' Chain queryInfo() returned block previousBlockHash='+blockchainInfo.previousBlockHash);
 		logger.info(' Chain queryInfo() returned block currentBlockHash='+blockchainInfo.currentBlockHash);
 		var block_hash = blockchainInfo.currentBlockHash;
-		var result = {
-				previousBlockHash : blockchainInfo.previousBlockHash,
-				currentBlockHash : blockchainInfo.currentBlockHash
-				//previousBlockHash : blockchainInfo.previousBlockHash.toString('utf8'),
-				//currentBlockHash : blockchainInfo.currentBlockHash.toString('utf8')
-			};
-		return result;		
-		
-/*		
+		result.previousBlockHash = blockchainInfo.previousBlockHash;
+		result.currentBlockHash = blockchainInfo.currentBlockHash;
+
 		// send query
 		return chain.queryBlockByHash(block_hash);
-	}).then((block) => {
-		logger.info(' Chain queryBlockByHash() returned block number=%s',block.header.number);
-		logger.info('got back block number '+ block.header.number);
-	})
-*/	
-	
-	
-	
 	},
 	(err) => {
 		console.error('Failed to send query due to error: ' + err.stack ? err.stack : err);
-		return 'failed';
+		return result;
+	}).then((block) => {
+		logger.info(' Chain queryBlockByHash() returned block number=%s',block.header.number);
+		logger.info('got back block number '+ block.header.number);
+		result.blockNumber = block.header.number.low;
+		//return result;
+
+	}).then(() => {
+		nonce = utils.getNonce();
+		tx_id = chain.buildTransactionID(nonce, the_user);
+
+		// send query
+		// for supplychain
+		var request = {
+			chaincodeId : e2e.chaincodeId,
+			chaincodeVersion : e2e.chaincodeVersion,
+			chainId: e2e.channel,
+			txId: tx_id,
+			nonce: nonce,
+			fcn: 'queryTrade',
+			args: ["TransactionId", "Sku", "TradeDate", "TraceInfo"]
+		};
+
+		return chain.queryByChaincode(request);
+	},
+	(err) => {
+		console.error('Failed to get submitter \'admin\'');
+		console.error('Failed to get submitter \'admin\'. Error: ' + err.stack ? err.stack : err );
+		return result;
+	}).then((response_payloads) => {
+		console.log('Query results: %s' + response_payloads);
+		if (response_payloads) {
+			for(let i = 0; i < response_payloads.length; i++) {
+				console.log('Query results [' + i + ']: %s' + response_payloads[i]);
+				var res_list = response_payloads[i].toString('utf8').split(',');
+				result.transactionId = res_list[0];
+				result.sku = res_list[1];
+				result.tradeDate = res_list[2];
+				result.traceInfo = res_list[3];
+				//result.counter = res_list[4];
+				return result;
+			}
+			return result;
+		} else {
+			console.error('response_payloads is null');
+			return result;
+		}
+	},
+	(err) => {
+		console.error('Failed to send query due to error: ' + err.stack ? err.stack : err);
+		return result;
 	}).catch((err) => {
 		console.error('Failed to end to end test with error:' + err.stack ? err.stack : err);
-		return 'failed';
+		return result;
 	});
 }
 
@@ -228,7 +274,7 @@ module.exports.queryByChaincode = function() {
 	(err) => {
 		console.error('Failed to get submitter \'admin\'');
 		console.error('Failed to get submitter \'admin\'. Error: ' + err.stack ? err.stack : err );
-		return 'failed';
+		return result;
 	}).then((response_payloads) => {
 		console.log('Query results: %s' + response_payloads);
 		if (response_payloads) {
@@ -244,17 +290,17 @@ module.exports.queryByChaincode = function() {
 					};
 				return result;
 			}
-			return 'failed';
+			return result;
 		} else {
 			console.error('response_payloads is null');
-			return 'failed';
+			return result;
 		}
 	},
 	(err) => {
 		console.error('Failed to send query due to error: ' + err.stack ? err.stack : err);
-		return 'failed';
+		return result;
 	}).catch((err) => {
 		console.error('Failed to end to end test with error:' + err.stack ? err.stack : err);
-		return 'failed';
+		return result;
 	});
 }

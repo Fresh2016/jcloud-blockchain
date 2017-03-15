@@ -41,13 +41,7 @@ module.exports = function(app) {
 		queryClient.queryTransaction()
 			.then((result) => {
 				console.log('API: query result %s', JSON.stringify(result));
-				if (result == 'failed') {
-					var jsonData = {blockHead: 'error', traceInfo: 'error'};
-				} else
-					{
-					var jsonData = {blockHead: result.previousBlockHash, traceInfo: result.currentBlockHash};//{blockHead: result.TransactionId, traceInfo: result.TraceInfo};
-					}
-				res.json(jsonData); // return all amounts in JSON format
+				res.json(result); // return all amounts in JSON format
 			},
 		(err) => {
 			console.error('API: query result %s', result);
