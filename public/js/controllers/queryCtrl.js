@@ -29,21 +29,19 @@ angular.module('queryController', [])
 		$scope.traceInfo = '';
 		
 		// GET method, initial data when loading query page
-		// TODO: pass real data from hfc client
 		Query.get()
 			.success(function(data) {
-				console.log(data);
-				//$scope.loading = false;
-				$scope.blockHead = 'empty block head';
-				$scope.traceInfo = 'empty trace info';
+				$scope.blockHead = data.blockHead;
+				$scope.traceInfo = data.traceInfo;
 			});	
 		
 		// QUERY method, refresh data when click query button
-		// TODO: pass real data from hfc client
 		$scope.query = function() {
-				//$scope.loading = false;
-				$scope.blockHead = 'refreshed block head';
-				$scope.traceInfo = 'refreshed trace info';
+				Query.get()
+				.success(function(data) {
+					$scope.blockHead = data.blockHead;
+					$scope.traceInfo = data.traceInfo;
+				});	
 			};	
 
 	}]);

@@ -78,8 +78,10 @@ module.exports.existsSync = function(absolutePath /*string*/) {
 
 module.exports.readFile = readFile;
 
-hfc.addConfigFile(path.join(__dirname, '../integration/e2e/config.json'));
+hfc.addConfigFile('./app/config/config.json');
 var ORGS = hfc.getConfigSetting('test-network');
+//console.log('Get ORGS: ');
+//console.dir(ORGS);
 
 function getSubmitter(username, password, client, loadFromConfig, userOrg) {
 	var caUrl = ORGS[userOrg].ca;

@@ -19,8 +19,13 @@
  * Map services of public/services into application interfaces
  */
 
-//require('./client/remove-old-key.js');
+createClient = require('./client/create-channel.js');
+joinClient = require('./client/join-channel.js');
+installClient = require('./client/install-chaincode.js');
+instantiateClient = require('./client/instantiate-chaincode.js');
+invokeClient = require('./client/invoke-transaction.js');
 queryClient = require('./client/query.js');
+queryBlockClient = require('./client/query-block.js');
 
 module.exports = function(app) {
 
@@ -31,23 +36,31 @@ module.exports = function(app) {
 	this.traceInfo = 'init value in routes.js';
 	
 	// API: query blockinfo
-	app.get('/api/query', function(req, res) {
-			console.log('API: query blockinfo');
-			var result = queryClient.query();
-			console.log('API: query result %s', result);
-			if (result == 'failed') {
-				var jsonData = {blockHead: 'error', traceInfo: 'error'};
-			} else
-				{
-				var jsonData = {blockHead: this.blockHead, traceInfo: this.traceInfo};
-				}
-			//var jsonData = {blockHead: this.blockHead, traceInfo: this.traceInfo};
-			res.json(jsonData); // return all amounts in JSON format
+	app.get('/v1/supplychain/query', function(req, res) {
+		console.log('API: query blockinfo');
+		queryClient.query()
+			.then((result) => {
+				console.log('API: query result %s', JSON.stringify(result));
+				if (result == 'failed') {
+					var jsonData = {blockHead: 'error', traceInfo: 'error'};
+				} else
+					{
+					var jsonData = {blockHead: result.TransactionId, traceInfo: result.TraceInfo};
+					}
+				res.json(jsonData); // return all amounts in JSON format
+			},
+		(err) => {
+			console.error('API: query result %s', result);
+			res.json('failed');
+		}).catch((err) => {
+			console.error('API: query result %s', result);
+			return 'failed';
+		});
 	});	
 	
 	// API: invoke transaction
-	app.post('/api/transaction', function(req, res) {
-			console.log('/api/transaction');
+	app.post('/v1/supplychain/transaction', function(req, res) {
+			console.log('API: invoke transaction');
 			var jsonData = {blockHead: this.blockHead, traceInfo: this.traceInfo};
 			res.json(jsonData); // return all amounts in JSON format
 	});	

@@ -31,8 +31,10 @@ var testUtil = require('./util.js');
 var logger = utils.getLogger('install-chaincode');
 
 var e2e = testUtil.END2END;
-hfc.addConfigFile('../config/config.json');
+hfc.addConfigFile('./app/config/config.json');
 var ORGS = hfc.getConfigSetting('test-network');
+//console.log('Get ORGS: ');
+//console.dir(ORGS);
 
 var tx_id = null;
 var nonce = null;
@@ -43,6 +45,8 @@ module.exports.query = function() {
 	// submit the request. intentionally we are using a different org
 	// than the one that submitted the "move" transaction, although either org
 	// should work properly
+	console.log('\n\n***** End-to-end flow: query chaincode *****');
+	
 	var org = 'org2';
 	var client = new hfc();
 	var chain = client.newChain(e2e.channel);
@@ -72,7 +76,7 @@ module.exports.query = function() {
 	}).then((store) => {
 
 		client.setStateStore(store);
-		return testUtil.getSubmitter(client, true, org);
+		return testUtil.getSubmitter(client, org);
 
 	}).then((admin) => {
 		the_user = admin;
@@ -103,7 +107,15 @@ module.exports.query = function() {
 		if (response_payloads) {
 			for(let i = 0; i < response_payloads.length; i++) {
 				console.log('Query results [' + i + ']: %s' + response_payloads[i]);
-				return ('Query results [' + i + ']: %s' + response_payloads[i]);
+				var res_list = response_payloads[i].toString('utf8').split(',');
+				var result = {
+						TransactionId : res_list[0],
+						Sku : res_list[1],
+						TradeDate: res_list[2],
+						TraceInfo: res_list[3],
+						counter: res_list[4]
+					};
+				return result;
 			}
 			return 'failed';
 		} else {
