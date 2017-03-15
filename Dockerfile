@@ -35,8 +35,14 @@ RUN cd / && \
 COPY docker-buile-packages/fabric-client /jcloud-blockchain/node_modules/fabric-client
 COPY docker-buile-packages/fabric-ca-client /jcloud-blockchain/node_modules/fabric-ca-client
 
+# Default server port
+EXPOSE 8081
+
+# Set workdir
 WORKDIR /jcloud-blockchain
 
+# Run server
+CMD node server.js
 
 # Docker commands
 #docker build -t shiying/jcloud-blockchain:1.0 -f Dockerfile .
