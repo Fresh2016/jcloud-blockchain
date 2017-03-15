@@ -30,13 +30,6 @@ angular.module('transactionController', [])
 		$scope.blockHead = '';
 		$scope.traceInfo = '';
 		
-		// GET method, initial data when loading query page
-		Transaction.get()
-			.success(function(data) {
-				$scope.blockHead = data.blockHead;
-				$scope.traceInfo = data.traceInfo;
-			});	
-
 		// POST method, invoke transaction when click transaction button
 		// TODO: pass real data to hfc client
 		$scope.post = function() {
