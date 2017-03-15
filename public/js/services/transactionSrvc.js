@@ -22,13 +22,13 @@ angular.module('transactionService', [])
 
 	// super simple service
 	// each function returns a promise object 
-	.factory('Transaction', ['$http',function($http) {
+	.factory('Transaction', ['$http', function($http) {
 		return {
 			get : function() {
-				return $http.get('/api/query');
+				return $http.get('/v1/supplychain/query');
 			},
 			post : function(data) {
-				return $http.post('/api/transaction', data);
+				return $http.post('/v1/supplychain/transaction', data);
 			}
 		}
 	}]);

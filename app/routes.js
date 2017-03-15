@@ -38,14 +38,14 @@ module.exports = function(app) {
 	// API: query blockinfo
 	app.get('/v1/supplychain/query', function(req, res) {
 		console.log('API: query blockinfo');
-		queryClient.query()
+		queryClient.queryTransaction()
 			.then((result) => {
 				console.log('API: query result %s', JSON.stringify(result));
 				if (result == 'failed') {
 					var jsonData = {blockHead: 'error', traceInfo: 'error'};
 				} else
 					{
-					var jsonData = {blockHead: result.TransactionId, traceInfo: result.TraceInfo};
+					var jsonData = {blockHead: result.previousBlockHash, traceInfo: result.currentBlockHash};//{blockHead: result.TransactionId, traceInfo: result.TraceInfo};
 					}
 				res.json(jsonData); // return all amounts in JSON format
 			},
@@ -60,9 +60,20 @@ module.exports = function(app) {
 	
 	// API: invoke transaction
 	app.post('/v1/supplychain/transaction', function(req, res) {
-			console.log('API: invoke transaction');
-			var jsonData = {blockHead: this.blockHead, traceInfo: this.traceInfo};
-			res.json(jsonData); // return all amounts in JSON format
+		console.log('API: invoke transaction');
+		console.dir(req.body);
+		invokeClient.invokeChaincode(req.body.traceInfo)
+			.then((result) => {
+				console.log('API: invoke result %s', JSON.stringify(result));
+				res.json(result); // return all amounts in JSON format
+			},
+		(err) => {
+			console.error('API: invoke result %s', result);
+			res.json('failed');
+		}).catch((err) => {
+			console.error('API: invoke result %s', result);
+			return 'failed';
+		});
 	});	
 
 };

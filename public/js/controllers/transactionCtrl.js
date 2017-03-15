@@ -31,25 +31,24 @@ angular.module('transactionController', [])
 		$scope.traceInfo = '';
 		
 		// GET method, initial data when loading query page
-		// TODO: pass real data from hfc client
 		Transaction.get()
 			.success(function(data) {
-				console.log(data);
-				//$scope.loading = false;
-				$scope.blockHead = 'Insert your encrypted blockhead here';
-				$scope.traceInfo = 'Insert your encrypted TraceInfo here';
+				$scope.blockHead = data.blockHead;
+				$scope.traceInfo = data.traceInfo;
 			});	
 
-		// POST method, refresh data when click query button
+		// POST method, invoke transaction when click transaction button
 		// TODO: pass real data to hfc client
 		$scope.post = function() {
-				Transaction.post()
-					.success(function(data) {
-						console.log('INVOKE New Trade in transaction controller');
-						data = $scope.traceInfo;
-						console.log(data);
-						$scope.traceInfo = data;
-					});	
-			};	
+			console.log('INVOKE New Trade in transaction controller');
+			var request = {
+					traceInfo : $scope.traceInfo
+				};
+			Transaction.post(request)
+				.success(function(data) {
+					console.log(data);
+					$scope.traceInfo = data.TransactionId;
+				});	
+		};	
 
 	}]);
