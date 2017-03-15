@@ -31,40 +31,27 @@ angular.module('queryController', [])
 		$scope.previousBlockHash = '';
 		$scope.transactionId = '';
 		
-		var request = {
-				transactionId : ''
-			};
-		
 		// GET method, initial data when loading query page
 		Query.get({
 	        params: {
-	        	transactionId: 'ebaee52e1994d93232b94322557f9348777f9d8b74c91398f8fcc896aa212b88'//$scope.transactionId
+	        	transactionId: $scope.transactionId
 	        }			
 		})
 		.success(function(data) {
 			bindData($scope, data);
 		});	
-
-		/*
-		$http.get('accept.php', {
-	        params: {
-	            source: link,
-	            category_id: category
-	        }
-	     })
-	     .success(function (data,status) {
-	          $scope.info_show = data
-	     });		
-		*/
 		
 		// QUERY method, refresh data when click query button
 		$scope.query = function() {
-			request.transactionId = $scope.transactionId;
-			Query.get(request)
-				.success(function(data) {
-					bindData($scope, data);
-				});	
-			};	
+			Query.get({
+		        params: {
+		        	transactionId: $scope.transactionId
+		        }			
+			})
+			.success(function(data) {
+				bindData($scope, data);
+			});				
+		};	
 
 		function bindData($scope, data) {
 			$scope.blockNumber = data.blockNumber;
