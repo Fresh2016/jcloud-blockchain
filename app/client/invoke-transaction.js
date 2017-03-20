@@ -54,7 +54,7 @@ module.exports.invokeChaincode = function(traceInfo) {
 	// this is a transaction, will just use org1's identity to
 	// submit the request
 	var org = 'org1';
-	var orgName = getOrgNameByOrg(ORGS, org);
+	var orgName = testUtil.getOrgNameByOrg(ORGS, org);
 
 	setupChain(ORGS, orgName);
 	
@@ -67,10 +67,10 @@ module.exports.invokeChaincode = function(traceInfo) {
 
 	}).then((admin) => {
 		logger.debug('Successfully enrolled user \'admin\'');
-		return sendTransactionProposal(admin, getMspid(ORGS, org), traceInfo);
+		return sendTransactionProposal(admin, testUtil.getMspid(ORGS, org), traceInfo);
 
 	}, (err) => {
-		throwError(err, 'Failed to enroll user \'admin\'. ');
+		testUtil.throwError(err, 'Failed to enroll user \'admin\'. ');
 
 	}).then((results) => {
 		var proposalResponses = results[0];
@@ -78,18 +78,18 @@ module.exports.invokeChaincode = function(traceInfo) {
 		var header   = results[2];
 
 		if (checkProposalResponses(proposalResponses)) {
+			logger.debug(util.format('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature));
 			commitTransaction(proposalResponses, proposal, header);
 		} else {
-			throwError(null, 'Failed to send Proposal or receive valid response. Response null or status is not 200. exiting...');
+			testUtil.throwError(null, 'Failed to send Proposal or receive valid response. Response null or status is not 200. exiting...');
 		}
 	}, (err) => {
-		throwError(err.stack ? err.stack : err, 'Failed to send proposal due to error: ');
+		testUtil.throwError(err.stack ? err.stack : err, 'Failed to send proposal due to error: ');
 
 	}).then((response) => {
 		return finishCommit(response, tx_id);
 	}, (err) => {
-		console.error('Failed to send transaction due to error: ' + err.stack ? err.stack : err);
-		//throw new Error('Failed to send transaction due to error: ' + err.stack ? err.stack : err);
+		logger.error('Failed to send transaction due to error: ' + err.stack ? err.stack : err);
 		return 'failed';
 	});
 };
@@ -122,8 +122,6 @@ function checkProposalResponses(proposalResponses){
 
 
 function commitTransaction(proposalResponses, proposal, header){
-
-	logger.debug(util.format('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature));
 	var request = {
 		proposalResponses: proposalResponses,
 		proposal: proposal,
@@ -149,7 +147,7 @@ function commitTransaction(proposalResponses, proposal, header){
 		return results[0]; // the first returned value is from the 'sendPromise' which is from the 'sendTransaction()' call
 
 	}).catch((err) => {
-		throwError(err, 'Failed to send transaction and get notifications within the timeout period.');
+		testUtil.throwError(err, 'Failed to send transaction and get notifications within the timeout period.');
 	});
 }
 
@@ -176,18 +174,8 @@ function finishCommit(response, tx_id) {
 			};
 		return result;			
 	} else {
-		throwError(response.status, 'Failed to order the transaction. Error code: ');
+		testUtil.throwError(response.status, 'Failed to order the transaction. Error code: ');
 	}
-}
-
-
-function getOrgNameByOrg(ORGS, org) {
-	return ORGS[org].name;
-}
-
-
-function getMspid(ORGS, org) {
-	return ORGS[org].mspid;
 }
 
 
@@ -221,6 +209,16 @@ function setupChain(ORGS, orgName) {
 		if (ORGS.hasOwnProperty(key) && typeof ORGS[key].peer1 !== 'undefined') {
 			let peer = new Peer(ORGS[key].peer1.requests);
 			chain.addPeer(peer);
+			if (!chain.isValidPeer(peer)) {
+				chain.addPeer(peer);
+				//logger.debug('喔～ key is %s, org is %s', key, peerOrg);
+				/*
+				if (key == peerOrg) {
+					logger.debug('set primary peer: %s', JSON.stringify(peer));
+					chain.setPrimaryPeer(peer);
+				}
+				*/
+			}
 
 			let eh = new EventHub();
 			eh.setPeerAddr(ORGS[key].peer1.events);
@@ -238,9 +236,7 @@ function setupChain(ORGS, orgName) {
 function sendTransactionProposal(admin, mspid, traceInfo) {
 	
 	the_user = admin;
-
 	the_user.mspImpl._id = mspid;
-
 	nonce = utils.getNonce();
 	tx_id = chain.buildTransactionID(nonce, the_user);
 
@@ -261,25 +257,18 @@ function sendTransactionProposal(admin, mspid, traceInfo) {
 }
 
 
-function throwError(err, desciption){
-	console.error(description + err);
-	throw new Error('Failed to enroll user \'admin\'. ' + err);
-}
-
-
 function txEventListener(eh, resolve, reject, handle, deployId) {
+	logger.debug('get callback of deployId %s ', deployId);
 
 	clearTimeout(handle);
 
 	//TODO：目前这里会导致程序异常退出
 	//eh.unregisterTxEvent(deployId);
 
-	logger.debug('get callback of deployId %s ', deployId);
-
 	//TODO: 目前这里会返回一个policy不满足的错误码，需要看下证书生成时的设置
 	/*
 	if (code !== 'VALID') {
-		console.error('The balance transfer transaction was invalid, code = ' + code);
+		logger.error('The balance transfer transaction was invalid, code = ' + code);
 		reject();
 	} else {
 		logger.debug('The balance transfer transaction has been committed on peer '+ eh.ep.addr);

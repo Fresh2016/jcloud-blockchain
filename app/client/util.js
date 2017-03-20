@@ -78,6 +78,46 @@ module.exports.existsSync = function(absolutePath /*string*/) {
 
 module.exports.readFile = readFile;
 
+
+module.exports.getOrgNameByOrg = function getOrgNameByOrg(ORGS, org) {
+	return ORGS[org].name;
+}
+
+
+module.exports.getMspid = function getMspid(ORGS, org) {
+	return ORGS[org].mspid;
+}
+
+module.exports.throwError = function throwError(err, desciption){
+	logger.error(description + err);
+	throw new Error(description + err);
+}
+
+
+module.exports.getSubmitter = function(client, loadFromConfig, org) {
+	if (arguments.length < 2) throw new Error('"client" and "test" are both required parameters');
+
+	var fromConfig, userOrg;
+	if (typeof loadFromConfig === 'boolean') {
+		fromConfig = loadFromConfig;
+	} else {
+		fromConfig = false;
+	}
+
+	if (typeof loadFromConfig === 'string') {
+		userOrg = loadFromConfig;
+	} else {
+		if (typeof org === 'string') {
+			userOrg = org;
+		} else {
+			userOrg = 'org1';
+		}
+	}
+
+	return getSubmitter('admin', 'adminpw', client, fromConfig, userOrg);
+};
+
+
 hfc.addConfigFile('./app/config/config.json');
 var ORGS = hfc.getConfigSetting('test-network');
 //console.log('Get ORGS: ');
@@ -170,26 +210,3 @@ function readFile(path) {
 		});
 	});
 }
-
-module.exports.getSubmitter = function(client, loadFromConfig, org) {
-	if (arguments.length < 2) throw new Error('"client" and "test" are both required parameters');
-
-	var fromConfig, userOrg;
-	if (typeof loadFromConfig === 'boolean') {
-		fromConfig = loadFromConfig;
-	} else {
-		fromConfig = false;
-	}
-
-	if (typeof loadFromConfig === 'string') {
-		userOrg = loadFromConfig;
-	} else {
-		if (typeof org === 'string') {
-			userOrg = org;
-		} else {
-			userOrg = 'org1';
-		}
-	}
-
-	return getSubmitter('admin', 'adminpw', client, fromConfig, userOrg);
-};

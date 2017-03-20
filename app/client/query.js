@@ -37,7 +37,7 @@ var ORGS = hfc.getConfigSetting('test-network');
 //logger.debug(ORGS);
 
 //TODO: to be removed
-var tx_id = null;
+//var tx_id = null;
 var nonce = null;
 var the_user = null;
 var targets = [];
@@ -69,7 +69,7 @@ module.exports.queryTransaction = function(transactionId) {
 	logger.info('\n\n***** End-to-end flow: query transaction by transactionId *****');
 	
 	var org = 'org2';
-	var orgName = getOrgNameByOrg(ORGS, org);
+	var orgName = testUtil.getOrgNameByOrg(ORGS, org);
 
 	setupChain(ORGS, orgName, org);
 	
@@ -82,10 +82,10 @@ module.exports.queryTransaction = function(transactionId) {
 
 	}).then((admin) => {
 		logger.debug('Successfully enrolled user \'admin\'');
-		return queryBlock(admin, getMspid(ORGS, org));
+		return queryBlock(admin, testUtil.getMspid(ORGS, org));
 	},
 	(err) => {
-		throwError(err, 'Failed to enroll user \'admin\'. ');
+		testUtil.throwError(err, 'Failed to enroll user \'admin\'. ');
 		
 	}).then((block) => {
 		logger.info('Chain getBlock() returned block number= %s',block.header.number);
@@ -112,7 +112,7 @@ module.exports.queryTransaction = function(transactionId) {
 		return chain.queryBlockByHash(block_hash);
 	},
 	(err) => {
-		throwError(err.stack ? err.stack : err, 'Failed to send query due to error: ');
+		testUtil.throwError(err.stack ? err.stack : err, 'Failed to send query due to error: ');
 		return result;
 		
 	}).then((block) => {
@@ -122,7 +122,7 @@ module.exports.queryTransaction = function(transactionId) {
 
 	}).then(() => {
 		nonce = utils.getNonce();
-		tx_id = chain.buildTransactionID(nonce, the_user);
+		var tx_id = chain.buildTransactionID(nonce, the_user);
 
 		// send query
 		// for supplychain
@@ -139,7 +139,7 @@ module.exports.queryTransaction = function(transactionId) {
 		return chain.queryByChaincode(request);
 	},
 	(err) => {
-		throwError(err.stack ? err.stack : err, 'Failed to send query chaincode due to error: ');
+		testUtil.throwError(err.stack ? err.stack : err, 'Failed to send query chaincode due to error: ');
 		return result;
 		
 	}).then((response_payloads) => {
@@ -148,7 +148,7 @@ module.exports.queryTransaction = function(transactionId) {
 
 	},
 	(err) => {
-		throwError(err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
+		testUtil.throwError(err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
 
 	}).catch((err) => {
 		logger.error.error('Failed to query with error:' + err.stack ? err.stack : err);
@@ -170,25 +170,10 @@ function decodeTransaction(processed_transaction, commonProtoPath, transProtoPat
 		logger.debug(' Chain queryTransaction - transaction ID :: %s:', channel_header.tx_id);
 	}
 	catch(err) {
-		throwError(err.stack ? err.stack : err, 'Failed to decode transaction query response.');
+		testUtil.throwError(err.stack ? err.stack : err, 'Failed to decode transaction query response.');
 	}	
 }
 
-
-
-function getOrgNameByOrg(ORGS, org) {
-	return ORGS[org].name;
-}
-
-
-function getMspid(ORGS, org) {
-	return ORGS[org].mspid;
-}
-
-function throwError(err, desciption){
-	logger.error(description + err);
-	throw new Error(description + err);
-}
 
 
 function parseQuerySupplyChainResponse(response_payloads) {
@@ -213,9 +198,6 @@ function parseQuerySupplyChainResponse(response_payloads) {
 function queryBlock(admin, mspid){
 	the_user = admin;
 	the_user.mspImpl._id = mspid;
-
-	nonce = utils.getNonce();
-	tx_id = chain.buildTransactionID(nonce, the_user);
 
 	// use default primary peer
 	// send query
