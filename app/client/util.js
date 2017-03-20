@@ -14,13 +14,14 @@
  *  limitations under the License.
  */
 
+// System imports
 var path = require('path');
 var fs = require('fs-extra');
 var os = require('os');
-
 var jsrsa = require('jsrsasign');
 var KEYUTIL = jsrsa.KEYUTIL;
 
+// Fabric client imports
 var hfc = require('fabric-client');
 var copService = require('fabric-ca-client/lib/FabricCAClientImpl.js');
 var User = require('fabric-client/lib/User.js');
@@ -28,42 +29,60 @@ var CryptoSuite = require('fabric-client/lib/impl/CryptoSuite_ECDSA_AES.js');
 var KeyStore = require('fabric-client/lib/impl/CryptoKeyStore.js');
 var ecdsaKey = require('fabric-client/lib/impl/ecdsa/key.js');
 
+// Channel and chaincode settings
+// TODO: should be managed by manager and stored in DB
 module.exports.CHAINCODE_PATH = 'github.com/supplychain';
-//module.exports.CHAINCODE_MARBLES_PATH = 'github.com/marbles_cc';
 module.exports.END2END = {
 	channel: 'mychannel',
 	chaincodeId: 'end2end2',
 	chaincodeVersion: 'v0'
 };
 
-// directory for file based KeyValueStore
-module.exports.KVS = '/tmp/hfc-test-kvs';
+// Directory for file based KeyValueStore
 module.exports.storePathForOrg = function(org) {
-	return module.exports.KVS + '_' + org;
+	return '/tmp/hfc-test-kvs' + '_' + org;
 };
 
-// temporarily set $GOPATH to the test fixture folder
-module.exports.setupChaincodeDeploy = function() {
-	process.env.GOPATH = path.join(__dirname, '../fixtures');
-};
-
-// specifically set the values to defaults because they may have been overridden when
-// running in the overall test bucket ('gulp test')
-module.exports.resetDefaults = function() {
-	global.hfc.config = undefined;
-};
-
+// Clean up KeyValueStore before new operations
 module.exports.cleanupDir = function(keyValStorePath) {
 	var absPath = path.join(process.cwd(), keyValStorePath);
-	var exists = module.exports.existsSync(absPath);
+	var exists = existsSync(absPath);
 	if (exists) {
 		fs.removeSync(absPath);
 	}
 };
 
-// utility function to check if directory or file exists
+// Read Org Name from config
+module.exports.getOrgNameByOrg = function getOrgNameByOrg(ORGS, org) {
+	return ORGS[org].name;
+}
+
+// Read MSP ID from config
+module.exports.getMspid = function getMspid(ORGS, org) {
+	return ORGS[org].mspid;
+}
+
+// Process error by logging and throwing new error
+module.exports.throwError = function throwError(err, desciption){
+	logger.error(description + err);
+	throw new Error(description + err);
+}
+
+// Read file
+module.exports.readFile = function readFile(path) {
+	return new Promise((resolve, reject) => {
+		fs.readFile(path, (err, data) => {
+			if (!!err)
+				reject(new Error('Failed to read file ' + path + ' due to error: ' + err));
+			else
+				resolve(data);
+		});
+	});
+}
+
+// Check if directory or file exists
 // uses entire / absolute path from root
-module.exports.existsSync = function(absolutePath /*string*/) {
+function existsSync(absolutePath /*string*/) {
 	try  {
 		var stat = fs.statSync(absolutePath);
 		if (stat.isDirectory() || stat.isFile()) {
@@ -76,32 +95,20 @@ module.exports.existsSync = function(absolutePath /*string*/) {
 	}
 };
 
-module.exports.readFile = readFile;
 
+//to be deleted
+//temporarily set $GOPATH to the test fixture folder
+/*
+module.exports.setGOPATH = function() {
+	process.env.GOPATH = __dirname;
+};
+*/
 
-module.exports.getOrgNameByOrg = function getOrgNameByOrg(ORGS, org) {
-	return ORGS[org].name;
-}
-
-
-module.exports.getMspid = function getMspid(ORGS, org) {
-	return ORGS[org].mspid;
-}
-
-module.exports.throwError = function throwError(err, desciption){
-	logger.error(description + err);
-	throw new Error(description + err);
-}
-
-
-
-function readFile(path) {
-	return new Promise((resolve, reject) => {
-		fs.readFile(path, (err, data) => {
-			if (!!err)
-				reject(new Error('Failed to read file ' + path + ' due to error: ' + err));
-			else
-				resolve(data);
-		});
-	});
-}
+//to be deleted
+//specifically set the values to defaults because they may have been overridden when
+//running in the overall test bucket ('gulp test')
+/*
+module.exports.resetDefaults = function() {
+	global.hfc.config = undefined;
+};
+*/

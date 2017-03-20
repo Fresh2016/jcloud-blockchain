@@ -22,16 +22,16 @@ var path = require('path');
 var util = require('util');
 
 var hfc = require('fabric-client');
-var utils = require('fabric-client/lib/utils.js');
+var ClientUtils = require('fabric-client/lib/utils.js');
 var Peer = require('fabric-client/lib/Peer.js');
 var Orderer = require('fabric-client/lib/Orderer.js');
 var EventHub = require('fabric-client/lib/EventHub.js');
 var Submitter = require('./get-submitter.js');
-var testUtil = require('./util.js');
+var util = require('./util.js');
 
-var logger = utils.getLogger('invoke-chaincode');
+var logger = ClientUtils.getLogger('invoke-chaincode');
 
-var e2e = testUtil.END2END;
+var e2e = util.END2END;
 hfc.addConfigFile(path.join(__dirname, './config.json'));
 var ORGS = hfc.getConfigSetting('test-network');
 
@@ -51,12 +51,12 @@ module.exports.invokeChaincode = function(traceInfo) {
 	// this is a transaction, will just use org1's identity to
 	// submit the request
 	var org = 'org1';
-	var orgName = testUtil.getOrgNameByOrg(ORGS, org);
+	var orgName = util.getOrgNameByOrg(ORGS, org);
 
 	setupChain(ORGS, orgName);
 	
 	return hfc.newDefaultKeyValueStore({
-		path: testUtil.storePathForOrg(orgName)
+		path: util.storePathForOrg(orgName)
 
 	}).then((store) => {
 		client.setStateStore(store);
@@ -64,10 +64,10 @@ module.exports.invokeChaincode = function(traceInfo) {
 
 	}).then((admin) => {
 		logger.debug('Successfully enrolled user \'admin\'');
-		return sendTransactionProposal(admin, testUtil.getMspid(ORGS, org), traceInfo);
+		return sendTransactionProposal(admin, util.getMspid(ORGS, org), traceInfo);
 
 	}, (err) => {
-		testUtil.throwError(err, 'Failed to enroll user \'admin\'. ');
+		util.throwError(err, 'Failed to enroll user \'admin\'. ');
 
 	}).then((results) => {
 		var proposalResponses = results[0];
@@ -78,10 +78,10 @@ module.exports.invokeChaincode = function(traceInfo) {
 			logger.debug(util.format('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature));
 			commitTransaction(proposalResponses, proposal, header);
 		} else {
-			testUtil.throwError(null, 'Failed to send Proposal or receive valid response. Response null or status is not 200. exiting...');
+			util.throwError(null, 'Failed to send Proposal or receive valid response. Response null or status is not 200. exiting...');
 		}
 	}, (err) => {
-		testUtil.throwError(err.stack ? err.stack : err, 'Failed to send proposal due to error: ');
+		util.throwError(err.stack ? err.stack : err, 'Failed to send proposal due to error: ');
 
 	}).then((response) => {
 		return finishCommit(response, tx_id);
@@ -144,7 +144,7 @@ function commitTransaction(proposalResponses, proposal, header){
 		return results[0]; // the first returned value is from the 'sendPromise' which is from the 'sendTransaction()' call
 
 	}).catch((err) => {
-		testUtil.throwError(err, 'Failed to send transaction and get notifications within the timeout period.');
+		util.throwError(err, 'Failed to send transaction and get notifications within the timeout period.');
 	});
 }
 
@@ -171,7 +171,7 @@ function finishCommit(response, tx_id) {
 			};
 		return result;			
 	} else {
-		testUtil.throwError(response.status, 'Failed to order the transaction. Error code: ');
+		util.throwError(response.status, 'Failed to order the transaction. Error code: ');
 	}
 }
 
@@ -226,7 +226,7 @@ function setupChain(ORGS, orgName) {
 	}
 
 	// remove expired keys before enroll admin
-	testUtil.cleanupDir(testUtil.storePathForOrg(orgName));
+	util.cleanupDir(util.storePathForOrg(orgName));
 }
 
 
@@ -234,7 +234,7 @@ function sendTransactionProposal(admin, mspid, traceInfo) {
 	
 	the_user = admin;
 	the_user.mspImpl._id = mspid;
-	nonce = utils.getNonce();
+	nonce = ClientUtils.getNonce()
 	tx_id = chain.buildTransactionID(nonce, the_user);
 
 	logger.info(util.format('Sending transaction proposal "%s"', tx_id));

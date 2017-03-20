@@ -18,7 +18,7 @@
 var hfc = require('fabric-client');
 hfc.addConfigFile('./app/config/config.json');
 var ORGS = hfc.getConfigSetting('test-network');
-var testUtil = require('./util.js');
+var util = require('./util.js');
 
 var defaultUserOrg = 'org1';
 var defaultUsrname = 'admin';
@@ -93,7 +93,7 @@ function getSubmitter(username, password, client, loadFromConfig, userOrg) {
 				// first load the private key and save in the BCCSP's key store
 				var privKeyPEM = path.join(__dirname, '../fixtures/msp/local/keystore/admin.pem');
 				var pemData, member;
-				return testUtil.readFile(privKeyPEM)
+				return util.readFile(privKeyPEM)
 				.then((data) => {
 					pemData = data;
 					// default crypto suite uses $HOME/.hfc-key-store as key store
@@ -109,7 +109,7 @@ function getSubmitter(username, password, client, loadFromConfig, userOrg) {
 				}).then((value) => {
 					// next save the certificate in a serialized user enrollment in the state store
 					var certPEM = path.join(__dirname, '../fixtures/msp/local/signcerts/admin.pem');
-					return testUtil.readFile(certPEM);
+					return util.readFile(certPEM);
 				}).then((data) => {
 					member = new User(username, client);
 					return member.setEnrollment(testKey, data.toString());

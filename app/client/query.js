@@ -22,16 +22,16 @@ var path = require('path');
 var util = require('util');
 
 var hfc = require('fabric-client');
-var utils = require('fabric-client/lib/utils.js');
+var ClientUtils = require('fabric-client/lib/utils.js');
 var Peer = require('fabric-client/lib/Peer.js');
 var Orderer = require('fabric-client/lib/Orderer.js');
 var EventHub = require('fabric-client/lib/EventHub.js');
 var Submitter = require('./get-submitter.js');
-var testUtil = require('./util.js');
+var util = require('./util.js');
 
-var logger = utils.getLogger('query-chaincode');
+var logger = ClientUtils.getLogger('query-chaincode');
 
-var e2e = testUtil.END2END;
+var e2e = util.END2END;
 hfc.addConfigFile('./app/config/config.json');
 var ORGS = hfc.getConfigSetting('test-network');
 //logger.debug('Get ORGS: ');
@@ -70,12 +70,12 @@ module.exports.queryTransaction = function(transactionId) {
 	logger.info('\n\n***** End-to-end flow: query transaction by transactionId *****');
 	
 	var org = 'org2';
-	var orgName = testUtil.getOrgNameByOrg(ORGS, org);
+	var orgName = util.getOrgNameByOrg(ORGS, org);
 
 	setupChain(ORGS, orgName, org);
 	
 	return hfc.newDefaultKeyValueStore({
-		path: testUtil.storePathForOrg(orgName)
+		path: util.storePathForOrg(orgName)
 		
 	}).then((store) => {
 		client.setStateStore(store);
@@ -83,10 +83,10 @@ module.exports.queryTransaction = function(transactionId) {
 
 	}).then((admin) => {
 		logger.debug('Successfully enrolled user \'admin\'');
-		return queryBlock(admin, testUtil.getMspid(ORGS, org));
+		return queryBlock(admin, util.getMspid(ORGS, org));
 	},
 	(err) => {
-		testUtil.throwError(err, 'Failed to enroll user \'admin\'. ');
+		util.throwError(err, 'Failed to enroll user \'admin\'. ');
 		
 	}).then((block) => {
 		logger.info('Chain getBlock() returned block number= %s',block.header.number);
@@ -113,7 +113,7 @@ module.exports.queryTransaction = function(transactionId) {
 		return chain.queryBlockByHash(block_hash);
 	},
 	(err) => {
-		testUtil.throwError(err.stack ? err.stack : err, 'Failed to send query due to error: ');
+		util.throwError(err.stack ? err.stack : err, 'Failed to send query due to error: ');
 		return result;
 		
 	}).then((block) => {
@@ -122,7 +122,7 @@ module.exports.queryTransaction = function(transactionId) {
 		result.blockNumber = block.header.number.low;
 
 	}).then(() => {
-		nonce = utils.getNonce();
+		nonce = ClientUtils.getNonce()
 		var tx_id = chain.buildTransactionID(nonce, the_user);
 
 		// send query
@@ -140,7 +140,7 @@ module.exports.queryTransaction = function(transactionId) {
 		return chain.queryByChaincode(request);
 	},
 	(err) => {
-		testUtil.throwError(err.stack ? err.stack : err, 'Failed to send query chaincode due to error: ');
+		util.throwError(err.stack ? err.stack : err, 'Failed to send query chaincode due to error: ');
 		return result;
 		
 	}).then((response_payloads) => {
@@ -149,7 +149,7 @@ module.exports.queryTransaction = function(transactionId) {
 
 	},
 	(err) => {
-		testUtil.throwError(err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
+		util.throwError(err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
 
 	}).catch((err) => {
 		logger.error.error('Failed to query with error:' + err.stack ? err.stack : err);
@@ -171,7 +171,7 @@ function decodeTransaction(processed_transaction, commonProtoPath, transProtoPat
 		logger.debug(' Chain queryTransaction - transaction ID :: %s:', channel_header.tx_id);
 	}
 	catch(err) {
-		testUtil.throwError(err.stack ? err.stack : err, 'Failed to decode transaction query response.');
+		util.throwError(err.stack ? err.stack : err, 'Failed to decode transaction query response.');
 	}	
 }
 
@@ -236,7 +236,7 @@ function setupChain(ORGS, orgName, peerOrg) {
 		}
 	}
 	// remove expired keys before enroll admin
-	testUtil.cleanupDir(testUtil.storePathForOrg(orgName));
+	util.cleanupDir(util.storePathForOrg(orgName));
 }
 
 
@@ -271,10 +271,10 @@ module.exports.queryByChaincode = function() {
 	}
 
 	// remove expired keys before enroll admin
-	testUtil.cleanupDir(testUtil.storePathForOrg(orgName));
+	util.cleanupDir(util.storePathForOrg(orgName));
 	
 	return hfc.newDefaultKeyValueStore({
-		path: testUtil.storePathForOrg(orgName)
+		path: util.storePathForOrg(orgName)
 	}).then((store) => {
 
 		client.setStateStore(store);
@@ -284,7 +284,7 @@ module.exports.queryByChaincode = function() {
 		the_user = admin;
 		the_user.mspImpl._id = ORGS[org].mspid;
 
-		nonce = utils.getNonce();
+		nonce = ClientUtils.getNonce()
 		tx_id = chain.buildTransactionID(nonce, the_user);
 
 		// send query
