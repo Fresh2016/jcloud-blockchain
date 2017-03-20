@@ -36,9 +36,18 @@ var ORGS = hfc.getConfigSetting('test-network');
 //console.log('Get ORGS: ');
 //console.dir(ORGS);
 
+//TODO: to be removed
 var tx_id = null;
 var nonce = null;
 var the_user = null;
+var targets = [];
+var client = new hfc();
+var chain = client.newChain(e2e.channel);
+
+// Used by decodeTransaction
+var commonProtoPath = './node_modules/fabric-client/lib/protos/common/common.proto';
+var transProtoPath = './node_modules/fabric-client/lib/protos/peer/transaction.proto';
+
 
 // Default response is all empty
 var result = {
@@ -57,95 +66,44 @@ module.exports.queryTransaction = function(transactionId) {
 	// submit the request. intentionally we are using a different org
 	// than the one that submitted the "move" transaction, although either org
 	// should work properly
-	console.log('\n\n***** End-to-end flow: query transaction by tx_id *****');
+	console.log('\n\n***** End-to-end flow: query transaction by transactionId *****');
 	
 	var org = 'org2';
-	var client = new hfc();
-	var chain = client.newChain(e2e.channel);
+	var orgName = getOrgNameByOrg(ORGS, org);
 
-	var orgName = ORGS[org].name;
-
-	var targets = [];
-	// set up the chain to use each org's 'peer1' for
-	// both requests and events
-	for (let key in ORGS) {
-		if (ORGS.hasOwnProperty(key) && typeof ORGS[key].peer1 !== 'undefined') {
-			let peer = new Peer(ORGS[key].peer1.requests);
-			chain.addPeer(peer);
-			//console.log('喔～ key is %s, org is %s', key, org);
-			if (key == org) {
-				console.log('set primary peer: %s', JSON.stringify(peer));
-				chain.setPrimaryPeer(peer);
-			}
-		}
-	}
-
-	// remove expired keys before enroll admin
-	testUtil.cleanupDir(testUtil.storePathForOrg(orgName));
+	setupChain(ORGS, orgName, org);
 	
 	return hfc.newDefaultKeyValueStore({
 		path: testUtil.storePathForOrg(orgName)
+		
 	}).then((store) => {
-
 		client.setStateStore(store);
 		return testUtil.getSubmitter(client, org);
 
 	}).then((admin) => {
-		the_user = admin;
-		the_user.mspImpl._id = ORGS[org].mspid;
-
-		nonce = utils.getNonce();
-		tx_id = chain.buildTransactionID(nonce, the_user);
-
-		// use default primary peer
-		// send query
-		return chain.queryBlock(0);
+		logger.debug('Successfully enrolled user \'admin\'');
+		return queryBlock(admin, getMspid(ORGS, org));
 	},
 	(err) => {
-		console.error('Failed to get submitter \'admin\'');
-		console.error('Failed to get submitter \'admin\'. Error: ' + err.stack ? err.stack : err );
-		return result;
-	})
-	.then((block) => {
-		logger.info(' Chain getBlock() returned block number=%s',block.header.number);
-		logger.info('checking query results are correct that we got zero block back: %s', block.header.number.toString());
-
-		//TODO: pass id from web ui
-		tx_id = transactionId;
-		if (!tx_id) {
-			logger.info('Transaction ID not found.');
-			tx_id = 'ebaee52e1994d93232b94322557f9348777f9d8b74c91398f8fcc896aa212b88';
-			//throw new Error('Transaction ID not found');
-		}
-		logger.info('Got tx_id %s', tx_id);
-		// send query
-		return chain.queryTransaction(tx_id); //assumes the end-to-end has run first
+		throwError(err, 'Failed to enroll user \'admin\'. ');
+		
+	}).then((block) => {
+		logger.info('Chain getBlock() returned block number= %s',block.header.number);
+		return queryTransactionByTxId(transactionId);
+		
 	}).then((processed_transaction) => {
-		// set to be able to decode grpc objects
-		var grpc = require('grpc');
-		var commonProto = grpc.load('./node_modules/fabric-client/lib/protos/common/common.proto').common;
-		var transProto = grpc.load('./node_modules/fabric-client/lib/protos/peer/transaction.proto').protos;
 		logger.info('Chain queryTransaction() returned processed tranaction validationCode: ' + processed_transaction.validationCode);
-		logger.info('  got back ProcessedTransaction with code: %s', processed_transaction.validationCode);
 
-		try {
-			var payload = commonProto.Payload.decode(processed_transaction.transactionEnvelope.payload);
-			var channel_header = commonProto.ChannelHeader.decode(payload.header.channel_header);
-			logger.debug(' Chain queryTransaction - transaction ID :: %s:', channel_header.tx_id);
-		}
-		catch(err) {
-			logger.error(err);
-			throw new Error(err.stack ? err.stack : err);
-		}
-
-		//chain.setPrimaryPeer(peer1);
-		// send query
+		// TODO: return nothing? check what we can get from processed_transaction
+		decodeTransaction(processed_transaction, commonProtoPath, transProtoPath);
+ 
 		return chain.queryInfo();
+		
 	}).then((blockchainInfo) => {
-		logger.info('got back blockchain info ');
-		logger.info(' Chain queryInfo() returned block height='+blockchainInfo.height);
-		logger.info(' Chain queryInfo() returned block previousBlockHash='+blockchainInfo.previousBlockHash);
-		logger.info(' Chain queryInfo() returned block currentBlockHash='+blockchainInfo.currentBlockHash);
+		logger.info('Chain queryInfo() returned blockchain info.');
+		logger.info('Chain queryInfo() returned block height = ' + blockchainInfo.height);
+		logger.info('Chain queryInfo() returned block previousBlockHash = ' + blockchainInfo.previousBlockHash);
+		logger.info('Chain queryInfo() returned block currentBlockHash = ' + blockchainInfo.currentBlockHash);
 		var block_hash = blockchainInfo.currentBlockHash;
 		result.previousBlockHash = blockchainInfo.previousBlockHash;
 		result.currentBlockHash = blockchainInfo.currentBlockHash;
@@ -154,13 +112,13 @@ module.exports.queryTransaction = function(transactionId) {
 		return chain.queryBlockByHash(block_hash);
 	},
 	(err) => {
-		console.error('Failed to send query due to error: ' + err.stack ? err.stack : err);
+		throwError(err.stack ? err.stack : err, 'Failed to send query due to error: ');
 		return result;
+		
 	}).then((block) => {
 		logger.info(' Chain queryBlockByHash() returned block number=%s',block.header.number);
 		logger.info('got back block number '+ block.header.number);
 		result.blockNumber = block.header.number.low;
-		//return result;
 
 	}).then(() => {
 		nonce = utils.getNonce();
@@ -181,36 +139,125 @@ module.exports.queryTransaction = function(transactionId) {
 		return chain.queryByChaincode(request);
 	},
 	(err) => {
-		console.error('Failed to get submitter \'admin\'');
-		console.error('Failed to get submitter \'admin\'. Error: ' + err.stack ? err.stack : err );
+		throwError(err.stack ? err.stack : err, 'Failed to send query chaincode due to error: ');
 		return result;
+		
 	}).then((response_payloads) => {
-		console.log('Query results: %s' + response_payloads);
-		if (response_payloads) {
-			for(let i = 0; i < response_payloads.length; i++) {
-				console.log('Query results [' + i + ']: %s' + response_payloads[i]);
-				var res_list = response_payloads[i].toString('utf8').split(',');
-				result.sku = res_list[1];
-				result.tradeDate = res_list[2];
-				result.traceInfo = res_list[3];
-				//result.counter = res_list[4];
-				return result;
-			}
-			return result;
-		} else {
-			console.error('response_payloads is null');
-			return result;
-		}
+		logger.info('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
+		return parseQuerySupplyChainResponse(response_payloads);
+
 	},
 	(err) => {
-		console.error('Failed to send query due to error: ' + err.stack ? err.stack : err);
-		return result;
+		throwError(err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
+
 	}).catch((err) => {
-		console.error('Failed to end to end test with error:' + err.stack ? err.stack : err);
+		console.error('Failed to query with error:' + err.stack ? err.stack : err);
 		return result;
 	});
 }
 
+
+
+function decodeTransaction(processed_transaction, commonProtoPath, transProtoPath) {
+	// set to be able to decode grpc objects
+	var grpc = require('grpc');
+	var commonProto = grpc.load(commonProtoPath).common;
+	var transProto = grpc.load(transProtoPath).protos;
+
+	try {
+		var payload = commonProto.Payload.decode(processed_transaction.transactionEnvelope.payload);
+		var channel_header = commonProto.ChannelHeader.decode(payload.header.channel_header);
+		logger.debug(' Chain queryTransaction - transaction ID :: %s:', channel_header.tx_id);
+	}
+	catch(err) {
+		throwError(err.stack ? err.stack : err, 'Failed to decode transaction query response.');
+	}	
+}
+
+
+
+function getOrgNameByOrg(ORGS, org) {
+	return ORGS[org].name;
+}
+
+
+function getMspid(ORGS, org) {
+	return ORGS[org].mspid;
+}
+
+function throwError(err, desciption){
+	console.error(description + err);
+	throw new Error(description + err);
+}
+
+
+function parseQuerySupplyChainResponse(response_payloads) {
+	if (response_payloads) {
+		for(let i = 0; i < response_payloads.length; i++) {
+			console.log('Query results [' + i + ']: %s' + response_payloads[i]);
+			var res_list = response_payloads[i].toString('utf8').split(',');
+			result.sku = res_list[1];
+			result.tradeDate = res_list[2];
+			result.traceInfo = res_list[3];
+			//result.counter = res_list[4];
+			return result;
+		}
+		//return result;
+	} else {
+		console.error('response_payloads is null');
+		return result;
+	}
+}
+
+
+function queryBlock(admin, mspid){
+	the_user = admin;
+	the_user.mspImpl._id = mspid;
+
+	nonce = utils.getNonce();
+	tx_id = chain.buildTransactionID(nonce, the_user);
+
+	// use default primary peer
+	// send query
+	return chain.queryBlock(0);
+}
+
+
+function queryTransactionByTxId(transactionId){
+	//TODO: a default id is set for initial value during loading query page
+	if (!transactionId) {
+		logger.info('Transaction ID not found.');
+		transactionId = 'ebaee52e1994d93232b94322557f9348777f9d8b74c91398f8fcc896aa212b88';
+		//throw new Error('Transaction ID not found');
+	}
+	logger.info('Got transactionId %s', transactionId);
+	// send query
+	return chain.queryTransaction(transactionId); //assumes the end-to-end has run first
+}
+
+
+function setupChain(ORGS, orgName, peerOrg) {
+	// set up the chain to use each org's 'peer1' for
+	// both requests and events
+	for (let key in ORGS) {
+		if (ORGS.hasOwnProperty(key) && typeof ORGS[key].peer1 !== 'undefined') {
+			let peer = new Peer(ORGS[key].peer1.requests);
+			chain.addPeer(peer);
+			//console.log('喔～ key is %s, org is %s', key, org);
+			if (key == peerOrg) {
+				console.log('set primary peer: %s', JSON.stringify(peer));
+				chain.setPrimaryPeer(peer);
+			}
+		}
+	}
+	// remove expired keys before enroll admin
+	testUtil.cleanupDir(testUtil.storePathForOrg(orgName));
+}
+
+
+
+/*
+// to be deleted
 module.exports.queryByChaincode = function() {
 	// this is a transaction, will just use org1's identity to
 	// submit the request. intentionally we are using a different org
@@ -303,3 +350,4 @@ module.exports.queryByChaincode = function() {
 		return result;
 	});
 }
+*/
