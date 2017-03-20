@@ -28,13 +28,13 @@ var Orderer = require('fabric-client/lib/Orderer.js');
 var EventHub = require('fabric-client/lib/EventHub.js');
 var testUtil = require('./util.js');
 
-var logger = utils.getLogger('install-chaincode');
+var logger = utils.getLogger('query-chaincode');
 
 var e2e = testUtil.END2END;
 hfc.addConfigFile('./app/config/config.json');
 var ORGS = hfc.getConfigSetting('test-network');
-//console.log('Get ORGS: ');
-//console.dir(ORGS);
+//logger.debug('Get ORGS: ');
+//logger.debug(ORGS);
 
 //TODO: to be removed
 var tx_id = null;
@@ -66,7 +66,7 @@ module.exports.queryTransaction = function(transactionId) {
 	// submit the request. intentionally we are using a different org
 	// than the one that submitted the "move" transaction, although either org
 	// should work properly
-	console.log('\n\n***** End-to-end flow: query transaction by transactionId *****');
+	logger.info('\n\n***** End-to-end flow: query transaction by transactionId *****');
 	
 	var org = 'org2';
 	var orgName = getOrgNameByOrg(ORGS, org);
@@ -151,7 +151,7 @@ module.exports.queryTransaction = function(transactionId) {
 		throwError(err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
 
 	}).catch((err) => {
-		console.error('Failed to query with error:' + err.stack ? err.stack : err);
+		logger.error.error('Failed to query with error:' + err.stack ? err.stack : err);
 		return result;
 	});
 }
@@ -186,7 +186,7 @@ function getMspid(ORGS, org) {
 }
 
 function throwError(err, desciption){
-	console.error(description + err);
+	logger.error(description + err);
 	throw new Error(description + err);
 }
 
@@ -194,7 +194,7 @@ function throwError(err, desciption){
 function parseQuerySupplyChainResponse(response_payloads) {
 	if (response_payloads) {
 		for(let i = 0; i < response_payloads.length; i++) {
-			console.log('Query results [' + i + ']: %s' + response_payloads[i]);
+			logger.debug('Query results [' + i + ']: %s' + response_payloads[i]);
 			var res_list = response_payloads[i].toString('utf8').split(',');
 			result.sku = res_list[1];
 			result.tradeDate = res_list[2];
@@ -204,7 +204,7 @@ function parseQuerySupplyChainResponse(response_payloads) {
 		}
 		//return result;
 	} else {
-		console.error('response_payloads is null');
+		logger.error('response_payloads is null');
 		return result;
 	}
 }
@@ -242,18 +242,19 @@ function setupChain(ORGS, orgName, peerOrg) {
 	for (let key in ORGS) {
 		if (ORGS.hasOwnProperty(key) && typeof ORGS[key].peer1 !== 'undefined') {
 			let peer = new Peer(ORGS[key].peer1.requests);
-			chain.addPeer(peer);
-			//console.log('喔～ key is %s, org is %s', key, org);
-			if (key == peerOrg) {
-				console.log('set primary peer: %s', JSON.stringify(peer));
-				chain.setPrimaryPeer(peer);
+			if (!chain.isValidPeer(peer)) {
+				chain.addPeer(peer);
+				//logger.debug('喔～ key is %s, org is %s', key, peerOrg);
+				if (key == peerOrg) {
+					logger.debug('set primary peer: %s', JSON.stringify(peer));
+					chain.setPrimaryPeer(peer);
+				}
 			}
 		}
 	}
 	// remove expired keys before enroll admin
 	testUtil.cleanupDir(testUtil.storePathForOrg(orgName));
 }
-
 
 
 /*
@@ -263,7 +264,7 @@ module.exports.queryByChaincode = function() {
 	// submit the request. intentionally we are using a different org
 	// than the one that submitted the "move" transaction, although either org
 	// should work properly
-	console.log('\n\n***** End-to-end flow: query chaincode *****');
+	logger.info('\n\n***** End-to-end flow: query chaincode *****');
 	
 	var org = 'org2';
 	var client = new hfc();
@@ -278,9 +279,9 @@ module.exports.queryByChaincode = function() {
 		if (ORGS.hasOwnProperty(key) && typeof ORGS[key].peer1 !== 'undefined') {
 			let peer = new Peer(ORGS[key].peer1.requests);
 			chain.addPeer(peer);
-			//console.log('喔～ key is %s, org is %s', key, org);
+			//logger.debug('喔～ key is %s, org is %s', key, org);
 			if (key == org) {
-				console.log('set primary peer: %s', JSON.stringify(peer));
+				logger.debug('set primary peer: %s', JSON.stringify(peer));
 				chain.setPrimaryPeer(peer);
 			}
 		}
@@ -318,14 +319,14 @@ module.exports.queryByChaincode = function() {
 		return chain.queryByChaincode(request);
 	},
 	(err) => {
-		console.error('Failed to get submitter \'admin\'');
-		console.error('Failed to get submitter \'admin\'. Error: ' + err.stack ? err.stack : err );
+		logger.error('Failed to get submitter \'admin\'');
+		logger.error('Failed to get submitter \'admin\'. Error: ' + err.stack ? err.stack : err );
 		return result;
 	}).then((response_payloads) => {
-		console.log('Query results: %s' + response_payloads);
+		logger.debug('Query results: %s' + response_payloads);
 		if (response_payloads) {
 			for(let i = 0; i < response_payloads.length; i++) {
-				console.log('Query results [' + i + ']: %s' + response_payloads[i]);
+				logger.debug('Query results [' + i + ']: %s' + response_payloads[i]);
 				var res_list = response_payloads[i].toString('utf8').split(',');
 				var result = {
 						TransactionId : res_list[0],
@@ -338,15 +339,15 @@ module.exports.queryByChaincode = function() {
 			}
 			return result;
 		} else {
-			console.error('response_payloads is null');
+			logger.error('response_payloads is null');
 			return result;
 		}
 	},
 	(err) => {
-		console.error('Failed to send query due to error: ' + err.stack ? err.stack : err);
+		logger.error('Failed to send query due to error: ' + err.stack ? err.stack : err);
 		return result;
 	}).catch((err) => {
-		console.error('Failed to end to end test with error:' + err.stack ? err.stack : err);
+		logger.error('Failed to end to end test with error:' + err.stack ? err.stack : err);
 		return result;
 	});
 }
