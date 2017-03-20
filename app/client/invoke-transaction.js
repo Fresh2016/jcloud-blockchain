@@ -49,7 +49,7 @@ var eventhubs = [];
 
 
 module.exports.invokeChaincode = function(traceInfo) {
-	console.log('\n\n***** End-to-end flow: invoke chaincode *****');
+	logger.info('\n\n***** End-to-end flow: invoke chaincode *****');
 	
 	// this is a transaction, will just use org1's identity to
 	// submit the request
@@ -66,7 +66,7 @@ module.exports.invokeChaincode = function(traceInfo) {
 		return testUtil.getSubmitter(client, org);
 
 	}).then((admin) => {
-		console.log('Successfully enrolled user \'admin\'');
+		logger.debug('Successfully enrolled user \'admin\'');
 		return sendTransactionProposal(admin, getMspid(ORGS, org), traceInfo);
 
 	}, (err) => {
@@ -111,7 +111,7 @@ function checkProposalResponses(proposalResponses){
 		let one_good = false;
 		if (proposalResponses && proposalResponses[0].response && proposalResponses[0].response.status === 200) {
 			one_good = true;
-			logger.info('transaction proposal was good');
+			logger.debug('transaction proposal was good');
 		} else {
 			logger.error('transaction proposal was bad');
 		}
@@ -123,13 +123,13 @@ function checkProposalResponses(proposalResponses){
 
 function commitTransaction(proposalResponses, proposal, header){
 
-	console.log(util.format('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature));
+	logger.debug(util.format('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature));
 	var request = {
 		proposalResponses: proposalResponses,
 		proposal: proposal,
 		header: header
 	};
-	console.log('request is %s ', JSON.stringify(request));
+	logger.debug('request is %s ', JSON.stringify(request));
 
 	// set the transaction listener and set a timeout of 30sec
 	// if the transaction did not get committed within the timeout period,
@@ -145,7 +145,7 @@ function commitTransaction(proposalResponses, proposal, header){
 	return Promise.all([sendPromise].concat(eventPromises))
 	.then((results) => {
 
-		logger.debug(' event promise all complete and testing complete');
+		logger.info('Invoke transaction event promise all complete.');
 		return results[0]; // the first returned value is from the 'sendPromise' which is from the 'sendTransaction()' call
 
 	}).catch((err) => {
@@ -160,7 +160,7 @@ function disconnectEventhub(context, ehs, f) {
 		for(var key in ehs) {
 			var eventhub = ehs[key];
 			if (eventhub && eventhub.isconnected()) {
-				logger.info('Disconnecting the event hub');
+				logger.debug('Disconnecting the event hub');
 				eventhub.disconnect();
 			}
 		}
@@ -192,18 +192,18 @@ function getMspid(ORGS, org) {
 
 
 function printSuccessHint(tx_id){
-	console.log('Successfully sent transaction to the orderer.');
-	console.log('******************************************************************');
-	console.log('To manually run query.js, set the following environment variables:');
-	console.log('E2E_TX_ID='+'\''+tx_id+'\'');
-	console.log('******************************************************************');
+	logger.info('Successfully sent transaction to the orderer.');
+	logger.info('******************************************************************');
+	logger.info('To manually run query.js, set the following environment variables:');
+	logger.info('E2E_TX_ID='+'\''+tx_id+'\'');
+	logger.info('******************************************************************');
 }
 
 
 function registerTxEvent(eh, resolve, reject, expireTime, deployId) {
 	let handle = setTimeout(reject, expireTime);
 
-	console.log('registerTxEvent with deployId %s ', deployId);
+	logger.debug('registerTxEvent with deployId %s ', deployId);
 
 	eh.registerTxEvent(deployId, (tx, code) => {
 		txEventListener(eh, resolve, reject, handle, deployId);
@@ -244,7 +244,7 @@ function sendTransactionProposal(admin, mspid, traceInfo) {
 	nonce = utils.getNonce();
 	tx_id = chain.buildTransactionID(nonce, the_user);
 
-	console.log(util.format('Sending transaction "%s"', tx_id));
+	logger.info(util.format('Sending transaction proposal "%s"', tx_id));
 
 	// send proposal to endorser
 	// for supplychain
@@ -274,7 +274,7 @@ function txEventListener(eh, resolve, reject, handle, deployId) {
 	//TODO：目前这里会导致程序异常退出
 	//eh.unregisterTxEvent(deployId);
 
-	console.log('get callback of deployId %s ', deployId);
+	logger.debug('get callback of deployId %s ', deployId);
 
 	//TODO: 目前这里会返回一个policy不满足的错误码，需要看下证书生成时的设置
 	/*
@@ -282,10 +282,10 @@ function txEventListener(eh, resolve, reject, handle, deployId) {
 		console.error('The balance transfer transaction was invalid, code = ' + code);
 		reject();
 	} else {
-		console.log('The balance transfer transaction has been committed on peer '+ eh.ep.addr);
+		logger.debug('The balance transfer transaction has been committed on peer '+ eh.ep.addr);
 		resolve();
 	}
 	*/
-	console.log('The balance transfer transaction has been committed on peer '+ eh.ep.addr);
+	logger.debug('The balance transfer transaction has been committed on peer '+ eh.ep.addr);
 	resolve();	
 }
