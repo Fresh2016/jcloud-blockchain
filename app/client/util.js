@@ -35,19 +35,10 @@ module.exports.CHAINCODE_PATH = 'github.com/supplychain';
 module.exports.channel = 'mychannel';
 module.exports.chaincodeId = 'end2end2';
 module.exports.chaincodeVersion = 'v0';
-/*
-module.exports.END2END = {
-	channel: 'mychannel',
-	chaincodeId: 'end2end2',
-	chaincodeVersion: 'v0'
-};
-*/
 
 // Read config.json information
 hfc.addConfigFile('./app/config/config.json');
 module.exports.ORGS = hfc.getConfigSetting('test-network');
-//logger.debug('Get ORGS: ');
-//logger.debug(ORGS);
 
 // Directory for file based KeyValueStore
 module.exports.storePathForOrg = function(org) {
@@ -105,21 +96,3 @@ function existsSync(absolutePath /*string*/) {
 		return false;
 	}
 };
-
-
-//to be deleted
-//temporarily set $GOPATH to the test fixture folder
-/*
-module.exports.setGOPATH = function() {
-	process.env.GOPATH = __dirname;
-};
-*/
-
-//to be deleted
-//specifically set the values to defaults because they may have been overridden when
-//running in the overall test bucket ('gulp test')
-/*
-module.exports.resetDefaults = function() {
-	global.hfc.config = undefined;
-};
-*/
