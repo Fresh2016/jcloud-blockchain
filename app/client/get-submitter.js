@@ -16,9 +16,8 @@
 
 
 var hfc = require('fabric-client');
-hfc.addConfigFile('./app/config/config.json');
-var ORGS = hfc.getConfigSetting('test-network');
 var util = require('./util.js');
+var ORGS = util.ORGS;
 
 var defaultUserOrg = 'org1';
 var defaultUsrname = 'admin';

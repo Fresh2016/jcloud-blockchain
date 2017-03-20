@@ -32,11 +32,22 @@ var ecdsaKey = require('fabric-client/lib/impl/ecdsa/key.js');
 // Channel and chaincode settings
 // TODO: should be managed by manager and stored in DB
 module.exports.CHAINCODE_PATH = 'github.com/supplychain';
+module.exports.channel = 'mychannel';
+module.exports.chaincodeId = 'end2end2';
+module.exports.chaincodeVersion = 'v0';
+/*
 module.exports.END2END = {
 	channel: 'mychannel',
 	chaincodeId: 'end2end2',
 	chaincodeVersion: 'v0'
 };
+*/
+
+// Read config.json information
+hfc.addConfigFile('./app/config/config.json');
+module.exports.ORGS = hfc.getConfigSetting('test-network');
+//logger.debug('Get ORGS: ');
+//logger.debug(ORGS);
 
 // Directory for file based KeyValueStore
 module.exports.storePathForOrg = function(org) {

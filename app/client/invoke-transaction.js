@@ -14,12 +14,7 @@
  *  limitations under the License.
  */
 
-// This is an end-to-end test that focuses on exercising all parts of the fabric APIs
-// in a happy-path scenario
-'use strict';
-
 var path = require('path');
-var util = require('util');
 
 var hfc = require('fabric-client');
 var ClientUtils = require('fabric-client/lib/utils.js');
@@ -30,17 +25,14 @@ var Submitter = require('./get-submitter.js');
 var util = require('./util.js');
 
 var logger = ClientUtils.getLogger('invoke-chaincode');
-
-var e2e = util.END2END;
-hfc.addConfigFile(path.join(__dirname, './config.json'));
-var ORGS = hfc.getConfigSetting('test-network');
+var ORGS = util.ORGS;
 
 var tx_id = null;
 var nonce = null;
 var the_user = null;
 var allEventhubs = [];
 var client = new hfc();
-var chain = client.newChain(e2e.channel);
+var chain = client.newChain(util.channel);
 var targets = [];
 var eventhubs = [];
 
@@ -242,11 +234,11 @@ function sendTransactionProposal(admin, mspid, traceInfo) {
 	// send proposal to endorser
 	// for supplychain
 	var request = {
-		chaincodeId : e2e.chaincodeId,
-		chaincodeVersion : e2e.chaincodeVersion,
+		chaincodeId : util.chaincodeId,
+		chaincodeVersion : util.chaincodeVersion,
 		fcn: 'addNewTrade',
 		args: ["Sku", "Sku654321", "TraceInfo", traceInfo ],
-		chainId: e2e.channel,
+		chainId: util.channel,
 		txId: tx_id,
 		nonce: nonce
 	};

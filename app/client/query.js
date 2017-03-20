@@ -14,13 +14,6 @@
  *  limitations under the License.
  */
 
-// This is an end-to-end test that focuses on exercising all parts of the fabric APIs
-// in a happy-path scenario
-'use strict';
-
-var path = require('path');
-var util = require('util');
-
 var hfc = require('fabric-client');
 var ClientUtils = require('fabric-client/lib/utils.js');
 var Peer = require('fabric-client/lib/Peer.js');
@@ -30,12 +23,7 @@ var Submitter = require('./get-submitter.js');
 var util = require('./util.js');
 
 var logger = ClientUtils.getLogger('query-chaincode');
-
-var e2e = util.END2END;
-hfc.addConfigFile('./app/config/config.json');
-var ORGS = hfc.getConfigSetting('test-network');
-//logger.debug('Get ORGS: ');
-//logger.debug(ORGS);
+var ORGS = util.ORGS;
 
 //TODO: to be removed
 //var tx_id = null;
@@ -43,7 +31,7 @@ var nonce = null;
 var the_user = null;
 var targets = [];
 var client = new hfc();
-var chain = client.newChain(e2e.channel);
+var chain = client.newChain(util.channel);
 
 // Used by decodeTransaction
 var commonProtoPath = './node_modules/fabric-client/lib/protos/common/common.proto';
@@ -128,9 +116,9 @@ module.exports.queryTransaction = function(transactionId) {
 		// send query
 		// for supplychain
 		var request = {
-			chaincodeId : e2e.chaincodeId,
-			chaincodeVersion : e2e.chaincodeVersion,
-			chainId: e2e.channel,
+			chaincodeId : util.chaincodeId,
+			chaincodeVersion : util.chaincodeVersion,
+			chainId: util.channel,
 			txId: tx_id,
 			nonce: nonce,
 			fcn: 'queryTrade',
@@ -251,7 +239,7 @@ module.exports.queryByChaincode = function() {
 	
 	var org = 'org2';
 	var client = new hfc();
-	var chain = client.newChain(e2e.channel);
+	var chain = client.newChain(util.channel);
 
 	var orgName = ORGS[org].name;
 
@@ -290,9 +278,9 @@ module.exports.queryByChaincode = function() {
 		// send query
 		// for supplychain
 		var request = {
-			chaincodeId : e2e.chaincodeId,
-			chaincodeVersion : e2e.chaincodeVersion,
-			chainId: e2e.channel,
+			chaincodeId : util.chaincodeId,
+			chaincodeVersion : util.chaincodeVersion,
+			chainId: util.channel,
 			txId: tx_id,
 			nonce: nonce,
 			fcn: 'queryTrade',

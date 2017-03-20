@@ -14,16 +14,8 @@
  *  limitations under the License.
  */
 
-// This is an end-to-end test that focuses on exercising all parts of the fabric APIs
-// in a happy-path scenario
-'use strict';
-
-var tape = require('tape');
-var _test = require('tape-promise');
-var test = _test(tape);
-
 var path = require('path');
-var util = require('util');
+//var util = require('util');
 
 var hfc = require('fabric-client');
 var ClientUtils = require('fabric-client/lib/utils.js');
@@ -33,10 +25,7 @@ var EventHub = require('fabric-client/lib/EventHub.js');
 var util = require('./util.js');
 
 var logger = ClientUtils.getLogger('install-chaincode');
-
-var e2e = util.END2END;
-hfc.addConfigFile(path.join(__dirname, './config.json'));
-var ORGS = hfc.getConfigSetting('test-network');
+var ORGS = util.ORGS;
 
 var tx_id = null;
 var nonce = null;
@@ -49,7 +38,7 @@ module.exports.installChaincode = function() {
 	// should work properly
 	var org = 'org2';
 	var client = new hfc();
-	var chain = client.newChain(e2e.channel);
+	var chain = client.newChain(util.channel);
 
 	var orgName = ORGS[org].name;
 
