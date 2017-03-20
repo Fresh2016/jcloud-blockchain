@@ -74,7 +74,7 @@ module.exports.installChaincode = function() {
 	.then((store) => {
 
 		client.setStateStore(store);
-		return testUtil.getSubmitter(client, org);
+		return Submitter.getSubmitter(client, org);
 
 	})
 	.then((admin) => {

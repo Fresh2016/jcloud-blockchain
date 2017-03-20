@@ -18,10 +18,6 @@
 // in a happy-path scenario
 'use strict';
 
-var tape = require('tape');
-var _test = require('tape-promise');
-var test = _test(tape);
-
 var path = require('path');
 var util = require('util');
 
@@ -30,6 +26,7 @@ var utils = require('fabric-client/lib/utils.js');
 var Peer = require('fabric-client/lib/Peer.js');
 var Orderer = require('fabric-client/lib/Orderer.js');
 var EventHub = require('fabric-client/lib/EventHub.js');
+var Submitter = require('./get-submitter.js');
 var testUtil = require('./util.js');
 
 var logger = utils.getLogger('invoke-chaincode');
@@ -63,7 +60,7 @@ module.exports.invokeChaincode = function(traceInfo) {
 
 	}).then((store) => {
 		client.setStateStore(store);
-		return testUtil.getSubmitter(client, org);
+		return Submitter.getSubmitter(client, org);
 
 	}).then((admin) => {
 		logger.debug('Successfully enrolled user \'admin\'');
