@@ -65,7 +65,7 @@ module.exports.getMspid = function getMspid(ORGS, org) {
 }
 
 // Process error by logging and throwing new error
-module.exports.throwError = function throwError(err, desciption){
+module.exports.throwError = function throwError(logger, err, description){
 	logger.error(description + err);
 	throw new Error(description + err);
 }
@@ -82,6 +82,7 @@ module.exports.readFile = function readFile(path) {
 	});
 }
 
+
 // Check if directory or file exists
 // uses entire / absolute path from root
 function existsSync(absolutePath /*string*/) {
@@ -96,3 +97,30 @@ function existsSync(absolutePath /*string*/) {
 		return false;
 	}
 };
+
+
+//Check status code of all responses to 
+//ensure get valid response from all peers
+module.exports.checkProposalResponses = 
+function checkProposalResponses(proposalResponses, proposal_type, logger) {
+	var all_good = true;
+
+	for(var i in proposalResponses) {
+		let one_good = false;
+		if (proposalResponses && proposalResponses[0].response && proposalResponses[0].response.status === 200) {
+			one_good = true;
+			logger.debug(proposal_type + ' proposal was good');
+		} else {
+			logger.error(proposal_type + ' proposal was bad');
+		}
+		all_good = all_good & one_good;
+	}
+	
+	if (all_good) {
+		logger.info('Successfully sent %s Proposal and received ProposalResponse: Status - %s', proposal_type, proposalResponses[0].response.status);
+	} else {
+		module.exports.throwError(logger, null, 'Failed to send Proposal or receive valid response. Response null or invalid.');
+	}
+	
+	return all_good;
+}
