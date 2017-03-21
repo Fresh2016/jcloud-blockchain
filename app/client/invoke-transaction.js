@@ -38,7 +38,7 @@ var eventhubs = [];
 
 
 module.exports.invokeChaincode = function(traceInfo) {
-	logger.info('\n\n***** End-to-end flow: invoke chaincode *****');
+	logger.info('\n\n***** Hyperledger fabric client: invoke chaincode *****');
 	
 	// this is a transaction, will just use org1's identity to
 	// submit the request
@@ -59,21 +59,21 @@ module.exports.invokeChaincode = function(traceInfo) {
 		return sendTransactionProposal(admin, util.getMspid(ORGS, org), traceInfo);
 
 	}, (err) => {
-		util.throwError(err, 'Failed to enroll user \'admin\'. ');
+		util.throwError(logger, err, 'Failed to enroll user \'admin\'. ');
 
 	}).then((results) => {
 		var proposalResponses = results[0];
 		var proposal = results[1];
 		var header   = results[2];
 
-		if (checkProposalResponses(proposalResponses)) {
+		if (util.checkProposalResponses(proposalResponses, 'Invoke transaction', logger)) {
 			logger.debug(util.format('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature));
 			commitTransaction(proposalResponses, proposal, header);
 		} else {
-			util.throwError(null, 'Failed to send Proposal or receive valid response. Response null or status is not 200. exiting...');
+			util.throwError(logger, null, 'Failed to send Proposal or receive valid response. Response null or status is not 200. exiting...');
 		}
 	}, (err) => {
-		util.throwError(err.stack ? err.stack : err, 'Failed to send proposal due to error: ');
+		util.throwError(logger, err.stack ? err.stack : err, 'Failed to send proposal due to error: ');
 
 	}).then((response) => {
 		return finishCommit(response, tx_id);
@@ -92,7 +92,7 @@ function addTxPromise(eventPromises, eh, deployId) {
 	eventPromises.push(txPromise);
 }
 
-
+/*
 function checkProposalResponses(proposalResponses){
 	var all_good = true;
 
@@ -108,7 +108,7 @@ function checkProposalResponses(proposalResponses){
 	}
 	return all_good;
 }
-
+*/
 
 function commitTransaction(proposalResponses, proposal, header){
 	var request = {
@@ -136,7 +136,7 @@ function commitTransaction(proposalResponses, proposal, header){
 		return results[0]; // the first returned value is from the 'sendPromise' which is from the 'sendTransaction()' call
 
 	}).catch((err) => {
-		util.throwError(err, 'Failed to send transaction and get notifications within the timeout period.');
+		util.throwError(logger, err, 'Failed to send transaction and get notifications within the timeout period.');
 	});
 }
 
@@ -163,7 +163,7 @@ function finishCommit(response, tx_id) {
 			};
 		return result;			
 	} else {
-		util.throwError(response.status, 'Failed to order the transaction. Error code: ');
+		util.throwError(logger, response.status, 'Failed to order the transaction. Error code: ');
 	}
 }
 
@@ -229,7 +229,7 @@ function sendTransactionProposal(admin, mspid, traceInfo) {
 	nonce = ClientUtils.getNonce()
 	tx_id = chain.buildTransactionID(nonce, the_user);
 
-	logger.info(util.format('Sending transaction proposal "%s"', tx_id));
+	logger.info('Sending transaction proposal "%s"', tx_id);
 
 	// send proposal to endorser
 	// for supplychain
