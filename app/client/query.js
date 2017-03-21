@@ -51,11 +51,11 @@ var result = {
 
 
 module.exports.queryTransaction = function(transactionId) {
-	// this is a transaction, will just use org1's identity to
+	// this is a transaction, will just use org2's identity to
 	// submit the request. intentionally we are using a different org
 	// than the one that submitted the "move" transaction, although either org
 	// should work properly
-	logger.info('\n\n***** End-to-end flow: query transaction by transactionId *****');
+	logger.info('\n\n***** Hyperledger fabric client: query transaction by transactionId: %s *****', transactionId);
 	
 	var org = 'org2';
 	var orgName = util.getOrgNameByOrg(ORGS, org);
@@ -77,6 +77,177 @@ module.exports.queryTransaction = function(transactionId) {
 		util.throwError(err, 'Failed to enroll user \'admin\'. ');
 		
 	}).then((block) => {
+		logger.info('Chain getBlock() returned block number= %s',block.header.number);
+		return queryTransactionByTxId(transactionId);
+		
+	}).then((processed_transaction) => {
+		logger.info('Chain queryTransaction() returned processed tranaction validationCode: ' + processed_transaction.validationCode);
+
+		// TODO: return nothing? check what we can get from processed_transaction
+		decodeTransaction(processed_transaction, commonProtoPath, transProtoPath);
+ 
+		return chain.queryInfo();
+		
+	}).then((blockchainInfo) => {
+		logger.info('Chain queryInfo() returned blockchain info.');
+		logger.info('Chain queryInfo() returned block height = ' + blockchainInfo.height);
+		logger.info('Chain queryInfo() returned block previousBlockHash = ' + blockchainInfo.previousBlockHash);
+		logger.info('Chain queryInfo() returned block currentBlockHash = ' + blockchainInfo.currentBlockHash);
+		var block_hash = blockchainInfo.currentBlockHash;
+		result.previousBlockHash = blockchainInfo.previousBlockHash;
+		result.currentBlockHash = blockchainInfo.currentBlockHash;
+
+		// send query
+		return chain.queryBlockByHash(block_hash);
+	},
+	(err) => {
+		util.throwError(err.stack ? err.stack : err, 'Failed to send query due to error: ');
+		return result;
+		
+	}).then((block) => {
+		logger.info(' Chain queryBlockByHash() returned block number=%s', block.header.number);
+		logger.info('got back block number '+ block.header.number);
+		result.blockNumber = block.header.number.low;
+
+	}).then(() => {
+		nonce = ClientUtils.getNonce()
+		var tx_id = chain.buildTransactionID(nonce, the_user);
+
+		// send query
+		// for supplychain
+		var request = {
+			chaincodeId : util.chaincodeId,
+			chaincodeVersion : util.chaincodeVersion,
+			chainId: util.channel,
+			txId: tx_id,
+			nonce: nonce,
+			fcn: 'queryTrade',
+			args: ["TransactionId", "Sku", "TradeDate", "TraceInfo"]
+		};
+
+		return chain.queryByChaincode(request);
+	},
+	(err) => {
+		util.throwError(err.stack ? err.stack : err, 'Failed to send query chaincode due to error: ');
+		return result;
+		
+	}).then((response_payloads) => {
+		logger.info('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
+		return parseQuerySupplyChainResponse(response_payloads);
+
+	},
+	(err) => {
+		util.throwError(err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
+
+	}).catch((err) => {
+		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
+		return result;
+	});
+}
+
+
+module.exports.queryPeers = function(channelName) {
+	// this is a transaction, will just use org2's identity to
+	// submit the request.
+
+	// TODO: channel name is fixed from config file and should be passed from REST request
+	logger.info('\n\n***** Hyperledger fabric client: query peer list of channel: %s *****', channelName);
+	
+	var org = 'org1';
+	var orgName = util.getOrgNameByOrg(ORGS, org);
+
+	setupChain(ORGS, orgName, org);
+	
+	return hfc.newDefaultKeyValueStore({
+		path: util.storePathForOrg(orgName)
+		
+	}).then((store) => {
+		client.setStateStore(store);
+		return Submitter.getSubmitter(client, org);
+
+	}).then((admin) => {
+		logger.debug('Successfully enrolled user \'admin\'');
+		
+		the_user = admin;
+		//the_user.mspImpl._id = mspid;
+		the_user.mspImpl._id = ORGS[org].mspid;
+		//return chain.initialize();
+		return chain.getChannelConfig();
+		//return 'peer list from client';
+		//return queryBlock(admin, util.getMspid(ORGS, org));
+	},
+	(err) => {
+		util.throwError(err, 'Failed to enroll user \'admin\'. ');
+		
+	})
+	.then(
+		function(config_envelope) {
+			logger.info('Got config envelope from getChannelConfig :: %j', config_envelope);
+			//console.dir(config_envelope);
+
+			let channel = config_envelope.config.channel;
+			logger.debug('queryPeers -  Channel version :: %s', channel.version);
+			logger.debug('queryPeers -  Channel groups name and originalName:: %s, ', 
+					channel.groups.field.name, channel.groups.field.originalName);
+
+			let app_map = channel.groups.map.Application;
+			let org1Msp_map = app_map.value.groups.map.Org1MSP;
+			logger.debug('queryPeers -  Channel groups maps of %s-%s', 
+					app_map.key, org1Msp_map.key);
+			logger.debug('queryPeers -  Channel groups maps:: (%s, %s)', 
+					org1Msp_map.value.policies.map.Admins.key, 
+					org1Msp_map.value.policies.map.Admins.value.mod_policy);
+			logger.debug('queryPeers -  Channel groups maps:: (%s, %s)', 
+					org1Msp_map.value.policies.map.Readers.key, 
+					org1Msp_map.value.policies.map.Readers.value.mod_policy);
+			logger.debug('queryPeers -  Channel groups maps:: (%s, %s)', 
+					org1Msp_map.value.policies.map.Writers.key, 
+					org1Msp_map.value.policies.map.Writers.value.mod_policy);
+
+			let org2Msp_map = app_map.value.groups.map.Org2MSP;
+			logger.debug('queryPeers -  Channel groups maps of %s-%s', 
+					app_map.key, org2Msp_map.key);
+			logger.debug('queryPeers -  Channel groups maps:: (%s, %s)', 
+					org1Msp_map.value.policies.map.Admins.key, 
+					org1Msp_map.value.policies.map.Admins.value.mod_policy);
+			logger.debug('queryPeers -  Channel groups maps:: (%s, %s)', 
+					org1Msp_map.value.policies.map.Readers.key, 
+					org1Msp_map.value.policies.map.Readers.value.mod_policy);
+			logger.debug('queryPeers -  Channel groups maps:: (%s, %s)', 
+					org1Msp_map.value.policies.map.Writers.key, 
+					org1Msp_map.value.policies.map.Writers.value.mod_policy);
+
+			let orderer_map = channel.groups.map.Orderer;
+			let ordererMSP_map = orderer_map.value.groups.map.OrdererMSP;
+			logger.debug('queryPeers -  Channel groups maps of %s-%s', 
+					orderer_map.key, ordererMSP_map.key);
+			logger.debug('queryPeers -  Channel groups maps:: (%s, %s)', 
+					ordererMSP_map.value.policies.map.Admins.key, 
+					ordererMSP_map.value.policies.map.Admins.value.mod_policy);
+			logger.debug('queryPeers -  Channel groups maps:: (%s, %s)', 
+					ordererMSP_map.value.policies.map.Readers.key, 
+					ordererMSP_map.value.policies.map.Readers.value.mod_policy);
+			logger.debug('queryPeers -  Channel groups maps:: (%s, %s)', 
+					ordererMSP_map.value.policies.map.Writers.key, 
+					ordererMSP_map.value.policies.map.Writers.value.mod_policy);
+
+			logger.debug('queryPeers -  Channel policies name and originalName:: %s, %s', 
+					channel.policies.field.name, channel.policies.field.originalName);
+
+			let policy_map = channel.policies.map;
+			logger.debug('queryPeers -  Channel policies maps:: (%s, %s)', 
+					policy_map.AcceptAllPolicy.key, policy_map.AcceptAllPolicy.value.mod_policy);
+			logger.debug('queryPeers -  Channel policies maps:: (%s, %s)', 
+					policy_map.Admins.key, policy_map.Admins.value.mod_policy);
+			logger.debug('queryPeers -  Channel policies maps:: (%s, %s)', 
+					policy_map.Readers.key, policy_map.Readers.value.mod_policy);
+			logger.debug('queryPeers -  Channel policies maps:: (%s, %s)', 
+					policy_map.Writers.key, policy_map.Writers.value.mod_policy);
+		}
+	)
+	/*
+
+	.then((block) => {
 		logger.info('Chain getBlock() returned block number= %s',block.header.number);
 		return queryTransactionByTxId(transactionId);
 		
@@ -139,12 +310,13 @@ module.exports.queryTransaction = function(transactionId) {
 	(err) => {
 		util.throwError(err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
 
-	}).catch((err) => {
+	})
+	*/
+	.catch((err) => {
 		logger.error.error('Failed to query with error:' + err.stack ? err.stack : err);
 		return result;
 	});
 }
-
 
 
 function decodeTransaction(processed_transaction, commonProtoPath, transProtoPath) {
@@ -208,6 +380,9 @@ function queryTransactionByTxId(transactionId){
 
 
 function setupChain(ORGS, orgName, peerOrg) {
+	// set up the chain with orderer
+	chain.addOrderer(new Orderer(ORGS.orderer));
+	
 	// set up the chain to use each org's 'peer1' for
 	// both requests and events
 	for (let key in ORGS) {
@@ -235,7 +410,7 @@ module.exports.queryByChaincode = function() {
 	// submit the request. intentionally we are using a different org
 	// than the one that submitted the "move" transaction, although either org
 	// should work properly
-	logger.info('\n\n***** End-to-end flow: query chaincode *****');
+	logger.info('\n\n***** Hyperledger fabric client: query chaincode *****');
 	
 	var org = 'org2';
 	var client = new hfc();
