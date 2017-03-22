@@ -31,14 +31,16 @@ var client = new hfc();
 var chain = client.newChain(util.channel);
 
 module.exports.createChannel = function(org) {
-	logger.info('\n\n***** Hyperledger fabric client: create channel *****');
-
-	chain.addOrderer(new Orderer(ORGS.orderer));
+	logger.info('\n\n***** Hyperledger fabric client: create channel via %s *****', org);
 
 	var orgName = util.getOrgNameByOrg(ORGS, org);
+	chain.addOrderer(new Orderer(ORGS.orderer));
+
+	// remove expired keys before enroll admin
+	util.cleanupDir(util.storePathForOrg(orgName));
 
 	return hfc.newDefaultKeyValueStore({
-		path: util.storePathForOrg(org)
+		path: util.storePathForOrg(orgName)
 	})
 	.then((store) => {
 		client.setStateStore(store);
