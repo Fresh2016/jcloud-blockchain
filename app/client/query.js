@@ -57,7 +57,7 @@ module.exports.queryTransaction = function(transactionId) {
 	// should work properly
 	logger.info('\n\n***** Hyperledger fabric client: query transaction by transactionId: %s *****', transactionId);
 	
-	var org = 'org2';
+	var org = 'org1';
 	var orgName = util.getOrgNameByOrg(ORGS, org);
 
 	setupChain(ORGS, orgName, org);
@@ -74,7 +74,7 @@ module.exports.queryTransaction = function(transactionId) {
 		return queryBlock(admin, util.getMspid(ORGS, org));
 	},
 	(err) => {
-		util.throwError(err, 'Failed to enroll user \'admin\'. ');
+		util.throwError(logger, err, 'Failed to enroll user \'admin\'. ');
 		
 	}).then((block) => {
 		logger.info('Chain getBlock() returned block number= %s',block.header.number);
@@ -101,7 +101,7 @@ module.exports.queryTransaction = function(transactionId) {
 		return chain.queryBlockByHash(block_hash);
 	},
 	(err) => {
-		util.throwError(err.stack ? err.stack : err, 'Failed to send query due to error: ');
+		util.throwError(logger, err.stack ? err.stack : err, 'Failed to send query due to error: ');
 		return result;
 		
 	}).then((block) => {
@@ -124,11 +124,12 @@ module.exports.queryTransaction = function(transactionId) {
 			fcn: 'queryTrade',
 			args: ["TransactionId", "Sku", "TradeDate", "TraceInfo"]
 		};
-
+		logger.debug('Sending query request: %s', JSON.stringify(request));
+		
 		return chain.queryByChaincode(request);
 	},
 	(err) => {
-		util.throwError(err.stack ? err.stack : err, 'Failed to send query chaincode due to error: ');
+		util.throwError(logger, err.stack ? err.stack : err, 'Failed to send query chaincode due to error: ');
 		return result;
 		
 	}).then((response_payloads) => {
@@ -137,7 +138,7 @@ module.exports.queryTransaction = function(transactionId) {
 
 	},
 	(err) => {
-		util.throwError(err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
+		util.throwError(logger, err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
 
 	}).catch((err) => {
 		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
@@ -153,7 +154,7 @@ module.exports.queryPeers = function(channelName) {
 	// TODO: channel name is fixed from config file and should be passed from REST request
 	logger.info('\n\n***** Hyperledger fabric client: query peer list of channel: %s *****', channelName);
 	
-	var org = 'org1';
+	var org = 'org2';
 	var orgName = util.getOrgNameByOrg(ORGS, org);
 
 	setupChain(ORGS, orgName, org);
@@ -164,8 +165,54 @@ module.exports.queryPeers = function(channelName) {
 	}).then((store) => {
 		client.setStateStore(store);
 		return Submitter.getSubmitter(client, org);
-
 	}).then((admin) => {
+		logger.debug('Successfully enrolled user \'admin\'');
+		var result = [];
+		
+		the_user = admin;
+		//the_user.mspImpl._id = mspid;
+		the_user.mspImpl._id = ORGS[org].mspid;
+		let peers = chain.getPeers();
+		for (let i = 0; i < peers.length; i++)  {
+			thisPeer = peers[i];
+			console.log(thisPeer.getUrl());
+			var peerStatus = {
+					name: thisPeer.getUrl(),
+					status: 'DOWN'
+				}
+			//chain.setPrimaryPeer(thisPeer);
+			
+			return chain.queryChannels(thisPeer);
+	
+			/*
+			
+			chain.queryChannels(thisPeer)
+				.then((response) => {
+					logger.debug('Peer %s has joined channels %s', peerStatus.name, JSON.stringify(response.channels));
+					let channels = response.channels;
+					for (let i = 0; i < channels.length; i++)  {
+						if (channels[i].channel_id == channelName) {
+							result.push(peerStatus);
+							console.dir(result);
+							continue;
+						}
+					}
+				});
+					*/
+		}
+		
+	
+	})
+	.then((response_payloads) => {
+		console.dir(response_payloads);
+		for(let i = 0; i < response_payloads.length; i++) {
+			logger.info('gua! Query results [' + i + ']: %s' + response_payloads[i]);
+		}
+		return 'aha';
+	})
+		/*
+	
+	.then((admin) => {
 		logger.debug('Successfully enrolled user \'admin\'');
 		
 		the_user = admin;
@@ -177,7 +224,7 @@ module.exports.queryPeers = function(channelName) {
 		//return queryBlock(admin, util.getMspid(ORGS, org));
 	},
 	(err) => {
-		util.throwError(err, 'Failed to enroll user \'admin\'. ');
+		util.throwError(logger, err, 'Failed to enroll user \'admin\'. ');
 		
 	})
 	.then(
@@ -272,7 +319,7 @@ module.exports.queryPeers = function(channelName) {
 		return chain.queryBlockByHash(block_hash);
 	},
 	(err) => {
-		util.throwError(err.stack ? err.stack : err, 'Failed to send query due to error: ');
+		util.throwError(logger, err.stack ? err.stack : err, 'Failed to send query due to error: ');
 		return result;
 		
 	}).then((block) => {
@@ -299,7 +346,7 @@ module.exports.queryPeers = function(channelName) {
 		return chain.queryByChaincode(request);
 	},
 	(err) => {
-		util.throwError(err.stack ? err.stack : err, 'Failed to send query chaincode due to error: ');
+		util.throwError(logger, err.stack ? err.stack : err, 'Failed to send query chaincode due to error: ');
 		return result;
 		
 	}).then((response_payloads) => {
@@ -308,7 +355,7 @@ module.exports.queryPeers = function(channelName) {
 
 	},
 	(err) => {
-		util.throwError(err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
+		util.throwError(logger, err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
 
 	})
 	*/
@@ -331,7 +378,7 @@ function decodeTransaction(processed_transaction, commonProtoPath, transProtoPat
 		logger.debug(' Chain queryTransaction - transaction ID :: %s:', channel_header.tx_id);
 	}
 	catch(err) {
-		util.throwError(err.stack ? err.stack : err, 'Failed to decode transaction query response.');
+		util.throwError(logger, err.stack ? err.stack : err, 'Failed to decode transaction query response.');
 	}	
 }
 
@@ -346,6 +393,7 @@ function parseQuerySupplyChainResponse(response_payloads) {
 			result.tradeDate = res_list[2];
 			result.traceInfo = res_list[3];
 			//result.counter = res_list[4];
+			logger.info('\nQuery results 4: %s' + response_payloads[4]);
 			return result;
 		}
 		//return result;
@@ -380,6 +428,8 @@ function queryTransactionByTxId(transactionId){
 
 
 function setupChain(ORGS, orgName, peerOrg) {
+	logger.info('Setup chain %s for query', chain.getName());
+	
 	// set up the chain with orderer
 	chain.addOrderer(new Orderer(ORGS.orderer));
 	
@@ -398,6 +448,9 @@ function setupChain(ORGS, orgName, peerOrg) {
 			}
 		}
 	}
+	
+	logger.debug('remove expired keys before enroll admin');
+	
 	// remove expired keys before enroll admin
 	util.cleanupDir(util.storePathForOrg(orgName));
 }
