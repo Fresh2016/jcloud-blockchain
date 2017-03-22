@@ -67,7 +67,8 @@ module.exports.invokeChaincode = function(traceInfo) {
 		var header   = results[2];
 
 		if (util.checkProposalResponses(proposalResponses, 'Invoke transaction', logger)) {
-			logger.debug(util.format('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature));
+			logger.debug('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', 
+					proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature);
 			commitTransaction(proposalResponses, proposal, header);
 		} else {
 			util.throwError(logger, null, 'Failed to send Proposal or receive valid response. Response null or status is not 200. exiting...');
@@ -92,23 +93,6 @@ function addTxPromise(eventPromises, eh, deployId) {
 	eventPromises.push(txPromise);
 }
 
-/*
-function checkProposalResponses(proposalResponses){
-	var all_good = true;
-
-	for(var i in proposalResponses) {
-		let one_good = false;
-		if (proposalResponses && proposalResponses[0].response && proposalResponses[0].response.status === 200) {
-			one_good = true;
-			logger.debug('transaction proposal was good');
-		} else {
-			logger.error('transaction proposal was bad');
-		}
-		all_good = all_good & one_good;
-	}
-	return all_good;
-}
-*/
 
 function commitTransaction(proposalResponses, proposal, header){
 	var request = {
