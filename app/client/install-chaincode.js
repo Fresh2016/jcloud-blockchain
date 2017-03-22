@@ -14,10 +14,6 @@
  *  limitations under the License.
  */
 
-// This is an end-to-end test that focuses on exercising all parts of the fabric APIs
-// in a happy-path scenario
-'use strict';
-
 var path = require('path');
 var async = require('async');
 
@@ -26,6 +22,7 @@ var ClientUtils = require('fabric-client/lib/utils.js');
 var Peer = require('fabric-client/lib/Peer.js');
 var Orderer = require('fabric-client/lib/Orderer.js');
 var Submitter = require('./get-submitter.js');
+var setup = require('./setup.js');
 var util = require('./util.js');
 
 var logger = ClientUtils.getLogger('install-chaincode');
@@ -35,8 +32,6 @@ var tx_id = null;
 var nonce = null;
 var the_user = null;
 var targets = [];
-var client = new hfc();
-var chain = client.newChain(util.channel);
 
 // Temporarily set GOPATH to chaincode_repo
 process.env.GOPATH = path.join(__dirname, '/chaincode_repo');
@@ -44,18 +39,14 @@ process.env.GOPATH = path.join(__dirname, '/chaincode_repo');
 module.exports.installChaincode = function(callback) {
 	logger.info('\n\n***** Hyperledger fabric client: install chaincode *****');
 	
-	var orgs = [];
-	for (let key in ORGS) {
-		if (ORGS.hasOwnProperty(key) && typeof ORGS[key].peer1 !== 'undefined') {
-			orgs.push(key);
-		}
-	}
+	var orgs = util.getOrgs(ORGS);
 	logger.info('There are %s organizations: %s. Going to install chaincode one by one.', orgs.length, orgs);
+	
+	//TODO: testing if it's ok to install all peers at the same time
+	//orgs = ['org1'];
 
 	// Send concurrent proposal
 	return async.mapSeries(orgs, function(org, processResults) {
-	    logger.debug('org: ' + org);
-	    
 		installChaincode(org)
 		.then(() => {
 			logger.info('Successfully installed chaincode in peers of organization %s', org);
@@ -79,10 +70,12 @@ module.exports.installChaincode = function(callback) {
 
 
 function installChaincode(org) {
+	logger.info('Calling peers in organization "%s" to install chaincode', org);
 
+	// Different org uses different client
+	var client = new hfc();
 	var orgName = util.getOrgNameByOrg(ORGS, org);
-
-	setupChain(ORGS, orgName, org);
+	var chain = setup.setupChain(client, ORGS, orgName, org);
 	
 	return hfc.newDefaultKeyValueStore({
 		path: util.storePathForOrg(orgName)
@@ -92,7 +85,7 @@ function installChaincode(org) {
 		
 	}).then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
-		return sendInstallProposal(admin, util.getMspid(ORGS, org));
+		return sendInstallProposal(chain, admin, util.getMspid(ORGS, org));
 
 	},
 	(err) => {
@@ -113,14 +106,14 @@ function installChaincode(org) {
 }
 
 
-function sendInstallProposal(admin, mspid) {
+function sendInstallProposal(chain, admin, mspid) {
 	the_user = admin;
 	the_user.mspImpl._id = mspid;
 
 	nonce = ClientUtils.getNonce()
 	tx_id = chain.buildTransactionID(nonce, the_user);
+	var targets = chain.getPeers();
 
-	// send proposal to endorser
 	var request = {
 		targets: targets,
 		chaincodePath: util.CHAINCODE_PATH,
@@ -133,25 +126,3 @@ function sendInstallProposal(admin, mspid) {
 	return chain.sendInstallProposal(request);	
 }
 
-
-function setupChain(ORGS, orgName, peerOrg) {
-	// set up the chain with orderer
-	if (!chain.getOrderers()) {
-		chain.addOrderer(new Orderer(ORGS.orderer));
-	}
-
-	// set up the chain to use each org's 'peer1' for
-	// both requests and events
-	for (let key in ORGS[peerOrg]) {
-		if (ORGS[peerOrg].hasOwnProperty(key)) {
-			if (key.indexOf('peer') === 0) {
-				let peer = new Peer(ORGS[peerOrg][key].requests);
-				targets.push(peer);
-				chain.addPeer(peer);
-			}
-		}
-	}
-
-	// remove expired keys before enroll admin
-	util.cleanupDir(util.storePathForOrg(orgName));
-}
