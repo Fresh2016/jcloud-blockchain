@@ -30,13 +30,11 @@ var targets = [];
 var client = new hfc();
 var chain = client.newChain(util.channel);
 
-module.exports.createChannel = function() {
+module.exports.createChannel = function(org) {
 	logger.info('\n\n***** Hyperledger fabric client: create channel *****');
 
 	chain.addOrderer(new Orderer(ORGS.orderer));
 
-	// Acting as a client in org1 when creating the channel
-	var org = 'org1';
 	var orgName = util.getOrgNameByOrg(ORGS, org);
 
 	return hfc.newDefaultKeyValueStore({
