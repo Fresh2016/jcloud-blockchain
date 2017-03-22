@@ -74,13 +74,13 @@ module.exports.invokeChaincode = function(traceInfo) {
 			util.throwError(logger, null, 'Failed to send Proposal or receive valid response. Response null or status is not 200. exiting...');
 		}
 	}, (err) => {
-		util.throwError(logger, err.stack ? err.stack : err, 'Failed to send proposal due to error: ');
+		util.throwError(logger, err.stack ? err.stack : err, 'Failed to send invoke proposal due to error: ');
 
 	}).then((response) => {
-		return finishCommit(response, tx_id);
+		return finishCommit(response, logger, tx_id);
 	}, (err) => {
 		logger.error('Failed to send transaction due to error: ' + err.stack ? err.stack : err);
-		return 'failed';
+		return 'FAILED';
 	});
 };
 
@@ -100,7 +100,7 @@ function commitTransaction(proposalResponses, proposal, header){
 		proposal: proposal,
 		header: header
 	};
-	logger.debug('request is %s ', JSON.stringify(request));
+	logger.debug('Commit request is %s ', JSON.stringify(request));
 
 	// set the transaction listener and set a timeout of 30sec
 	// if the transaction did not get committed within the timeout period,
@@ -115,12 +115,11 @@ function commitTransaction(proposalResponses, proposal, header){
 	var sendPromise = chain.sendTransaction(request);
 	return Promise.all([sendPromise].concat(eventPromises))
 	.then((results) => {
-
 		logger.info('Invoke transaction event promise all complete.');
 		return results[0]; // the first returned value is from the 'sendPromise' which is from the 'sendTransaction()' call
 
 	}).catch((err) => {
-		util.throwError(logger, err, 'Failed to send transaction and get notifications within the timeout period.');
+		util.throwError(logger, err, 'Failed to send invoke transaction and get notifications within the timeout period.');
 	});
 }
 
@@ -139,7 +138,7 @@ function disconnectEventhub(context, ehs, f) {
 	};
 }
 
-function finishCommit(response, tx_id) {
+function finishCommit(response, logger, tx_id) {
 	if (response.status === 'SUCCESS') {
 		printSuccessHint(tx_id);
 		var result = {
