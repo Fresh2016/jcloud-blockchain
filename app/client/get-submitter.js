@@ -17,6 +17,12 @@
 
 var hfc = require('fabric-client');
 var util = require('./util.js');
+var User = require('fabric-client/lib/User.js');
+var copService = require('fabric-ca-client/lib/FabricCAClientImpl.js');
+var CryptoSuite = require('fabric-client/lib/impl/CryptoSuite_ECDSA_AES.js');
+var KeyStore = require('fabric-client/lib/impl/CryptoKeyStore.js');
+var ecdsaKey = require('fabric-client/lib/impl/ecdsa/key.js');
+
 var ORGS = util.ORGS;
 
 var defaultUserOrg = 'org1';

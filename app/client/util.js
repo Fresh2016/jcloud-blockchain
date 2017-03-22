@@ -23,17 +23,12 @@ var KEYUTIL = jsrsa.KEYUTIL;
 
 // Fabric client imports
 var hfc = require('fabric-client');
-var copService = require('fabric-ca-client/lib/FabricCAClientImpl.js');
-var User = require('fabric-client/lib/User.js');
-var CryptoSuite = require('fabric-client/lib/impl/CryptoSuite_ECDSA_AES.js');
-var KeyStore = require('fabric-client/lib/impl/CryptoKeyStore.js');
-var ecdsaKey = require('fabric-client/lib/impl/ecdsa/key.js');
 
 // Channel and chaincode settings
 // TODO: should be managed by manager and stored in DB
 module.exports.CHAINCODE_PATH = 'github.com/supplychain';
 module.exports.channel = 'mychannel';
-module.exports.chaincodeId = 'end2end2';
+module.exports.chaincodeId = 'supplychain';
 module.exports.chaincodeVersion = 'v0';
 
 // Read config.json information
@@ -47,11 +42,12 @@ module.exports.storePathForOrg = function(org) {
 
 // Clean up KeyValueStore before new operations
 module.exports.cleanupDir = function(keyValStorePath) {
-	var absPath = path.join(process.cwd(), keyValStorePath);
-	var exists = existsSync(absPath);
-	if (exists) {
-		fs.removeSync(absPath);
-	}
+	var absPath = keyValStorePath;
+	//var absPath = path.join(process.cwd(), keyValStorePath);
+	deleteFolderRecursive(absPath);
+	//TODO: delete CryptoKeyStore if exists. To be replaced by input para.
+	deleteFolderRecursive('C:/Users/shiying1/.hfc-key-store');
+	deleteFolderRecursive('~/.hfc-key-store');
 };
 
 // Read Org Name from config
@@ -97,6 +93,24 @@ function existsSync(absolutePath /*string*/) {
 		return false;
 	}
 };
+
+
+// Remove directory recursively
+function deleteFolderRecursive(path) {
+    var files = [];
+    if( fs.existsSync(path) ) {
+        files = fs.readdirSync(path);
+        files.forEach(function(file,index){
+            var curPath = path + "/" + file;
+            if(fs.statSync(curPath).isDirectory()) { // recurse
+                deleteFolderRecursive(curPath);
+            } else { // delete file
+                fs.unlinkSync(curPath);
+            }
+        });
+        fs.rmdirSync(path);
+    }
+}
 
 
 //Check status code of all responses to 
