@@ -20,6 +20,7 @@ var Peer = require('fabric-client/lib/Peer.js');
 var Orderer = require('fabric-client/lib/Orderer.js');
 var EventHub = require('fabric-client/lib/EventHub.js');
 var Submitter = require('./get-submitter.js');
+var setup = require('./setup.js');
 var util = require('./util.js');
 
 var logger = ClientUtils.getLogger('query-chaincode');
@@ -31,7 +32,6 @@ var nonce = null;
 var the_user = null;
 var targets = [];
 var client = new hfc();
-var chain = client.newChain(util.channel);
 
 // Used by decodeTransaction
 var commonProtoPath = './node_modules/fabric-client/lib/protos/common/common.proto';
@@ -57,12 +57,11 @@ var result = {
 var defaultOrg = 'org2';
 
 module.exports.isTransactionSucceed = function(transactionId) {
-	logger.info('\n\n***** Hyperledger fabric client: query transaction by transactionId: %s *****', transactionId);
+	logger.info('\n\n***** Hyperledger fabric client: query transaction validationCode by transactionId: %s *****', transactionId);
 	
 	var org = defaultOrg;
 	var orgName = util.getOrgNameByOrg(ORGS, org);
-
-	setupChain(ORGS, orgName, org);
+	var chain = setup.setupChainWithOnlyPrimaryPeer(client, ORGS, orgName, org);
 	
 	return hfc.newDefaultKeyValueStore({
 		path: util.storePathForOrg(orgName)
@@ -94,8 +93,7 @@ module.exports.queryTransaction = function(transactionId) {
 	
 	var org = defaultOrg;
 	var orgName = util.getOrgNameByOrg(ORGS, org);
-
-	setupChain(ORGS, orgName, org);
+	var chain = setup.setupChainWithOnlyPrimaryPeer(client, ORGS, orgName, org);
 	
 	return hfc.newDefaultKeyValueStore({
 		path: util.storePathForOrg(orgName)
@@ -165,8 +163,7 @@ module.exports.queryPeers = function(channelName) {
 
 	var org = defaultOrg;
 	var orgName = util.getOrgNameByOrg(ORGS, org);
-
-	setupChain(ORGS, orgName, org);
+	var chain = setup.setupChainWithOnlyPrimaryPeer(client, ORGS, orgName, org);
 	
 	return hfc.newDefaultKeyValueStore({
 		path: util.storePathForOrg(orgName)
@@ -429,129 +426,3 @@ function queryTransactionByTxId(transactionId){
 	// send query
 	return chain.queryTransaction(transactionId); //assumes the end-to-end has run first
 }
-
-
-function setupChain(ORGS, orgName, peerOrg) {
-	logger.info('Setup chain %s for query', chain.getName());
-	
-	// set up the chain with orderer
-	chain.addOrderer(new Orderer(ORGS.orderer));
-	
-	// set up the chain to use each org's 'peer1' for
-	// both requests and events
-	for (let key in ORGS) {
-		if (ORGS.hasOwnProperty(key) && typeof ORGS[key].peer1 !== 'undefined') {
-			let peer = new Peer(ORGS[key].peer1.requests);
-			if (!chain.isValidPeer(peer)) {
-				chain.addPeer(peer);
-				//logger.debug('喔～ key is %s, org is %s', key, peerOrg);
-				if (key == peerOrg) {
-					logger.debug('set primary peer: %s', JSON.stringify(peer));
-					chain.setPrimaryPeer(peer);
-				}
-			}
-		}
-	}
-	
-	logger.debug('remove expired keys before enroll admin');
-	
-	// remove expired keys before enroll admin
-	util.cleanupDir(util.storePathForOrg(orgName));
-}
-
-
-/*
-// to be deleted
-module.exports.queryByChaincode = function() {
-	// this is a transaction, will just use org1's identity to
-	// submit the request. intentionally we are using a different org
-	// than the one that submitted the "move" transaction, although either org
-	// should work properly
-	logger.info('\n\n***** Hyperledger fabric client: query chaincode *****');
-	
-	var org = 'org2';
-	var client = new hfc();
-	var chain = client.newChain(util.channel);
-
-	var orgName = ORGS[org].name;
-
-	var targets = [];
-	// set up the chain to use each org's 'peer1' for
-	// both requests and events
-	for (let key in ORGS) {
-		if (ORGS.hasOwnProperty(key) && typeof ORGS[key].peer1 !== 'undefined') {
-			let peer = new Peer(ORGS[key].peer1.requests);
-			chain.addPeer(peer);
-			//logger.debug('喔～ key is %s, org is %s', key, org);
-			if (key == org) {
-				logger.debug('set primary peer: %s', JSON.stringify(peer));
-				chain.setPrimaryPeer(peer);
-			}
-		}
-	}
-
-	// remove expired keys before enroll admin
-	util.cleanupDir(util.storePathForOrg(orgName));
-	
-	return hfc.newDefaultKeyValueStore({
-		path: util.storePathForOrg(orgName)
-	}).then((store) => {
-
-		client.setStateStore(store);
-		return Submitter.getSubmitter(client, org, logger);
-
-	}).then((admin) => {
-		the_user = admin;
-		the_user.mspImpl._id = util.getMspid(ORGS, org);
-
-		nonce = ClientUtils.getNonce()
-		tx_id = chain.buildTransactionID(nonce, the_user);
-
-		// send query
-		// for supplychain
-		var request = {
-			chaincodeId : util.chaincodeId,
-			chaincodeVersion : util.chaincodeVersion,
-			chainId: util.channel,
-			txId: tx_id,
-			nonce: nonce,
-			fcn: 'queryTrade',
-			args: ["TransactionId", "Sku", "TradeDate", "TraceInfo"]
-		};
-
-		return chain.queryByChaincode(request);
-	},
-	(err) => {
-		logger.error('Failed to get submitter \'admin\'');
-		logger.error('Failed to get submitter \'admin\'. Error: ' + err.stack ? err.stack : err );
-		return result;
-	}).then((response_payloads) => {
-		logger.debug('Query results: %s' + response_payloads);
-		if (response_payloads) {
-			for(let i = 0; i < response_payloads.length; i++) {
-				logger.debug('Query results [' + i + ']: %s' + response_payloads[i]);
-				var res_list = response_payloads[i].toString('utf8').split(',');
-				var result = {
-						TransactionId : res_list[0],
-						Sku : res_list[1],
-						TradeDate: res_list[2],
-						TraceInfo: res_list[3],
-						counter: res_list[4]
-					};
-				return result;
-			}
-			return result;
-		} else {
-			logger.error('response_payloads is null');
-			return result;
-		}
-	},
-	(err) => {
-		logger.error('Failed to send query due to error: ' + err.stack ? err.stack : err);
-		return result;
-	}).catch((err) => {
-		logger.error('Failed to end to end test with error:' + err.stack ? err.stack : err);
-		return result;
-	});
-}
-*/

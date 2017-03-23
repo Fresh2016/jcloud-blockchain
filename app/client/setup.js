@@ -17,7 +17,7 @@ var Orderer = require('fabric-client/lib/Orderer.js');
 var Peer = require('fabric-client/lib/Peer.js');
 var util = require('./util.js');
 
-// initial a new chain for specific org
+// initial a new chain for specific org with all peers
 module.exports.setupChain = function(client, ORGS, orgName, peerOrg) {
 	var chain = client.newChain(util.channel);
 	chain.addOrderer(new Orderer(ORGS.orderer));
@@ -36,4 +36,33 @@ module.exports.setupChain = function(client, ORGS, orgName, peerOrg) {
 	util.cleanupDir(util.storePathForOrg(orgName));
 	
 	return chain;
+}
+
+
+//initial a new chain for specific org with only peer1 and as primary peer
+module.exports.setupChainWithOnlyPrimaryPeer = function(client, ORGS, orgName, peerOrg) {
+	// set up the chain with orderer
+	var chain = client.newChain(util.channel);
+	chain.addOrderer(new Orderer(ORGS.orderer));
+	
+	// set up the chain to use each org's 'peer1' for
+	// both requests and events
+	for (let key in ORGS) {
+		if (ORGS.hasOwnProperty(key) && typeof ORGS[key].peer1 !== 'undefined') {
+			let peer = new Peer(ORGS[key].peer1.requests);
+			if (!chain.isValidPeer(peer)) {
+				chain.addPeer(peer);
+				//logger.debug('喔～ key is %s, org is %s', key, peerOrg);
+				if (key == peerOrg) {
+					chain.setPrimaryPeer(peer);
+				}
+			}
+		}
+	}
+	
+	// remove expired keys before enroll admin
+	util.cleanupDir(util.storePathForOrg(orgName));
+	
+	return chain;
+
 }
