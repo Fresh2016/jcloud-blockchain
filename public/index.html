@@ -52,6 +52,7 @@
 				<ul class="nav navbar-nav">
 					<li class="active"><a href="#" ng-click="viewType='query'">查询</a></li>
 					<li class="active"><a href="#" ng-click="viewType='transaction'">交易</a></li>
+					<li class="active"><a href="#" ng-click="viewType='monitor'">监控</a></li>
 				</ul>
 			</div><!--/.nav-collapse -->
 		</div><!--/.container -->
@@ -63,6 +64,7 @@
 		<div class="view" ng-switch on="viewType">
 			<div ng-switch-when="query"><div ng-include="'views/query-view.html'"></div></div>
 			<div ng-switch-when="transaction"><div ng-include="'views/transaction-view.html'"></div></div>
+			<div ng-switch-when="monitor"><div ng-include="'views/monitor-view.html'"></div></div>
 			<div ng-switch-default><div ng-include="'views/query-view.html'"></div></div>
 		</div>
 

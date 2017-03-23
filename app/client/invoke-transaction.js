@@ -220,7 +220,7 @@ function sendTransactionProposal(admin, mspid, traceInfo) {
 		chaincodeId : util.chaincodeId,
 		chaincodeVersion : util.chaincodeVersion,
 		fcn: 'addNewTrade',
-		args: ["Sku", "Sku654321", "TraceInfo", traceInfo ],
+		args: ["Sku", "Sku654321", "TraceInfo", traceInfo],
 		chainId: util.channel,
 		txId: tx_id,
 		nonce: nonce

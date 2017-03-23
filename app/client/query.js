@@ -31,7 +31,6 @@ var ORGS = util.ORGS;
 var nonce = null;
 var the_user = null;
 var targets = [];
-var client = new hfc();
 
 // Used by decodeTransaction
 var commonProtoPath = './node_modules/fabric-client/lib/protos/common/common.proto';
@@ -58,7 +57,9 @@ var defaultOrg = 'org2';
 
 module.exports.isTransactionSucceed = function(transactionId) {
 	logger.info('\n\n***** Hyperledger fabric client: query transaction validationCode by transactionId: %s *****', transactionId);
-	
+
+	// Different org uses different client
+	var client = new hfc();
 	var org = defaultOrg;
 	var orgName = util.getOrgNameByOrg(ORGS, org);
 	var chain = setup.setupChainWithOnlyPrimaryPeer(client, ORGS, orgName, org);
@@ -91,6 +92,8 @@ module.exports.isTransactionSucceed = function(transactionId) {
 module.exports.queryTransaction = function(transactionId) {
 	logger.info('\n\n***** Hyperledger fabric client: query transaction by transactionId: %s *****', transactionId);
 	
+	// Different org uses different client
+	var client = new hfc();
 	var org = defaultOrg;
 	var orgName = util.getOrgNameByOrg(ORGS, org);
 	var chain = setup.setupChainWithOnlyPrimaryPeer(client, ORGS, orgName, org);
@@ -161,6 +164,8 @@ module.exports.queryPeers = function(channelName) {
 	// TODO: channel name is fixed from config file and should be passed from REST request
 	logger.info('\n\n***** Hyperledger fabric client: query peer list of channel: %s *****', channelName);
 
+	// Different org uses different client
+	var client = new hfc();
 	var org = defaultOrg;
 	var orgName = util.getOrgNameByOrg(ORGS, org);
 	var chain = setup.setupChainWithOnlyPrimaryPeer(client, ORGS, orgName, org);

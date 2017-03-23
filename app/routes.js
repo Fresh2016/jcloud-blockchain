@@ -51,7 +51,24 @@ module.exports = function(app) {
 			return 'failed';
 		});
 	});	
-	
+
+	// API: query peer list
+	app.get('/v1/peers', function(req, res) {
+		console.log('API: query peer list');
+		queryClient.queryTransaction(req.query.channel)
+			.then((result) => {
+				console.log('API: query result %s', JSON.stringify(result));
+				res.json(result); // return all amounts in JSON format
+			},
+		(err) => {
+			console.error('API: query result %s', result);
+			res.json('failed');
+		}).catch((err) => {
+			console.error('API: query result %s', result);
+			return 'failed';
+		});
+	});	
+
 	// API: invoke transaction
 	app.post('/v1/supplychain', function(req, res) {
 		console.log('API: invoke transaction');
