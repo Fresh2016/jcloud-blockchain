@@ -19,7 +19,7 @@ package main
 import (
 	//"bytes"
 	"fmt"
-    "os" 
+    //"os" 
 	"strconv"
     "time"
     
@@ -43,9 +43,7 @@ func main() {
 
 // Initialize chaincode, called by deploy.js
 func (t *SupplyChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response  {
-    
     fmt.Println("########### supplychain_chaincode Init ###########")
-
 	_, args := stub.GetFunctionAndParameters()
 
 	return t.addNewTrade(stub, args)
@@ -74,28 +72,28 @@ func (t *SupplyChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.getTradeHistory(stub, args)
 	}
 
-	fmt.Println("Invoke did not find func: " + function) //error
+	fmt.Println("ERROR: Invoke did not find func: " + function) //error
 	return shim.Error("Received unknown function invocation")
 }
 
 
-// Add new trade and trace info, where TransactionId is fake
+// Add new trade and trace info
 func (t *SupplyChaincode) addNewTrade(stub shim.ChaincodeStubInterface, args []string) pb.Response  {
     
     fmt.Println("########### supplychain_chaincode addNewTrade ###########")
 
-	var TransactionId, Sku, TradeDate, TraceInfo, Counter string	// Fileds of a trade
-	var TransactionIdVal, SkuVal, TradeDateVal, TraceInfoVal string	// Information values of a trade 
+	var Sku, TradeDate, TraceInfo, Counter string	// Fileds of a trade
+	var SkuVal, TradeDateVal, TraceInfoVal string	// Information values of a trade 
 	var CounterVal int // Used for testing TPS
 	var err error
 
 	if len(args) != 4 {
-		return shim.Error("Incorrect number of arguments. Expecting 8")
+		return shim.Error("Incorrect number of arguments. Expecting 4")
+	} else {
+		fmt.Printf("Received SkuVal: %s, TraceInfoVal: %s\n", args[1], args[3])
 	}
 
 	// Initialize the chaincode
-	TransactionId = "TransactionId"
-	TransactionIdVal = getUUID()
 	TradeDate = "TradeDate"
 	TradeDateVal = time.Unix(time.Now().Unix(), 0).String()
 	Sku = args[0]
@@ -106,17 +104,12 @@ func (t *SupplyChaincode) addNewTrade(stub shim.ChaincodeStubInterface, args []s
 	CounterVal = 0
 	
 	// Write the state to the ledger
-	err = stub.PutState(TransactionId, []byte(TransactionIdVal))
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	
-	err = stub.PutState(Sku, []byte(SkuVal))
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	
 	err = stub.PutState(TradeDate, []byte(TradeDateVal))
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	err = stub.PutState(Sku, []byte(SkuVal))
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -127,7 +120,7 @@ func (t *SupplyChaincode) addNewTrade(stub shim.ChaincodeStubInterface, args []s
 	}
 	
 	CounterValbytes, err := stub.GetState(Counter)
-	fmt.Printf("CounterVal:%d\n", CounterValbytes)
+	fmt.Printf("CounterVal was %d \n", CounterValbytes)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -137,6 +130,7 @@ func (t *SupplyChaincode) addNewTrade(stub shim.ChaincodeStubInterface, args []s
 	if err != nil {
 		return shim.Error(err.Error())
 	}
+	fmt.Printf("CounterVal is %d \n", strconv.Itoa(CounterVal))
 		
     fmt.Println("######### Successfully add New Trade #########")
 
@@ -146,22 +140,16 @@ func (t *SupplyChaincode) addNewTrade(stub shim.ChaincodeStubInterface, args []s
 
 // Query all fields of current state
 func (t *SupplyChaincode) queryTrade(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var TransactionId, Sku, TradeDate, TraceInfo, Counter string	// Fileds of a trade
+	var Sku, TradeDate, TraceInfo, Counter string	// Fileds of a trade
 	var err error
 	
-	fmt.Println("---inside queryTrade---")
-	fmt.Printf("queryTrade received %d args\n ", len(args))
+    fmt.Println("########### supplychain_chaincode queryTrade ###########")
+	printArgs(args)
 	
-	TransactionId = args[0]
-	Sku = args[1]
-	TradeDate = args[2]
-	TraceInfo = args[3]
+	Sku = args[0]
+	TradeDate = args[1]
+	TraceInfo = args[2]
 	Counter = "Counter"
-
-	TransactionIdVal, err := stub.GetState(TransactionId)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
 	
 	SkuVal, err := stub.GetState(Sku)
 	if err != nil {
@@ -179,28 +167,19 @@ func (t *SupplyChaincode) queryTrade(stub shim.ChaincodeStubInterface, args []st
 	}
 	
 	CounterValbytes, err := stub.GetState(Counter)
-	fmt.Printf("CounterVal:%d\n", CounterValbytes)
+	fmt.Printf("CounterVal is %d \n", CounterValbytes)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 	
-/*
-	fmt.Printf("1.Query results: %x\n", TransactionIdVal)
-	fmt.Printf("2.Query results: %x\n", SkuVal)
-	fmt.Printf("3.Query results: %x\n", TradeDateVal)
-	fmt.Printf("4.Query results: %x\n", TraceInfoVal)
+	fmt.Printf("1.Query results: %x\n", SkuVal)
+	fmt.Printf("2.Query results: %x\n", TradeDateVal)
+	fmt.Printf("3.Query results: %x\n", TraceInfoVal)
 
-	fmt.Printf("1.Query results: %x\n", string(TransactionIdVal))
-	fmt.Printf("2.Query results: %x\n", string(SkuVal))
-	fmt.Printf("3.Query results: %x\n", string(TradeDateVal))
-	fmt.Printf("4.Query results: %x\n", string(TraceInfoVal))
-*/
-	QueryResults := []byte(string(TransactionIdVal) + "," + 
-							string(SkuVal) + "," + 
+	QueryResults := []byte(	string(SkuVal) + "," +
 							string(TradeDateVal) + "," + 
 							string(TraceInfoVal) + "," + 
-//							string(string(CounterValbytes)))
-							string(string(CounterValbytes)) + "supplychain-version-1")
+							string(string(CounterValbytes)))
 	return shim.Success(QueryResults)
 }
 
@@ -266,6 +245,7 @@ func (t *SupplyChaincode) getTradeHistory(stub shim.ChaincodeStubInterface, args
 
 
 // Generat fake TransactionId
+/*
 func getUUID() (string) {
 	f, _ := os.OpenFile("/dev/urandom", os.O_RDONLY, 0) 
     b := make([]byte, 16) 
@@ -273,4 +253,13 @@ func getUUID() (string) {
     f.Close() 
     uuid := fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:]) 
 	return uuid
+}*/
+
+
+func printArgs(args []string) {
+	fmt.Printf("queryTrade received %d args: ", len(args))
+	for i := 0; i < len(args); i++ {
+		fmt.Printf("%s, ", args[i])
+	}
+	fmt.Printf("\n")
 }
