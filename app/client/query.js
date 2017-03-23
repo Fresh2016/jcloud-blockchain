@@ -46,18 +46,20 @@ var result = {
 		traceInfo : '',
 		previousBlockHash : '',
 		currentBlockHash : '',
-		transactionId : ''
+		transactionId : '',
+		counter : ''
 	};
 
+// this is a transaction, will just use org2's identity to
+// submit the request. intentionally we are using a different org
+// than the one that submitted the "move" transaction, although either org
+// should work properly
+var defaultOrg = 'org2';
 
-module.exports.queryTransaction = function(transactionId) {
-	// this is a transaction, will just use org2's identity to
-	// submit the request. intentionally we are using a different org
-	// than the one that submitted the "move" transaction, although either org
-	// should work properly
+module.exports.isTransactionSucceed = function(transactionId) {
 	logger.info('\n\n***** Hyperledger fabric client: query transaction by transactionId: %s *****', transactionId);
 	
-	var org = 'org1';
+	var org = defaultOrg;
 	var orgName = util.getOrgNameByOrg(ORGS, org);
 
 	setupChain(ORGS, orgName, org);
@@ -71,43 +73,53 @@ module.exports.queryTransaction = function(transactionId) {
 
 	}).then((admin) => {
 		logger.debug('Successfully enrolled user \'admin\'');
-		return queryBlock(admin, util.getMspid(ORGS, org));
-	},
-	(err) => {
-		util.throwError(logger, err, 'Failed to enroll user \'admin\'. ');
-		
-	}).then((block) => {
-		logger.info('Chain getBlock() returned block number= %s',block.header.number);
+		the_user = admin;
+		the_user.mspImpl._id = util.getMspid(ORGS, org);
+
+		// use default primary peer
 		return queryTransactionByTxId(transactionId);
 		
 	}).then((processed_transaction) => {
-		logger.info('Chain queryTransaction() returned processed tranaction validationCode: ' + processed_transaction.validationCode);
+		return decodeTransaction(transactionId, processed_transaction, commonProtoPath, transProtoPath);
 
-		// TODO: return nothing? check what we can get from processed_transaction
-		decodeTransaction(processed_transaction, commonProtoPath, transProtoPath);
- 
+	}).catch((err) => {
+		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
+		return result;
+	});
+}
+
+
+module.exports.queryTransaction = function(transactionId) {
+	logger.info('\n\n***** Hyperledger fabric client: query transaction by transactionId: %s *****', transactionId);
+	
+	var org = defaultOrg;
+	var orgName = util.getOrgNameByOrg(ORGS, org);
+
+	setupChain(ORGS, orgName, org);
+	
+	return hfc.newDefaultKeyValueStore({
+		path: util.storePathForOrg(orgName)
+		
+	}).then((store) => {
+		client.setStateStore(store);
+		return Submitter.getSubmitter(client, org, logger);
+
+	}).then((admin) => {
+		logger.debug('Successfully enrolled user \'admin\'');
+		the_user = admin;
+		the_user.mspImpl._id = util.getMspid(ORGS, org);
+		
+		// use default primary peer
 		return chain.queryInfo();
 		
 	}).then((blockchainInfo) => {
-		logger.info('Chain queryInfo() returned blockchain info.');
-		logger.info('Chain queryInfo() returned block height = ' + blockchainInfo.height);
-		logger.info('Chain queryInfo() returned block previousBlockHash = ' + blockchainInfo.previousBlockHash);
-		logger.info('Chain queryInfo() returned block currentBlockHash = ' + blockchainInfo.currentBlockHash);
+		logger.debug('Chain queryInfo() returned block height = ' + blockchainInfo.height.low);
+		logger.debug('Chain queryInfo() returned block previousBlockHash = ' + blockchainInfo.previousBlockHash);
+		logger.debug('Chain queryInfo() returned block currentBlockHash = ' + blockchainInfo.currentBlockHash);
 		var block_hash = blockchainInfo.currentBlockHash;
+		result.blockNumber = blockchainInfo.height.low;
 		result.previousBlockHash = blockchainInfo.previousBlockHash;
 		result.currentBlockHash = blockchainInfo.currentBlockHash;
-
-		// send query
-		return chain.queryBlockByHash(block_hash);
-	},
-	(err) => {
-		util.throwError(logger, err.stack ? err.stack : err, 'Failed to send query due to error: ');
-		return result;
-		
-	}).then((block) => {
-		logger.info(' Chain queryBlockByHash() returned block number=%s', block.header.number);
-		logger.info('got back block number '+ block.header.number);
-		result.blockNumber = block.header.number.low;
 
 	}).then(() => {
 		nonce = ClientUtils.getNonce()
@@ -133,7 +145,7 @@ module.exports.queryTransaction = function(transactionId) {
 		return result;
 		
 	}).then((response_payloads) => {
-		logger.info('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
+		logger.debug('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
 		return parseQuerySupplyChainResponse(response_payloads);
 
 	},
@@ -148,13 +160,10 @@ module.exports.queryTransaction = function(transactionId) {
 
 
 module.exports.queryPeers = function(channelName) {
-	// this is a transaction, will just use org2's identity to
-	// submit the request.
-
 	// TODO: channel name is fixed from config file and should be passed from REST request
 	logger.info('\n\n***** Hyperledger fabric client: query peer list of channel: %s *****', channelName);
-	
-	var org = 'org2';
+
+	var org = defaultOrg;
 	var orgName = util.getOrgNameByOrg(ORGS, org);
 
 	setupChain(ORGS, orgName, org);
@@ -170,8 +179,8 @@ module.exports.queryPeers = function(channelName) {
 		var result = [];
 		
 		the_user = admin;
-		//the_user.mspImpl._id = mspid;
-		the_user.mspImpl._id = ORGS[org].mspid;
+		the_user.mspImpl._id = util.getMspid(ORGS, org);
+		
 		let peers = chain.getPeers();
 		for (let i = 0; i < peers.length; i++)  {
 			thisPeer = peers[i];
@@ -216,8 +225,7 @@ module.exports.queryPeers = function(channelName) {
 		logger.debug('Successfully enrolled user \'admin\'');
 		
 		the_user = admin;
-		//the_user.mspImpl._id = mspid;
-		the_user.mspImpl._id = ORGS[org].mspid;
+		//the_user.mspImpl._id = util.getMspid(ORGS, org);
 		//return chain.initialize();
 		return chain.getChannelConfig();
 		//return 'peer list from client';
@@ -366,7 +374,7 @@ module.exports.queryPeers = function(channelName) {
 }
 
 
-function decodeTransaction(processed_transaction, commonProtoPath, transProtoPath) {
+function decodeTransaction(transactionId, processed_transaction, commonProtoPath, transProtoPath) {
 	// set to be able to decode grpc objects
 	var grpc = require('grpc');
 	var commonProto = grpc.load(commonProtoPath).common;
@@ -375,11 +383,18 @@ function decodeTransaction(processed_transaction, commonProtoPath, transProtoPat
 	try {
 		var payload = commonProto.Payload.decode(processed_transaction.transactionEnvelope.payload);
 		var channel_header = commonProto.ChannelHeader.decode(payload.header.channel_header);
-		logger.debug(' Chain queryTransaction - transaction ID :: %s:', channel_header.tx_id);
+		logger.debug('Chain queryTransaction - transaction ID :: %s', channel_header.tx_id);
+		logger.debug('Chain queryTransaction - tranaction validationCode:: %s ', processed_transaction.validationCode);
 	}
 	catch(err) {
 		util.throwError(logger, err.stack ? err.stack : err, 'Failed to decode transaction query response.');
-	}	
+	}
+	
+	if (transactionId == channel_header.tx_id && 0 == processed_transaction.validationCode) {
+		return true;
+	} else {
+		return false;
+	}
 }
 
 
@@ -387,13 +402,12 @@ function decodeTransaction(processed_transaction, commonProtoPath, transProtoPat
 function parseQuerySupplyChainResponse(response_payloads) {
 	if (response_payloads) {
 		for(let i = 0; i < response_payloads.length; i++) {
-			logger.debug('Query results [' + i + ']: %s' + response_payloads[i]);
+			logger.debug('Query results [' + i + ']: ' + response_payloads[i]);
 			var res_list = response_payloads[i].toString('utf8').split(',');
 			result.sku = res_list[0];
 			result.tradeDate = res_list[1];
 			result.traceInfo = res_list[2];
-			//result.counter = res_list[4];
-			logger.info('\nQuery results 3: %s' + response_payloads[3]);
+			result.counter = res_list[3];
 			return result;
 		}
 		//return result;
@@ -401,16 +415,6 @@ function parseQuerySupplyChainResponse(response_payloads) {
 		logger.error('response_payloads is null');
 		return result;
 	}
-}
-
-
-function queryBlock(admin, mspid){
-	the_user = admin;
-	the_user.mspImpl._id = mspid;
-
-	// use default primary peer
-	// send query
-	return chain.queryBlock(0);
 }
 
 
@@ -498,7 +502,7 @@ module.exports.queryByChaincode = function() {
 
 	}).then((admin) => {
 		the_user = admin;
-		the_user.mspImpl._id = ORGS[org].mspid;
+		the_user.mspImpl._id = util.getMspid(ORGS, org);
 
 		nonce = ClientUtils.getNonce()
 		tx_id = chain.buildTransactionID(nonce, the_user);
