@@ -67,7 +67,7 @@ module.exports.queryTransaction = function(transactionId) {
 		
 	}).then((store) => {
 		client.setStateStore(store);
-		return Submitter.getSubmitter(client, org);
+		return Submitter.getSubmitter(client, org, logger);
 
 	}).then((admin) => {
 		logger.debug('Successfully enrolled user \'admin\'');
@@ -122,7 +122,7 @@ module.exports.queryTransaction = function(transactionId) {
 			txId: tx_id,
 			nonce: nonce,
 			fcn: 'queryTrade',
-			args: ["TransactionId", "Sku", "TradeDate", "TraceInfo"]
+			args: ["Sku", "TradeDate", "TraceInfo"]
 		};
 		logger.debug('Sending query request: %s', JSON.stringify(request));
 		
@@ -164,7 +164,7 @@ module.exports.queryPeers = function(channelName) {
 		
 	}).then((store) => {
 		client.setStateStore(store);
-		return Submitter.getSubmitter(client, org);
+		return Submitter.getSubmitter(client, org, logger);
 	}).then((admin) => {
 		logger.debug('Successfully enrolled user \'admin\'');
 		var result = [];
@@ -389,11 +389,11 @@ function parseQuerySupplyChainResponse(response_payloads) {
 		for(let i = 0; i < response_payloads.length; i++) {
 			logger.debug('Query results [' + i + ']: %s' + response_payloads[i]);
 			var res_list = response_payloads[i].toString('utf8').split(',');
-			result.sku = res_list[1];
-			result.tradeDate = res_list[2];
-			result.traceInfo = res_list[3];
+			result.sku = res_list[0];
+			result.tradeDate = res_list[1];
+			result.traceInfo = res_list[2];
 			//result.counter = res_list[4];
-			logger.info('\nQuery results 4: %s' + response_payloads[4]);
+			logger.info('\nQuery results 3: %s' + response_payloads[3]);
 			return result;
 		}
 		//return result;
@@ -494,7 +494,7 @@ module.exports.queryByChaincode = function() {
 	}).then((store) => {
 
 		client.setStateStore(store);
-		return Submitter.getSubmitter(client, org);
+		return Submitter.getSubmitter(client, org, logger);
 
 	}).then((admin) => {
 		the_user = admin;

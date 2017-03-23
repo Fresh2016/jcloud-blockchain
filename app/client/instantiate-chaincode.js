@@ -14,10 +14,6 @@
  *  limitations under the License.
  */
 
-// This is an end-to-end test that focuses on exercising all parts of the fabric APIs
-// in a happy-path scenario
-'use strict';
-
 var path = require('path');
 
 var hfc = require('fabric-client');
@@ -54,7 +50,7 @@ module.exports.instantiateChaincode = function(org) {
 		path: util.storePathForOrg(orgName)
 	}).then((store) => {
 		client.setStateStore(store);
-		return Submitter.getSubmitter(client, org);
+		return Submitter.getSubmitter(client, org, logger);
 
 	}).then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
@@ -183,7 +179,7 @@ function sendInstantiateProposal(admin, mspid) {
 	// send proposal to endorser
 	// for supplychain
 	var request = {
-			chaincodePath: util.CHAINCODE_PATH,
+			chaincodePath: util.chaincodePath,
 			chaincodeId: util.chaincodeId,
 			chaincodeVersion: util.chaincodeVersion,
 			fcn: 'init',
@@ -192,6 +188,8 @@ function sendInstantiateProposal(admin, mspid) {
 			txId: tx_id,
 			nonce: nonce
 		};
+
+	logger.debug('Sending instantiate transaction proposal "%s"', JSON.stringify(request));
 
 	return chain.sendInstantiateProposal(request);
 }
@@ -210,12 +208,10 @@ function setupChain(ORGS, orgName) {
 			if (!chain.isValidPeer(peer)) {
 				chain.addPeer(peer);
 				//logger.debug('喔～ key is %s, org is %s', key, peerOrg);
-				/*
 				if (key == peerOrg) {
 					logger.debug('set primary peer: %s', JSON.stringify(peer));
 					chain.setPrimaryPeer(peer);
 				}
-				*/
 			}
 
 			let eh = new EventHub();

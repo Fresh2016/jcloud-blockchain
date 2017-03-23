@@ -26,9 +26,10 @@ var hfc = require('fabric-client');
 
 // Channel and chaincode settings
 // TODO: should be managed by manager and stored in DB
-module.exports.CHAINCODE_PATH = 'github.com/supplychain';
+module.exports.txFilePath = './app/config/mychannel.tx';
+module.exports.chaincodePath = 'github.com/supplychain';
 module.exports.channel = 'mychannel';
-module.exports.chaincodeId = 'supplychain';
+module.exports.chaincodeId = 'supplychain3';
 module.exports.chaincodeVersion = 'v0';
 
 // Read config.json information
@@ -49,6 +50,17 @@ module.exports.cleanupDir = function(keyValStorePath) {
 	deleteFolderRecursive('C:/Users/shiying1/.hfc-key-store');
 	deleteFolderRecursive('~/.hfc-key-store');
 };
+
+//Read Org from config
+module.exports.getOrgs = function getOrgs(ORGS) {
+	var orgs = [];
+	for (let key in ORGS) {
+		if (ORGS.hasOwnProperty(key) && typeof ORGS[key].peer1 !== 'undefined') {
+			orgs.push(key);
+		}
+	}
+	return orgs;
+}
 
 // Read Org Name from config
 module.exports.getOrgNameByOrg = function getOrgNameByOrg(ORGS, org) {

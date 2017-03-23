@@ -81,7 +81,7 @@ function installChaincode(org) {
 		path: util.storePathForOrg(orgName)
 	}).then((store) => {
 		client.setStateStore(store);
-		return Submitter.getSubmitter(client, org);
+		return Submitter.getSubmitter(client, org, logger);
 		
 	}).then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
@@ -93,10 +93,6 @@ function installChaincode(org) {
 
 	}).then((results) => {
 		var proposalResponses = results[0];
-
-		//var proposal = results[1];
-		//var header   = results[2];
-		
 		return util.checkProposalResponses(proposalResponses, 'Install chaincode', logger);
 
 	},
@@ -116,7 +112,7 @@ function sendInstallProposal(chain, admin, mspid) {
 
 	var request = {
 		targets: targets,
-		chaincodePath: util.CHAINCODE_PATH,
+		chaincodePath: util.chaincodePath,
 		chaincodeId: util.chaincodeId,
 		chaincodeVersion: util.chaincodeVersion,
 		txId: tx_id,

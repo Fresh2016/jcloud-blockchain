@@ -75,7 +75,7 @@ function joinChannel(org) {
 	})
 	.then((store) => {
 		client.setStateStore(store);
-		return Submitter.getSubmitter(client, org);
+		return Submitter.getSubmitter(client, org, logger);
 	})
 	.then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');

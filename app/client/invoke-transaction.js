@@ -52,7 +52,7 @@ module.exports.invokeChaincode = function(traceInfo) {
 
 	}).then((store) => {
 		client.setStateStore(store);
-		return Submitter.getSubmitter(client, org);
+		return Submitter.getSubmitter(client, org, logger);
 
 	}).then((admin) => {
 		logger.debug('Successfully enrolled user \'admin\'');
