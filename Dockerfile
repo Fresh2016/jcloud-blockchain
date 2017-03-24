@@ -46,6 +46,7 @@ CMD node server.js
 
 # Docker commands
 #docker build -t shiying/jcloud-blockchain:1.3 -f Dockerfile .
+#docker build --no-cache=true -t shiying/jcloud-blockchain:1.3 -f Dockerfile .
 #docker login --username=shiying
 #docker push shiying/jcloud-blockchain:1.3
 #docker run -it -p 8081:8081 shiying/jcloud-blockchain:1.3
