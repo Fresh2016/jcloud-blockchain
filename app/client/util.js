@@ -29,7 +29,7 @@ var hfc = require('fabric-client');
 module.exports.txFilePath = './app/config/mychannel.tx';
 module.exports.chaincodePath = 'github.com/supplychain';
 module.exports.channel = 'mychannel';
-module.exports.chaincodeId = 'supplychain3';
+module.exports.chaincodeId = 'supplychain0';
 module.exports.chaincodeVersion = 'v0';
 
 // Read config.json information

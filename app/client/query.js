@@ -206,7 +206,7 @@ module.exports.queryTransactionHistory = function(transactionId) {
 			txId: tx_id,
 			nonce: nonce,
 			fcn: 'getTradeHistory',
-			args: ["TraceInfo"]
+			args: ["TransactionId", "TraceInfo"]
 		};
 		logger.debug('Sending query request: %s', JSON.stringify(request));
 		

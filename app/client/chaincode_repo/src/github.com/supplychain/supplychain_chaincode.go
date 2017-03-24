@@ -19,8 +19,9 @@ package main
 import (
 	"bytes"
 	//"fmt"
-    "os" 
+    //"os" 
 	"strconv"
+	"strings"
     "time"
     
 	"github.com/hyperledger/fabric/core/chaincode/shim"
@@ -35,9 +36,11 @@ type SupplyChaincode struct {
 
 
 func main() {
-    logger.SetLevel(shim.LogInfo)
-    logLevel, _ := shim.LogLevel(os.Getenv("SHIM_LOGGING_LEVEL"))
-    shim.SetLoggingLevel(logLevel)
+	
+	// For setting log level as debug
+    logger.SetLevel(shim.LogDebug)
+    shim.SetLoggingLevel(shim.LogDebug)
+	logger.Debugf("Module supplychain logger enabled for log level: %s", shim.LogDebug)
         
 	err := shim.Start(new(SupplyChaincode))
 	if err != nil {
@@ -66,7 +69,9 @@ func (t *SupplyChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
     
     logger.Notice("########### supplychain_chaincode Invoke ###########")
 	function, args := stub.GetFunctionAndParameters()
-	logger.Debugf("Invoke is running %s with args: %s\n", function, args)
+	// TODO: should change to Debugf when loglevel bug fixed in fabric
+	//logger.Debugf("Invoke is running %s with args: %s\n", function, args)
+	logger.Infof("Invoke is running %s with args: %s\n", function, args)
 
 	// Handle different functions
 	if function == "addNewTrade" { // add new trade and trace info
@@ -95,7 +100,9 @@ func (t *SupplyChaincode) addNewTrade(stub shim.ChaincodeStubInterface, args []s
 	if len(args) != 4 {
 		return shim.Error("Incorrect number of arguments. Expecting 4")
 	} else {
-		logger.Debugf("Received SkuVal: %s, TraceInfoVal: %s\n", args[1], args[3])
+		// TODO: should change to Debugf when loglevel bug fixed in fabric
+		//logger.Debugf("Received SkuVal: %s, TraceInfoVal: %s\n", args[1], args[3])
+		logger.Infof("Received SkuVal: %s, TraceInfoVal: %s\n", args[1], args[3])
 	}
 
 	// Initialize the chaincode
@@ -135,7 +142,9 @@ func (t *SupplyChaincode) addNewTrade(stub shim.ChaincodeStubInterface, args []s
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	logger.Debugf("CounterVal is %d \n", strconv.Itoa(CounterVal))
+	// TODO: should change to Debugf when loglevel bug fixed in fabric
+	//logger.Debugf("CounterVal is %d \n", strconv.Itoa(CounterVal))
+	logger.Infof("CounterVal is %d \n", strconv.Itoa(CounterVal))
 		
     logger.Info("######### Successfully add New Trade #########")
 
@@ -172,14 +181,17 @@ func (t *SupplyChaincode) queryTrade(stub shim.ChaincodeStubInterface, args []st
 	}
 	
 	CounterValbytes, err := stub.GetState(Counter)
-	logger.Debugf("CounterVal is %d \n", CounterValbytes)
+	// TODO: should change to Debugf when loglevel bug fixed in fabric
+	//logger.Debugf("CounterVal is %d \n", CounterValbytes)
+	logger.Infof("CounterVal is %d \n", CounterValbytes)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 	
-	logger.Debugf("1.Query results: %x\n", SkuVal)
-	logger.Debugf("2.Query results: %x\n", TradeDateVal)
-	logger.Debugf("3.Query results: %x\n", TraceInfoVal)
+	// TODO: should change to Debugf when loglevel bug fixed in fabric
+	logger.Infof("1.Query results: %x\n", SkuVal)
+	logger.Infof("2.Query results: %x\n", TradeDateVal)
+	logger.Infof("3.Query results: %x\n", TraceInfoVal)
 
 	QueryResults := []byte(	string(SkuVal) + "," +
 							string(TradeDateVal) + "," + 
@@ -201,7 +213,7 @@ func (t *SupplyChaincode) getTradeHistory(stub shim.ChaincodeStubInterface, args
 		return shim.Error("Incorrect number of arguments. Expecting nameOfTxId and at least 1 queriedKey")
 	} else {
 		nameOfTxId = args[0]
-		queriedKey = args[0]
+		queriedKey = args[1]
 	}
 
 	resultsIterator, err := stub.GetHistoryForKey(queriedKey)
@@ -213,7 +225,9 @@ func (t *SupplyChaincode) getTradeHistory(stub shim.ChaincodeStubInterface, args
 	// buffer is a JSON array containing historic values
 	var buffer bytes.Buffer
 	buffer = formatHistoricValue(buffer, resultsIterator, nameOfTxId, queriedKey)
-	logger.Debugf("queryTrade returning:\n%s\n", buffer.String())
+	// TODO: should change to Debugf when loglevel bug fixed in fabric
+	//logger.Debugf("queryTrade returning:\n%s\n", buffer.String())
+	logger.Infof("queryTrade returning:\n%s\n", buffer.String())
 
 	return shim.Success(buffer.Bytes())
 }
@@ -256,7 +270,7 @@ func formatHistoricValue(buffer bytes.Buffer, resultsIterator shim.StateQueryIte
 		buffer.WriteString(txID)
 		buffer.WriteString("\"")
 
-		buffer.WriteString("{\"")
+		buffer.WriteString(",\"")
 		buffer.WriteString(queriedKey)
 		buffer.WriteString("\":")
 		buffer.WriteString("\"")
@@ -272,9 +286,7 @@ func formatHistoricValue(buffer bytes.Buffer, resultsIterator shim.StateQueryIte
 
 
 func printArgs(args []string) {
-	logger.Debugf("queryTrade received %d args: ", len(args))
-	for i := 0; i < len(args); i++ {
-		logger.Debugf("%s, ", args[i])
-	}
-	logger.Debug("\b\n")
+	// TODO: should change to Debugf when loglevel bug fixed in fabric
+	//logger.Debugf("queryTrade received %d args: %s", len(args), strings.Join(args, ", "))
+	logger.Infof("queryTrade received %d args: %s", len(args), strings.Join(args, ", "))
 }
