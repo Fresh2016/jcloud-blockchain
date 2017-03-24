@@ -18,8 +18,8 @@ package main
 
 import (
 	"bytes"
-	"fmt"
-    //"os" 
+	//"fmt"
+    "os" 
 	"strconv"
     "time"
     
@@ -27,6 +27,7 @@ import (
 	pb "github.com/hyperledger/fabric/protos/peer"
 )
 
+var logger = shim.NewLogger("supplychain")
 
 // Supply chain Chaincode implementation
 type SupplyChaincode struct {
@@ -34,16 +35,20 @@ type SupplyChaincode struct {
 
 
 func main() {
+    logger.SetLevel(shim.LogInfo)
+    logLevel, _ := shim.LogLevel(os.Getenv("SHIM_LOGGING_LEVEL"))
+    shim.SetLoggingLevel(logLevel)
+        
 	err := shim.Start(new(SupplyChaincode))
 	if err != nil {
-		fmt.Printf("Error starting Simple chaincode: %s", err)
+		logger.Error("Error starting Simple chaincode: %s", err)
 	}
 }
 
 
 // Initialize chaincode, called by deploy.js
 func (t *SupplyChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response  {
-    fmt.Println("########### supplychain_chaincode Init ###########")
+    logger.Notice("########### supplychain_chaincode Init ###########")
 	_, args := stub.GetFunctionAndParameters()
 
 	return t.addNewTrade(stub, args)
@@ -59,9 +64,9 @@ func (t *SupplyChaincode) Query(stub shim.ChaincodeStubInterface) pb.Response {
 // Transaction include addNewTrade, queryTrade, and (TODO) getTradeHistory
 func (t *SupplyChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
     
-    fmt.Println("########### supplychain_chaincode Invoke ###########")
+    logger.Notice("########### supplychain_chaincode Invoke ###########")
 	function, args := stub.GetFunctionAndParameters()
-	fmt.Printf("Invoke is running %s with args: %s\n", function, args)
+	logger.Debugf("Invoke is running %s with args: %s\n", function, args)
 
 	// Handle different functions
 	if function == "addNewTrade" { // add new trade and trace info
@@ -72,7 +77,7 @@ func (t *SupplyChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.getTradeHistory(stub, args)
 	}
 
-	fmt.Println("ERROR: Invoke did not find func: " + function) //error
+	logger.Error("ERROR: Invoke did not find func: " + function) //error
 	return shim.Error("Received unknown function invocation")
 }
 
@@ -80,7 +85,7 @@ func (t *SupplyChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 // Add new trade and trace info
 func (t *SupplyChaincode) addNewTrade(stub shim.ChaincodeStubInterface, args []string) pb.Response  {
     
-    fmt.Println("########### supplychain_chaincode addNewTrade ###########")
+    logger.Info("########### supplychain_chaincode addNewTrade ###########")
 
 	var Sku, TradeDate, TraceInfo, Counter string	// Fileds of a trade
 	var SkuVal, TradeDateVal, TraceInfoVal string	// Information values of a trade 
@@ -90,7 +95,7 @@ func (t *SupplyChaincode) addNewTrade(stub shim.ChaincodeStubInterface, args []s
 	if len(args) != 4 {
 		return shim.Error("Incorrect number of arguments. Expecting 4")
 	} else {
-		fmt.Printf("Received SkuVal: %s, TraceInfoVal: %s\n", args[1], args[3])
+		logger.Debugf("Received SkuVal: %s, TraceInfoVal: %s\n", args[1], args[3])
 	}
 
 	// Initialize the chaincode
@@ -120,7 +125,7 @@ func (t *SupplyChaincode) addNewTrade(stub shim.ChaincodeStubInterface, args []s
 	}
 	
 	CounterValbytes, err := stub.GetState(Counter)
-	fmt.Printf("CounterVal was %d \n", CounterValbytes)
+	logger.Debugf("CounterVal was %d \n", CounterValbytes)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -130,9 +135,9 @@ func (t *SupplyChaincode) addNewTrade(stub shim.ChaincodeStubInterface, args []s
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	fmt.Printf("CounterVal is %d \n", strconv.Itoa(CounterVal))
+	logger.Debugf("CounterVal is %d \n", strconv.Itoa(CounterVal))
 		
-    fmt.Println("######### Successfully add New Trade #########")
+    logger.Info("######### Successfully add New Trade #########")
 
 	return shim.Success(nil)
 }
@@ -143,7 +148,7 @@ func (t *SupplyChaincode) queryTrade(stub shim.ChaincodeStubInterface, args []st
 	var Sku, TradeDate, TraceInfo, Counter string	// Fileds of a trade
 	var err error
 	
-    fmt.Println("########### supplychain_chaincode queryTrade ###########")
+    logger.Info("########### supplychain_chaincode queryTrade ###########")
 	printArgs(args)
 	
 	Sku = args[0]
@@ -167,14 +172,14 @@ func (t *SupplyChaincode) queryTrade(stub shim.ChaincodeStubInterface, args []st
 	}
 	
 	CounterValbytes, err := stub.GetState(Counter)
-	fmt.Printf("CounterVal is %d \n", CounterValbytes)
+	logger.Debugf("CounterVal is %d \n", CounterValbytes)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 	
-	fmt.Printf("1.Query results: %x\n", SkuVal)
-	fmt.Printf("2.Query results: %x\n", TradeDateVal)
-	fmt.Printf("3.Query results: %x\n", TraceInfoVal)
+	logger.Debugf("1.Query results: %x\n", SkuVal)
+	logger.Debugf("2.Query results: %x\n", TradeDateVal)
+	logger.Debugf("3.Query results: %x\n", TraceInfoVal)
 
 	QueryResults := []byte(	string(SkuVal) + "," +
 							string(TradeDateVal) + "," + 
@@ -186,19 +191,20 @@ func (t *SupplyChaincode) queryTrade(stub shim.ChaincodeStubInterface, args []st
 
 // Query all fields of historic state
 func (t *SupplyChaincode) getTradeHistory(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var TraceInfo string	// Fileds of a trade
+	var nameOfTxId, queriedKey string	// Fileds of a trade
 	var err error
 
-    fmt.Println("########### supplychain_chaincode getTradeHistory ###########")
+    logger.Info("########### supplychain_chaincode getTradeHistory ###########")
 	printArgs(args)
 
-	if len(args) < 1 {
-		return shim.Error("Incorrect number of arguments. Expecting 1")
+	if len(args) < 2 {
+		return shim.Error("Incorrect number of arguments. Expecting nameOfTxId and at least 1 queriedKey")
 	} else {
-		TraceInfo = args[0]
+		nameOfTxId = args[0]
+		queriedKey = args[0]
 	}
 
-	resultsIterator, err := stub.GetHistoryForKey(TraceInfo)
+	resultsIterator, err := stub.GetHistoryForKey(queriedKey)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -206,34 +212,8 @@ func (t *SupplyChaincode) getTradeHistory(stub shim.ChaincodeStubInterface, args
 
 	// buffer is a JSON array containing historic values
 	var buffer bytes.Buffer
-	buffer.WriteString("[")
-
-	bArrayMemberAlreadyWritten := false
-	for resultsIterator.HasNext() {
-		txID, historicValue, err := resultsIterator.Next()
-		if err != nil {
-			return shim.Error(err.Error())
-		}
-		// Add a semicolon before array members
-		// then it will be parsed in query client
-		if bArrayMemberAlreadyWritten == true {
-			buffer.WriteString(",")
-		}
-		buffer.WriteString("{\"TxId\":")
-		buffer.WriteString("\"")
-		buffer.WriteString(txID)
-		buffer.WriteString("\"")
-
-		buffer.WriteString(", \"Value\":")
-		buffer.WriteString("\"")
-		buffer.WriteString(string(historicValue))
-		buffer.WriteString("\"")
-		buffer.WriteString("}")
-		bArrayMemberAlreadyWritten = true
-	}
-	buffer.WriteString("]")
-
-	fmt.Printf("queryTrade returning:\n%s\n", buffer.String())
+	buffer = formatHistoricValue(buffer, resultsIterator, nameOfTxId, queriedKey)
+	logger.Debugf("queryTrade returning:\n%s\n", buffer.String())
 
 	return shim.Success(buffer.Bytes())
 }
@@ -251,10 +231,50 @@ func getUUID() (string) {
 }*/
 
 
-func printArgs(args []string) {
-	fmt.Printf("queryTrade received %d args: ", len(args))
-	for i := 0; i < len(args); i++ {
-		fmt.Printf("%s, ", args[i])
+
+// Format historic values into string of JSON array
+func formatHistoricValue(buffer bytes.Buffer, resultsIterator shim.StateQueryIteratorInterface, nameOfTxId string, queriedKey string) bytes.Buffer {
+	// Start of an array
+	buffer.WriteString("[")
+
+	bArrayMemberAlreadyWritten := false
+	for resultsIterator.HasNext() {
+		txID, historicValue, err := resultsIterator.Next()
+		if err != nil {
+			logger.Error("ERROR: error in reading resultsIterator, write nothing to buffer and returning... ") //error
+			return buffer
+		}
+		// Add a comma before array members
+		// then it will be parsed in query client
+		if bArrayMemberAlreadyWritten == true {
+			buffer.WriteString(",")
+		}
+		buffer.WriteString("{\"")
+		buffer.WriteString(nameOfTxId)
+		buffer.WriteString("\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(txID)
+		buffer.WriteString("\"")
+
+		buffer.WriteString("{\"")
+		buffer.WriteString(queriedKey)
+		buffer.WriteString("\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(string(historicValue))
+		buffer.WriteString("\"")
+		buffer.WriteString("}")
+		bArrayMemberAlreadyWritten = true
 	}
-	fmt.Printf("\n")
+	buffer.WriteString("]")
+	
+	return buffer
+}
+
+
+func printArgs(args []string) {
+	logger.Debugf("queryTrade received %d args: ", len(args))
+	for i := 0; i < len(args); i++ {
+		logger.Debugf("%s, ", args[i])
+	}
+	logger.Debug("\b\n")
 }
