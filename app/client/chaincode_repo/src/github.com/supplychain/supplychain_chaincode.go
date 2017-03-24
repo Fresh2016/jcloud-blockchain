@@ -17,7 +17,7 @@ limitations under the License.
 package main
 
 import (
-	//"bytes"
+	"bytes"
 	"fmt"
     //"os" 
 	"strconv"
@@ -186,24 +186,25 @@ func (t *SupplyChaincode) queryTrade(stub shim.ChaincodeStubInterface, args []st
 
 // Query all fields of historic state
 func (t *SupplyChaincode) getTradeHistory(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	var TraceInfo string	// Fileds of a trade
+	var err error
+
+    fmt.Println("########### supplychain_chaincode getTradeHistory ###########")
+	printArgs(args)
 
 	if len(args) < 1 {
 		return shim.Error("Incorrect number of arguments. Expecting 1")
+	} else {
+		TraceInfo = args[0]
 	}
 
-	marbleName := args[0]
-
-	fmt.Printf("- start getHistoryForMarble: %s\n", marbleName)
-
-/*
-// TODO: not implemented in current stable version. Waiting for v1.0 beta release.
-	resultsIterator, err := stub.GetHistoryForKey(marbleName)
+	resultsIterator, err := stub.GetHistoryForKey(TraceInfo)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 	defer resultsIterator.Close()
 
-	// buffer is a JSON array containing historic values for the marble
+	// buffer is a JSON array containing historic values
 	var buffer bytes.Buffer
 	buffer.WriteString("[")
 
@@ -213,7 +214,8 @@ func (t *SupplyChaincode) getTradeHistory(stub shim.ChaincodeStubInterface, args
 		if err != nil {
 			return shim.Error(err.Error())
 		}
-		// Add a comma before array members, suppress it for the first array member
+		// Add a semicolon before array members
+		// then it will be parsed in query client
 		if bArrayMemberAlreadyWritten == true {
 			buffer.WriteString(",")
 		}
@@ -223,24 +225,17 @@ func (t *SupplyChaincode) getTradeHistory(stub shim.ChaincodeStubInterface, args
 		buffer.WriteString("\"")
 
 		buffer.WriteString(", \"Value\":")
-		// historicValue is a JSON marble, so we write as-is
+		buffer.WriteString("\"")
 		buffer.WriteString(string(historicValue))
+		buffer.WriteString("\"")
 		buffer.WriteString("}")
 		bArrayMemberAlreadyWritten = true
 	}
 	buffer.WriteString("]")
 
-	fmt.Printf("- getHistoryForMarble returning:\n%s\n", buffer.String())
+	fmt.Printf("queryTrade returning:\n%s\n", buffer.String())
 
 	return shim.Success(buffer.Bytes())
-*/
-
-	queryString := args[0]
-	queryResults, err := stub.GetState(queryString)
-	if err != nil {
-		return shim.Error(err.Error())
-	}	
-	return shim.Success(queryResults)	
 }
 
 

@@ -160,6 +160,77 @@ module.exports.queryTransaction = function(transactionId) {
 }
 
 
+module.exports.queryTransactionHistory = function(transactionId) {
+	logger.info('\n\n***** Hyperledger fabric client: query transaction history by transactionId: %s *****', transactionId);
+	
+	// Different org uses different client
+	var client = new hfc();
+	var org = defaultOrg;
+	var orgName = util.getOrgNameByOrg(ORGS, org);
+	var chain = setup.setupChainWithOnlyPrimaryPeer(client, ORGS, orgName, org);
+	
+	return hfc.newDefaultKeyValueStore({
+		path: util.storePathForOrg(orgName)
+		
+	}).then((store) => {
+		client.setStateStore(store);
+		return Submitter.getSubmitter(client, org, logger);
+
+	}).then((admin) => {
+		logger.debug('Successfully enrolled user \'admin\'');
+		the_user = admin;
+		the_user.mspImpl._id = util.getMspid(ORGS, org);
+		
+		// use default primary peer
+		return chain.queryInfo();
+		
+	}).then((blockchainInfo) => {
+		logger.debug('Chain queryInfo() returned block height = ' + blockchainInfo.height.low);
+		logger.debug('Chain queryInfo() returned block previousBlockHash = ' + blockchainInfo.previousBlockHash);
+		logger.debug('Chain queryInfo() returned block currentBlockHash = ' + blockchainInfo.currentBlockHash);
+		var block_hash = blockchainInfo.currentBlockHash;
+		result.blockNumber = blockchainInfo.height.low;
+		result.previousBlockHash = blockchainInfo.previousBlockHash;
+		result.currentBlockHash = blockchainInfo.currentBlockHash;
+
+	}).then(() => {
+		nonce = ClientUtils.getNonce()
+		var tx_id = chain.buildTransactionID(nonce, the_user);
+
+		// send query
+		// for supplychain
+		var request = {
+			chaincodeId : util.chaincodeId,
+			chaincodeVersion : util.chaincodeVersion,
+			chainId: util.channel,
+			txId: tx_id,
+			nonce: nonce,
+			fcn: 'getTradeHistory',
+			args: ["TraceInfo"]
+		};
+		logger.debug('Sending query request: %s', JSON.stringify(request));
+		
+		return chain.queryByChaincode(request);
+	},
+	(err) => {
+		util.throwError(logger, err.stack ? err.stack : err, 'Failed to send query chaincode due to error: ');
+		return result;
+		
+	}).then((response_payloads) => {
+		logger.debug('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
+		return parseQueryHistoryResponse(response_payloads);
+
+	},
+	(err) => {
+		util.throwError(logger, err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
+
+	}).catch((err) => {
+		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
+		return result;
+	});
+}
+
+
 module.exports.queryPeers = function(channelName) {
 	// TODO: channel name is fixed from config file and should be passed from REST request
 	logger.info('\n\n***** Hyperledger fabric client: query peer list of channel: %s *****', channelName);
@@ -413,6 +484,27 @@ function parseQuerySupplyChainResponse(response_payloads) {
 			return result;
 		}
 		//return result;
+	} else {
+		logger.error('response_payloads is null');
+		return result;
+	}
+}
+
+
+function parseQueryHistoryResponse(response_payloads) {
+	var result = [];
+	if (response_payloads) {
+		for(let i = 0; i < response_payloads.length; i++) {
+			logger.debug('Query results [' + i + ']: ' + response_payloads[i]);
+			var res_list = response_payloads[i].toString('utf8')
+								.replace('[', '').replace(']', '')
+								.replace('},{', '};{').split(';');
+			for (let i in res_list) {
+				result.push(JSON.parse(res_list[i]));
+			}
+			logger.debug('Parsed result: %s', JSON.stringify(result));
+			return result;
+		}
 	} else {
 		logger.error('response_payloads is null');
 		return result;

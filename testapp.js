@@ -69,10 +69,26 @@ return 'failed';
  08814632425ab7a59955eb582cf4d06cd349df9081478c33529e7d6b345be2d1
  64571d8b25ee08eb4824e3f7528582aed1709d75f37224aca3219f6fc4627ea1
  4bbcf35db4c9e2e309ed01e8b07c29b0248f55e57f3662b6e338e062afc9ace6
+ c3d9cd935f82329638066115fe8a69bc118bb22c411119459c8e815202d1b5dc
  */
 
+/*
+queryClient.queryTransaction('')
+.then((result) => {
+	console.log('API: query result %s', JSON.stringify(result));
+	res.json(result); // return all amounts in JSON format
+},
+(err) => {
+console.error('API: query result %s', result);
+res.json('failed');
+}).catch((err) => {
+console.error('API: query result %s', result);
+return 'failed';
+});
+*/
 
-queryClient.queryTransaction('c3d9cd935f82329638066115fe8a69bc118bb22c411119459c8e815202d1b5dc')
+
+queryClient.queryTransactionHistory('')
 .then((result) => {
 	console.log('API: query result %s', JSON.stringify(result));
 	res.json(result); // return all amounts in JSON format
@@ -102,7 +118,7 @@ return 'failed';
 */
 
 /*
-invokeClient.invokeChaincode('uhmmm...we are testing ...')
+invokeClient.invokeChaincode('uhmmm...we are testing ...again and again')
 .then((result) => {
 	console.log('API: invoke result %s', JSON.stringify(result));
 	res.json(result); // return all amounts in JSON format
