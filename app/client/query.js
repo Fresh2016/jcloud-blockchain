@@ -462,7 +462,7 @@ function parseQueryHistoryResponse(response_payloads) {
 			logger.debug('Query results [' + i + ']: ' + response_payloads[i]);
 			var res_list = response_payloads[i].toString('utf8')
 								.replace('[', '').replace(']', '')
-								.replace('},{', '};{').split(';');
+								.replace(/\},{/g, '};{').split(';');
 			for (let i in res_list) {
 				result.push(JSON.parse(res_list[i]));
 			}
