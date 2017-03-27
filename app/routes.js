@@ -56,10 +56,7 @@ module.exports = function(app) {
 	app.get('/v1/peers', function(req, res) {
 		console.log('API: query peers status');
 		queryClient.queryPeers(req.query.channel, function sendResponse(result) {
-			for (let i in result) {
-				result[i].name = 'peer' + i;
-			}
-			res.json(result);
+			res.json(hideUrl(result));
 		});
 	});	
 
@@ -82,3 +79,10 @@ module.exports = function(app) {
 	});	
 
 };
+
+function hideUrl(result) {
+	for (let i in result) {
+		result[i].name = 'peer' + i;
+	}
+	return result;
+}
