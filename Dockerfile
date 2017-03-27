@@ -45,10 +45,11 @@ WORKDIR /jcloud-blockchain
 CMD node server.js
 
 # Docker commands
-#docker build -t shiying/jcloud-blockchain:1.3 -f Dockerfile .
-#docker build --no-cache=true -t shiying/jcloud-blockchain:1.3 -f Dockerfile .
+#docker build -t shiying/jcloud-blockchain:1.4 -f Dockerfile .
+#docker build --no-cache=true -t shiying/jcloud-blockchain:1.4 -f Dockerfile .
 #docker login --username=shiying
-#docker push shiying/jcloud-blockchain:1.3
-#docker run -it -p 8081:8081 shiying/jcloud-blockchain:1.3
+#docker push shiying/jcloud-blockchain:1.4
+#docker run -it -p 8081:8081 shiying/jcloud-blockchain:1.4
 #docker rm -f $(docker ps -a -q)
+#docker rm -f $(docker ps -a | grep none | awk '{print $1 }')
 #docker images|grep none|awk '{print $3 }'|xargs docker rmi
