@@ -77,15 +77,11 @@ module.exports.isTransactionSucceed = function(transactionId, callback) {
 		the_user.mspImpl._id = util.getMspid(ORGS, org);
 
 		// use default primary peer
-		return queryTransactionByTxId(transactionId);
+		return queryTransactionByTxId(chain, transactionId);
 		
 	}).then((processed_transaction) => {
-		try {
-			callback(decodeTransaction(transactionId, processed_transaction, commonProtoPath, transProtoPath));
-			logger.info('END of query transaction status.');
-		} catch(err) {
-			callback(err);
-		}
+		callback(decodeTransaction(transactionId, processed_transaction, commonProtoPath, transProtoPath));
+		logger.info('END of query transaction status.');
 
 	}).catch((err) => {
 		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
@@ -500,14 +496,13 @@ function parseQueryPeerStatusReponse(responses, channelName) {
 }
 
 
-function queryTransactionByTxId(transactionId){
+function queryTransactionByTxId(chain, transactionId){
 	//TODO: a default id is set for initial value during loading query page
 	if (!transactionId) {
-		logger.info('Transaction ID not found.');
-		transactionId = 'ebaee52e1994d93232b94322557f9348777f9d8b74c91398f8fcc896aa212b88';
-		//throw new Error('Transaction ID not found');
+		util.throwError(logger, new Error('Transaction ID not found'), '');
+	} else {
+		logger.info('Got transactionId %s', transactionId);
+		// send query
+		return chain.queryTransaction(transactionId); //assumes the end-to-end has run first
 	}
-	logger.info('Got transactionId %s', transactionId);
-	// send query
-	return chain.queryTransaction(transactionId); //assumes the end-to-end has run first
 }

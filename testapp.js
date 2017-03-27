@@ -63,39 +63,10 @@ return 'failed';
 });
 */
 
-
-/*
-queryClient.queryTransaction('')
-.then((result) => {
-	console.log('API: query result %s', JSON.stringify(result));
-	res.json(result); // return all amounts in JSON format
-},
-(err) => {
-console.error('API: query result %s', result);
-res.json('failed');
-}).catch((err) => {
-console.error('API: query result %s', result);
-return 'failed';
-});
-*/
-
-/*
-queryClient.queryTransactionHistory('')
-.then((result) => {
-	console.log('API: query result %s', JSON.stringify(result));
-	res.json(result); // return all amounts in JSON format
-},
-(err) => {
-console.error('API: query result %s', result);
-res.json('failed');
-}).catch((err) => {
-console.error('API: query result %s', result);
-return 'failed';
-});
-*/
-
-
+//queryClient.isTransactionSucceed('45907971aeea190eda997232f8147f14e8e0c911a0484bbb883a0c9d10a0ad83', sendResponse);
+//queryClient.queryTransaction('', sendResponse);
+//queryClient.queryTransactionHistory('', sendResponse);
 //queryClient.queryPeers('mychannel', sendResponse);
 //queryClient.queryOrderers('mychannel', sendResponse);
 
-invokeClient.invokeChaincode('uhmmm...we are testing ...again', sendResponse);
+//invokeClient.invokeChaincode('uhmmm...we are testing ...again', sendResponse);
