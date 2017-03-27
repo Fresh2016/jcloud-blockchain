@@ -112,15 +112,11 @@ function deleteFolderRecursive(path) {
     var files = [];
     if( fs.existsSync(path) ) {
         files = fs.readdirSync(path);
-        console.dir(files);
         files.forEach(function(file,index){
             var curPath = path + "/" + file;
-            console.log('delete %s', curPath);
             if(fs.statSync(curPath).isDirectory()) { // recurse
-            	console.log('delete folder');
                 deleteFolderRecursive(curPath);
             } else { // delete file
-            	console.log('delete file');
                 fs.unlinkSync(curPath);
             }
         });

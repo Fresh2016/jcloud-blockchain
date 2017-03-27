@@ -327,7 +327,7 @@ module.exports.queryConfig = function(channelName, callback) {
 		try {
 			parseQueryChainConfig(response_payloads);
 			ordererStatus.status = 'UP';
-			callback(ordererStatus);
+			callback([ordererStatus]);
 		} catch(err) {
 			callback(ordererStatus);
 		}
