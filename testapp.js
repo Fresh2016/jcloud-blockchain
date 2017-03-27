@@ -67,6 +67,6 @@ return 'failed';
 //queryClient.queryTransaction('', sendResponse);
 //queryClient.queryTransactionHistory('', sendResponse);
 //queryClient.queryPeers('mychannel', sendResponse);
-queryClient.queryOrderers('mychannel', sendResponse);
+//queryClient.queryOrderers('mychannel', sendResponse);
 
 //invokeClient.invokeChaincode('uhmmm...we are testing ...again', sendResponse);
