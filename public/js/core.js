@@ -16,8 +16,10 @@
 
 // Dependencies of jcloud-blockchain
 angular.module('jcloud-blockchain', 
-			['queryController', 
+			['monitorController',
+			'queryController', 
 			'transactionController',
+			'monitorService', 
 			'queryService', 
 			'transactionService'
 			]);

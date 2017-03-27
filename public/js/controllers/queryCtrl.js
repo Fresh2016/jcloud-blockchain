@@ -16,7 +16,7 @@
 
 /*
  * Query controller
- * Inject the BlockInfo service factory defined in querySrvc.js into controller
+ * Inject the Query service factory defined in querySrvc.js into controller
  */
 angular.module('queryController', [])
 	.controller('queryController', ['$scope', '$http', 'Query', function($scope, $http, Query) {
@@ -30,7 +30,6 @@ angular.module('queryController', [])
 		$scope.currentBlockHash = '';
 		$scope.previousBlockHash = '';
 		$scope.transactionId = '';
-		$scope.peerList = '';
 		
 		// GET method, initial data when loading query page
 		Query.get({
@@ -41,18 +40,6 @@ angular.module('queryController', [])
 		.success(function(data) {
 			bindData($scope, data);
 		});	
-
-		// GET Peers method, initial data when loading monitoring page
-		/*
-		Query.getPeers({
-	        params: {
-	        	channel: 'mychannel'
-	        }			
-		})
-		.success(function(data) {
-			bindMonitorData($scope, data);
-		});	
-		*/
 
 		// QUERY method, refresh data when click query button
 		$scope.query = function() {
@@ -74,10 +61,6 @@ angular.module('queryController', [])
 			$scope.currentBlockHash = data.currentBlockHash;
 			$scope.previousBlockHash = data.previousBlockHash;
 			$scope.transactionId = data.transactionId;
-		}
-
-		function bindMonitorData($scope, data) {
-			$scope.peerList = data.peerList;
 		}
 		
 	}]);

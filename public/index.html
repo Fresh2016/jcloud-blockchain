@@ -18,6 +18,7 @@
 	<!-- base style -->
 	<style>
 		html 					{ overflow-y:scroll; }
+		monitor-form 	 		{ margin-bottom:50px; }
 		query-form 				{ margin-bottom:50px; }
 		transaction-form 	 	{ margin-bottom:50px; }
 	</style>
@@ -30,8 +31,10 @@
 	<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
 	
 	<!-- load up controllers and services -->
+	<script src="js/controllers/monitorCtrl.js"></script>
 	<script src="js/controllers/queryCtrl.js"></script>
 	<script src="js/controllers/transactionCtrl.js"></script>
+	<script src="js/services/monitorSrvc.js"></script>
 	<script src="js/services/querySrvc.js"></script>
 	<script src="js/services/transactionSrvc.js"></script>
 	
@@ -40,7 +43,8 @@
 
 </head>
 <!-- SET THE CONTROLLER -->
-<body ng-controller="queryController">
+<!--body ng-controller="queryController"-->
+<body>
 
 	<!-- RESPONSIVE HEADER -->
 	<div class="navbar navbar-default" role="navigation">

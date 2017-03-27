@@ -26,9 +26,6 @@ angular.module('queryService', [])
 		return {
 			get : function(data) {
 				return $http.get('/v1/supplychain', data);
-			},
-			getPeers : function(data) {
-				return $http.get('/v1/peers', data);
 			}
 		}
 	}]);
