@@ -94,23 +94,13 @@ return 'failed';
 });
 */
 
-/*
-queryClient.queryPeers('mychannel')
-.then((result) => {
-	console.log('API: query result %s', JSON.stringify(result));
-	res.json(result); // return all amounts in JSON format
-},
-(err) => {
-console.error('API: query result %s', result);
-res.json('failed');
-}).catch((err) => {
-console.error('API: query result %s', result);
-return 'failed';
-});
-*/
+
+//queryClient.queryPeers('mychannel', sendResponse);
+queryClient.queryOrderers('mychannel', sendResponse);
+
 
 /*
-invokeClient.invokeChaincode('uhmmm...we are testing ...again and again')
+invokeClient.invokeChaincode('uhmmm...we are testing ...again')
 .then((result) => {
 	console.log('API: invoke result %s', JSON.stringify(result));
 	res.json(result); // return all amounts in JSON format

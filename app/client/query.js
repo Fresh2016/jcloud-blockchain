@@ -80,11 +80,15 @@ module.exports.isTransactionSucceed = function(transactionId) {
 		return queryTransactionByTxId(transactionId);
 		
 	}).then((processed_transaction) => {
-		return decodeTransaction(transactionId, processed_transaction, commonProtoPath, transProtoPath);
+		try {
+			return decodeTransaction(transactionId, processed_transaction, commonProtoPath, transProtoPath);
+		} catch(err) {
+			return false;
+		}
 
 	}).catch((err) => {
 		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
-		return result;
+		return false;
 	});
 }
 
@@ -231,9 +235,9 @@ module.exports.queryTransactionHistory = function(transactionId) {
 }
 
 
-module.exports.queryPeers = function(channelName) {
+module.exports.queryPeers = function(channelName, callback) {
 	// TODO: channel name is fixed from config file and should be passed from REST request
-	logger.info('\n\n***** Hyperledger fabric client: query peer list of channel: %s *****', channelName);
+	logger.info('\n\n***** Hyperledger fabric client: query peer status of channel: %s *****', channelName);
 
 	// Different org uses different client
 	var client = new hfc();
@@ -270,105 +274,67 @@ module.exports.queryPeers = function(channelName) {
 					JSON.stringify(responses), JSON.stringify(err));
 			var result = parseQueryPeerStatusReponse(responses, channelName);
 			logger.debug('Returning peer status: %s', JSON.stringify(result));
+			callback(result);
 			logger.info('END of query peers.');
 		});			
 
 	}).catch((err) => {
 		logger.error.error('Failed to query with error:' + err.stack ? err.stack : err);
-		return result;
+		callback(err);
 	});
 }
 
 
-
-
-/*
+module.exports.queryOrderers = function(channelName, callback) {
+	// TODO: channel name is fixed from config file and should be passed from REST request
+	logger.info('\n\n***** Hyperledger fabric client: query orderer status of channel: %s *****', channelName);
 	
-	.then((admin) => {
-		logger.debug('Successfully enrolled user \'admin\'');
-		
-		the_user = admin;
-		//the_user.mspImpl._id = util.getMspid(ORGS, org);
-		//return chain.initialize();
-		return chain.getChannelConfig();
-		//return 'peer list from client';
-		//return queryBlock(admin, util.getMspid(ORGS, org));
-	},
-	(err) => {
-		util.throwError(logger, err, 'Failed to enroll user \'admin\'. ');
-		
-	})
-	.then(
-		function(config_envelope) {
-			logger.info('Got config envelope from getChannelConfig :: %j', config_envelope);
-			//console.dir(config_envelope);
+	return module.exports.queryConfig(channelName, callback);
+}
 
-			let channel = config_envelope.config.channel;
-			logger.debug('queryPeers -  Channel version :: %s', channel.version);
-			logger.debug('queryPeers -  Channel groups name and originalName:: %s, ', 
-					channel.groups.field.name, channel.groups.field.originalName);
 
-			let app_map = channel.groups.map.Application;
-			let org1Msp_map = app_map.value.groups.map.Org1MSP;
-			logger.debug('queryPeers -  Channel groups maps of %s-%s', 
-					app_map.key, org1Msp_map.key);
-			logger.debug('queryPeers -  Channel groups maps:: (%s, %s)', 
-					org1Msp_map.value.policies.map.Admins.key, 
-					org1Msp_map.value.policies.map.Admins.value.mod_policy);
-			logger.debug('queryPeers -  Channel groups maps:: (%s, %s)', 
-					org1Msp_map.value.policies.map.Readers.key, 
-					org1Msp_map.value.policies.map.Readers.value.mod_policy);
-			logger.debug('queryPeers -  Channel groups maps:: (%s, %s)', 
-					org1Msp_map.value.policies.map.Writers.key, 
-					org1Msp_map.value.policies.map.Writers.value.mod_policy);
+module.exports.queryConfig = function(channelName, callback) {
+	// TODO: channel name is fixed from config file and should be passed from REST request
+	// TODO: care only 1 orderer. should be order cluster status when we have
+	logger.info('\n\n***** Hyperledger fabric client: query configuration of channel: %s *****', channelName);
 
-			let org2Msp_map = app_map.value.groups.map.Org2MSP;
-			logger.debug('queryPeers -  Channel groups maps of %s-%s', 
-					app_map.key, org2Msp_map.key);
-			logger.debug('queryPeers -  Channel groups maps:: (%s, %s)', 
-					org1Msp_map.value.policies.map.Admins.key, 
-					org1Msp_map.value.policies.map.Admins.value.mod_policy);
-			logger.debug('queryPeers -  Channel groups maps:: (%s, %s)', 
-					org1Msp_map.value.policies.map.Readers.key, 
-					org1Msp_map.value.policies.map.Readers.value.mod_policy);
-			logger.debug('queryPeers -  Channel groups maps:: (%s, %s)', 
-					org1Msp_map.value.policies.map.Writers.key, 
-					org1Msp_map.value.policies.map.Writers.value.mod_policy);
-
-			let orderer_map = channel.groups.map.Orderer;
-			let ordererMSP_map = orderer_map.value.groups.map.OrdererMSP;
-			logger.debug('queryPeers -  Channel groups maps of %s-%s', 
-					orderer_map.key, ordererMSP_map.key);
-			logger.debug('queryPeers -  Channel groups maps:: (%s, %s)', 
-					ordererMSP_map.value.policies.map.Admins.key, 
-					ordererMSP_map.value.policies.map.Admins.value.mod_policy);
-			logger.debug('queryPeers -  Channel groups maps:: (%s, %s)', 
-					ordererMSP_map.value.policies.map.Readers.key, 
-					ordererMSP_map.value.policies.map.Readers.value.mod_policy);
-			logger.debug('queryPeers -  Channel groups maps:: (%s, %s)', 
-					ordererMSP_map.value.policies.map.Writers.key, 
-					ordererMSP_map.value.policies.map.Writers.value.mod_policy);
-
-			logger.debug('queryPeers -  Channel policies name and originalName:: %s, %s', 
-					channel.policies.field.name, channel.policies.field.originalName);
-
-			let policy_map = channel.policies.map;
-			logger.debug('queryPeers -  Channel policies maps:: (%s, %s)', 
-					policy_map.AcceptAllPolicy.key, policy_map.AcceptAllPolicy.value.mod_policy);
-			logger.debug('queryPeers -  Channel policies maps:: (%s, %s)', 
-					policy_map.Admins.key, policy_map.Admins.value.mod_policy);
-			logger.debug('queryPeers -  Channel policies maps:: (%s, %s)', 
-					policy_map.Readers.key, policy_map.Readers.value.mod_policy);
-			logger.debug('queryPeers -  Channel policies maps:: (%s, %s)', 
-					policy_map.Writers.key, policy_map.Writers.value.mod_policy);
+	// Different org uses different client
+	var client = new hfc();
+	var org = defaultOrg;
+	var orgName = util.getOrgNameByOrg(ORGS, org);
+	var chain = setup.setupChain(client, ORGS, orgName);
+	var ordererStatus = {
+			name: chain.getOrderers()[0].getUrl(),
+			status: 'DOWN'
 		}
-	)
-	.catch((err) => {
+	
+	return hfc.newDefaultKeyValueStore({
+		path: util.storePathForOrg(orgName)
+	}).then((store) => {
+		client.setStateStore(store);
+		return Submitter.getSubmitter(client, org, logger);
+		
+	}).then((admin) => {
+		logger.debug('Successfully enrolled user \'admin\'');
+		the_user = admin;
+		the_user.mspImpl._id = util.getMspid(ORGS, org);
+		return chain.getChannelConfig();
+		
+	}).then((response_payloads) => {
+		logger.info('Got config envelope from getChannelConfig.');
+		try {
+			parseQueryChainConfig(response_payloads);
+			ordererStatus.status = 'UP';
+			callback(ordererStatus);
+		} catch(err) {
+			callback(ordererStatus);
+		}
+			
+	}).catch((err) => {
 		logger.error.error('Failed to query with error:' + err.stack ? err.stack : err);
-		return result;
+		callback(ordererStatus);
 	});
 }
-*/
 
 
 function decodeTransaction(transactionId, processed_transaction, commonProtoPath, transProtoPath) {
@@ -382,8 +348,7 @@ function decodeTransaction(transactionId, processed_transaction, commonProtoPath
 		var channel_header = commonProto.ChannelHeader.decode(payload.header.channel_header);
 		logger.debug('Chain queryTransaction - transaction ID :: %s', channel_header.tx_id);
 		logger.debug('Chain queryTransaction - tranaction validationCode:: %s ', processed_transaction.validationCode);
-	}
-	catch(err) {
+	} catch(err) {
 		util.throwError(logger, err.stack ? err.stack : err, 'Failed to decode transaction query response.');
 	}
 	
@@ -394,6 +359,75 @@ function decodeTransaction(transactionId, processed_transaction, commonProtoPath
 	}
 }
 
+
+function parseQueryChainConfig(config_envelope) {
+	try {
+		let channel = config_envelope.config.channel;
+		logger.debug('queryConfig -  Channel version :: %s', channel.version);
+		logger.debug('queryConfig -  Channel groups name and originalName:: %s, ', 
+				channel.groups.field.name, channel.groups.field.originalName);
+
+		let app_map = channel.groups.map.Application;
+		let org1Msp_map = app_map.value.groups.map.Org1MSP;
+		logger.debug('queryConfig -  Channel groups maps of %s-%s', 
+				app_map.key, org1Msp_map.key);
+		logger.debug('queryConfig -  Channel groups maps:: (%s, %s)', 
+				org1Msp_map.value.policies.map.Admins.key, 
+				org1Msp_map.value.policies.map.Admins.value.mod_policy);
+		logger.debug('queryConfig -  Channel groups maps:: (%s, %s)', 
+				org1Msp_map.value.policies.map.Readers.key, 
+				org1Msp_map.value.policies.map.Readers.value.mod_policy);
+		logger.debug('queryConfig -  Channel groups maps:: (%s, %s)', 
+				org1Msp_map.value.policies.map.Writers.key, 
+				org1Msp_map.value.policies.map.Writers.value.mod_policy);
+
+		let org2Msp_map = app_map.value.groups.map.Org2MSP;
+		logger.debug('queryConfig -  Channel groups maps of %s-%s', 
+				app_map.key, org2Msp_map.key);
+		logger.debug('queryConfig -  Channel groups maps:: (%s, %s)', 
+				org1Msp_map.value.policies.map.Admins.key, 
+				org1Msp_map.value.policies.map.Admins.value.mod_policy);
+		logger.debug('queryConfig -  Channel groups maps:: (%s, %s)', 
+				org1Msp_map.value.policies.map.Readers.key, 
+				org1Msp_map.value.policies.map.Readers.value.mod_policy);
+		logger.debug('queryConfig -  Channel groups maps:: (%s, %s)', 
+				org1Msp_map.value.policies.map.Writers.key, 
+				org1Msp_map.value.policies.map.Writers.value.mod_policy);
+
+		let orderer_map = channel.groups.map.Orderer;
+		let ordererMSP_map = orderer_map.value.groups.map.OrdererMSP;
+		logger.debug('queryConfig -  Channel groups maps of %s-%s', 
+				orderer_map.key, ordererMSP_map.key);
+		logger.debug('queryConfig -  Channel groups maps:: (%s, %s)', 
+				ordererMSP_map.value.policies.map.Admins.key, 
+				ordererMSP_map.value.policies.map.Admins.value.mod_policy);
+		logger.debug('queryConfig -  Channel groups maps:: (%s, %s)', 
+				ordererMSP_map.value.policies.map.Readers.key, 
+				ordererMSP_map.value.policies.map.Readers.value.mod_policy);
+		logger.debug('queryConfig -  Channel groups maps:: (%s, %s)', 
+				ordererMSP_map.value.policies.map.Writers.key, 
+				ordererMSP_map.value.policies.map.Writers.value.mod_policy);
+
+		logger.debug('queryConfig -  Channel policies name and originalName:: %s, %s', 
+				channel.policies.field.name, channel.policies.field.originalName);
+
+		let policy_map = channel.policies.map;
+		logger.debug('queryConfig -  Channel policies maps:: (%s, %s)', 
+				policy_map.AcceptAllPolicy.key, policy_map.AcceptAllPolicy.value.mod_policy);
+		logger.debug('queryConfig -  Channel policies maps:: (%s, %s)', 
+				policy_map.Admins.key, policy_map.Admins.value.mod_policy);
+		logger.debug('queryConfig -  Channel policies maps:: (%s, %s)', 
+				policy_map.Readers.key, policy_map.Readers.value.mod_policy);
+		logger.debug('queryConfig -  Channel policies maps:: (%s, %s)', 
+				policy_map.Writers.key, policy_map.Writers.value.mod_policy);
+		
+		return true;
+		
+		} catch(err) {
+		util.throwError(logger, err.stack ? err.stack : err, 'Failed to parse query chain config response.');
+		return false;
+	}
+}
 
 
 function parseQuerySupplyChainResponse(response_payloads) {
