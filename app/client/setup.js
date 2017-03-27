@@ -64,5 +64,28 @@ module.exports.setupChainWithOnlyPrimaryPeer = function(client, ORGS, orgName, p
 	util.cleanupDir(util.storePathForOrg(orgName));
 	
 	return chain;
+}
 
+
+//initial a new chain with all peers
+module.exports.setupChainWithAllPeers = function(client, ORGS, orgName) {
+	var chain = client.newChain(util.channel);
+	chain.addOrderer(new Orderer(ORGS.orderer));
+
+	// set up the chain to use all peers of all orgs
+	for (peerOrg in ORGS) {
+		for (let key in ORGS[peerOrg]) {
+			if (ORGS[peerOrg].hasOwnProperty(key)) {
+				if (key.indexOf('peer') === 0) {
+					let peer = new Peer(ORGS[peerOrg][key].requests);
+					chain.addPeer(peer);
+				}
+			}
+		}
+	}
+
+	// remove expired keys before enroll admin
+	util.cleanupDir(util.storePathForOrg(orgName));
+	
+	return chain;
 }

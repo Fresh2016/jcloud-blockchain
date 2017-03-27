@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+var async = require('async');
+
 var hfc = require('fabric-client');
 var ClientUtils = require('fabric-client/lib/utils.js');
 var Peer = require('fabric-client/lib/Peer.js');
@@ -26,8 +28,6 @@ var util = require('./util.js');
 var logger = ClientUtils.getLogger('query-chaincode');
 var ORGS = util.ORGS;
 
-//TODO: to be removed
-//var tx_id = null;
 var nonce = null;
 var the_user = null;
 var targets = [];
@@ -49,7 +49,7 @@ var result = {
 		counter : ''
 	};
 
-// this is a transaction, will just use org2's identity to
+// Query transactions just use org2's identity to
 // submit the request. intentionally we are using a different org
 // than the one that submitted the "move" transaction, although either org
 // should work properly
@@ -239,60 +239,50 @@ module.exports.queryPeers = function(channelName) {
 	var client = new hfc();
 	var org = defaultOrg;
 	var orgName = util.getOrgNameByOrg(ORGS, org);
-	var chain = setup.setupChainWithOnlyPrimaryPeer(client, ORGS, orgName, org);
+	var chain = setup.setupChainWithAllPeers(client, ORGS, orgName);
 	
 	return hfc.newDefaultKeyValueStore({
 		path: util.storePathForOrg(orgName)
-		
 	}).then((store) => {
 		client.setStateStore(store);
 		return Submitter.getSubmitter(client, org, logger);
+		
 	}).then((admin) => {
 		logger.debug('Successfully enrolled user \'admin\'');
-		var result = [];
-		
 		the_user = admin;
 		the_user.mspImpl._id = util.getMspid(ORGS, org);
 		
-		let peers = chain.getPeers();
-		for (let i = 0; i < peers.length; i++)  {
-			thisPeer = peers[i];
-			console.log(thisPeer.getUrl());
-			var peerStatus = {
-					name: thisPeer.getUrl(),
-					status: 'DOWN'
-				}
-			//chain.setPrimaryPeer(thisPeer);
-			
-			return chain.queryChannels(thisPeer);
-	
-			/*
-			
+		var peers = chain.getPeers();
+		async.mapSeries(peers, function(thisPeer, processResults) {
 			chain.queryChannels(thisPeer)
-				.then((response) => {
-					logger.debug('Peer %s has joined channels %s', peerStatus.name, JSON.stringify(response.channels));
-					let channels = response.channels;
-					for (let i = 0; i < channels.length; i++)  {
-						if (channels[i].channel_id == channelName) {
-							result.push(peerStatus);
-							console.dir(result);
-							continue;
-						}
-					}
-				});
-					*/
-		}
-		
-	
-	})
-	.then((response_payloads) => {
-		console.dir(response_payloads);
-		for(let i = 0; i < response_payloads.length; i++) {
-			logger.info('gua! Query results [' + i + ']: %s' + response_payloads[i]);
-		}
-		return 'aha';
-	})
-		/*
+			.then((response) => {
+				response.peer = thisPeer.getUrl();
+				processResults(null, response);
+			}, (err) => {
+				processResults(err, null);
+			}).catch((err) => {
+				logger.error('Failed due to unexpected reasons. ' + err.stack ? err.stack : err);
+				processResults(err, null);
+			});
+
+		}, function(err, responses) {
+			logger.debug('processResults get callback with results %s and err %s.', 
+					JSON.stringify(responses), JSON.stringify(err));
+			var result = parseQueryPeerStatusReponse(responses, channelName);
+			logger.debug('Returning peer status: %s', JSON.stringify(result));
+			logger.info('END of query peers.');
+		});			
+
+	}).catch((err) => {
+		logger.error.error('Failed to query with error:' + err.stack ? err.stack : err);
+		return result;
+	});
+}
+
+
+
+
+/*
 	
 	.then((admin) => {
 		logger.debug('Successfully enrolled user \'admin\'');
@@ -373,78 +363,12 @@ module.exports.queryPeers = function(channelName) {
 					policy_map.Writers.key, policy_map.Writers.value.mod_policy);
 		}
 	)
-	/*
-
-	.then((block) => {
-		logger.info('Chain getBlock() returned block number= %s',block.header.number);
-		return queryTransactionByTxId(transactionId);
-		
-	}).then((processed_transaction) => {
-		logger.info('Chain queryTransaction() returned processed tranaction validationCode: ' + processed_transaction.validationCode);
-
-		// TODO: return nothing? check what we can get from processed_transaction
-		decodeTransaction(processed_transaction, commonProtoPath, transProtoPath);
- 
-		return chain.queryInfo();
-		
-	}).then((blockchainInfo) => {
-		logger.info('Chain queryInfo() returned blockchain info.');
-		logger.info('Chain queryInfo() returned block height = ' + blockchainInfo.height);
-		logger.info('Chain queryInfo() returned block previousBlockHash = ' + blockchainInfo.previousBlockHash);
-		logger.info('Chain queryInfo() returned block currentBlockHash = ' + blockchainInfo.currentBlockHash);
-		var block_hash = blockchainInfo.currentBlockHash;
-		result.previousBlockHash = blockchainInfo.previousBlockHash;
-		result.currentBlockHash = blockchainInfo.currentBlockHash;
-
-		// send query
-		return chain.queryBlockByHash(block_hash);
-	},
-	(err) => {
-		util.throwError(logger, err.stack ? err.stack : err, 'Failed to send query due to error: ');
-		return result;
-		
-	}).then((block) => {
-		logger.info(' Chain queryBlockByHash() returned block number=%s',block.header.number);
-		logger.info('got back block number '+ block.header.number);
-		result.blockNumber = block.header.number.low;
-
-	}).then(() => {
-		nonce = ClientUtils.getNonce()
-		var tx_id = chain.buildTransactionID(nonce, the_user);
-
-		// send query
-		// for supplychain
-		var request = {
-			chaincodeId : util.chaincodeId,
-			chaincodeVersion : util.chaincodeVersion,
-			chainId: util.channel,
-			txId: tx_id,
-			nonce: nonce,
-			fcn: 'queryTrade',
-			args: ["TransactionId", "Sku", "TradeDate", "TraceInfo"]
-		};
-
-		return chain.queryByChaincode(request);
-	},
-	(err) => {
-		util.throwError(logger, err.stack ? err.stack : err, 'Failed to send query chaincode due to error: ');
-		return result;
-		
-	}).then((response_payloads) => {
-		logger.info('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
-		return parseQuerySupplyChainResponse(response_payloads);
-
-	},
-	(err) => {
-		util.throwError(logger, err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
-
-	})
-	*/
 	.catch((err) => {
 		logger.error.error('Failed to query with error:' + err.stack ? err.stack : err);
 		return result;
 	});
 }
+*/
 
 
 function decodeTransaction(transactionId, processed_transaction, commonProtoPath, transProtoPath) {
@@ -509,6 +433,30 @@ function parseQueryHistoryResponse(response_payloads) {
 		logger.error('response_payloads is null');
 		return result;
 	}
+}
+
+
+function parseQueryPeerStatusReponse(responses, channelName) {
+	var result = [];
+	for (let i in responses) {
+		let response = responses[i];
+		var peerStatus = {
+				name: response.peer,
+				status: 'DOWN'
+			}
+		if (null != response && null != response.channels) {
+			for (let num in response.channels) {
+				if (channelName == response.channels[num].channel_id) {
+					peerStatus.status = 'UP';
+					logger.debug('Peer %s has joined channel %s', response.peer, 
+							response.channels[num].channel_id);
+					break;
+				}
+			}
+		}
+		result.push(peerStatus);
+	}
+	return result;
 }
 
 
