@@ -55,7 +55,7 @@ var result = {
 // should work properly
 var defaultOrg = 'org2';
 
-module.exports.isTransactionSucceed = function(transactionId) {
+module.exports.isTransactionSucceed = function(transactionId, callback) {
 	logger.info('\n\n***** Hyperledger fabric client: query transaction validationCode by transactionId: %s *****', transactionId);
 
 	// Different org uses different client
@@ -81,19 +81,20 @@ module.exports.isTransactionSucceed = function(transactionId) {
 		
 	}).then((processed_transaction) => {
 		try {
-			return decodeTransaction(transactionId, processed_transaction, commonProtoPath, transProtoPath);
+			callback(decodeTransaction(transactionId, processed_transaction, commonProtoPath, transProtoPath));
+			logger.info('END of query transaction status.');
 		} catch(err) {
-			return false;
+			callback(err);
 		}
 
 	}).catch((err) => {
 		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
-		return false;
+		callback(err);
 	});
 }
 
 
-module.exports.queryTransaction = function(transactionId) {
+module.exports.queryTransaction = function(transactionId, callback) {
 	logger.info('\n\n***** Hyperledger fabric client: query transaction by transactionId: %s *****', transactionId);
 	
 	// Different org uses different client
@@ -151,20 +152,21 @@ module.exports.queryTransaction = function(transactionId) {
 		
 	}).then((response_payloads) => {
 		logger.debug('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
-		return parseQuerySupplyChainResponse(response_payloads);
+		callback(parseQuerySupplyChainResponse(response_payloads));
+		logger.info('END of query transaction.');
 
 	},
 	(err) => {
 		util.throwError(logger, err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
-
+		callback(err);
 	}).catch((err) => {
 		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
-		return result;
+		callback(err);
 	});
 }
 
 
-module.exports.queryTransactionHistory = function(transactionId) {
+module.exports.queryTransactionHistory = function(transactionId, callback) {
 	logger.info('\n\n***** Hyperledger fabric client: query transaction history by transactionId: %s *****', transactionId);
 	
 	// Different org uses different client
@@ -222,15 +224,16 @@ module.exports.queryTransactionHistory = function(transactionId) {
 		
 	}).then((response_payloads) => {
 		logger.debug('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
-		return parseQueryHistoryResponse(response_payloads);
+		callback(parseQueryHistoryResponse(response_payloads));
+		logger.info('END of query transaction hitory.');
 
 	},
 	(err) => {
 		util.throwError(logger, err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
-
+		callback(err);
 	}).catch((err) => {
 		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
-		return result;
+		callback(err);
 	});
 }
 
@@ -276,8 +279,11 @@ module.exports.queryPeers = function(channelName, callback) {
 			logger.debug('Returning peer status: %s', JSON.stringify(result));
 			callback(result);
 			logger.info('END of query peers.');
+		},
+		(err) => {
+			util.throwError(logger, err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
+			callback(err);
 		});			
-
 	}).catch((err) => {
 		logger.error.error('Failed to query with error:' + err.stack ? err.stack : err);
 		callback(err);
