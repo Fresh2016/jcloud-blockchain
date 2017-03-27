@@ -183,7 +183,7 @@ function sendInstantiateProposal(admin, mspid) {
 			chaincodeId: util.chaincodeId,
 			chaincodeVersion: util.chaincodeVersion,
 			fcn: 'init',
-			args: ["Sku", "Sku654321", "TraceInfo", "this is gesis block"],
+			args: ["Sku", "Sku654321", "TraceInfo", "this is genesis block"],
 			chainId: util.channel,
 			txId: tx_id,
 			nonce: nonce
