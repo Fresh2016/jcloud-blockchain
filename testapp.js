@@ -96,20 +96,6 @@ return 'failed';
 
 
 //queryClient.queryPeers('mychannel', sendResponse);
-queryClient.queryOrderers('mychannel', sendResponse);
+//queryClient.queryOrderers('mychannel', sendResponse);
 
-
-/*
-invokeClient.invokeChaincode('uhmmm...we are testing ...again')
-.then((result) => {
-	console.log('API: invoke result %s', JSON.stringify(result));
-	res.json(result); // return all amounts in JSON format
-},
-(err) => {
-console.error('API: invoke result %s', result);
-res.json('failed');
-}).catch((err) => {
-console.error('API: invoke result %s', result);
-return 'failed';
-});
-*/
+invokeClient.invokeChaincode('uhmmm...we are testing ...again', sendResponse);

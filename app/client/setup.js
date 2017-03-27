@@ -15,6 +15,7 @@
  */
 var Orderer = require('fabric-client/lib/Orderer.js');
 var Peer = require('fabric-client/lib/Peer.js');
+var EventHub = require('fabric-client/lib/EventHub.js');
 var util = require('./util.js');
 
 // initial a new chain for specific org with all peers
@@ -29,6 +30,45 @@ module.exports.setupChain = function(client, ORGS, orgName, peerOrg) {
 				let peer = new Peer(ORGS[peerOrg][key].requests);
 				chain.addPeer(peer);
 			}
+		}
+	}
+
+	// remove expired keys before enroll admin
+	util.cleanupDir(util.storePathForOrg(orgName));
+	
+	return chain;
+}
+
+
+
+//initial a new chain for specific org with only peer1 with eventbus
+module.exports.setupChainWithEventbus = function(client, eventhubs, allEventhubs, ORGS, orgName, peerOrg) {
+	// set up the chain with orderer
+	var chain = client.newChain(util.channel);
+	chain.addOrderer(new Orderer(ORGS.orderer));
+
+	// set up the chain to use each org's 'peer1' for
+	// both requests and events
+	for (let key in ORGS) {
+		if (ORGS.hasOwnProperty(key) && typeof ORGS[key].peer1 !== 'undefined') {
+			let peer = new Peer(ORGS[key].peer1.requests);
+			chain.addPeer(peer);
+			if (!chain.isValidPeer(peer)) {
+				chain.addPeer(peer);
+				//console.debug('喔～ key is %s, org is %s', key, peerOrg);
+				/*
+				if (key == peerOrg) {
+					logger.debug('set primary peer: %s', JSON.stringify(peer));
+					chain.setPrimaryPeer(peer);
+				}
+				*/
+			}
+
+			let eh = new EventHub();
+			eh.setPeerAddr(ORGS[key].peer1.events);
+			eh.connect();
+			eventhubs.push(eh);
+			allEventhubs.push(eh);
 		}
 	}
 
