@@ -52,20 +52,14 @@ module.exports = function(app) {
 		});
 	});	
 
-	// API: query peer list
+	// API: query peer list and status
 	app.get('/v1/peers', function(req, res) {
-		console.log('API: query peer list');
-		queryClient.queryTransaction(req.query.channel)
-			.then((result) => {
-				console.log('API: query result %s', JSON.stringify(result));
-				res.json(result); // return all amounts in JSON format
-			},
-		(err) => {
-			console.error('API: query result %s', result);
-			res.json('failed');
-		}).catch((err) => {
-			console.error('API: query result %s', result);
-			return 'failed';
+		console.log('API: query peers status');
+		queryClient.queryPeers(req.query.channel, function sendResponse(result) {
+			for (let i in result) {
+				result[i].name = 'peer' + i;
+			}
+			res.json(result);
 		});
 	});	
 
