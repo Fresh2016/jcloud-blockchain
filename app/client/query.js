@@ -37,18 +37,6 @@ var commonProtoPath = './node_modules/fabric-client/lib/protos/common/common.pro
 var transProtoPath = './node_modules/fabric-client/lib/protos/peer/transaction.proto';
 
 
-// Default response is all empty
-var result = {
-		blockNumber : '',
-		sku : '',
-		tradeDate : '',
-		traceInfo : '',
-		previousBlockHash : '',
-		currentBlockHash : '',
-		transactionId : '',
-		counter : ''
-	};
-
 // Query transactions just use org2's identity to
 // submit the request. intentionally we are using a different org
 // than the one that submitted the "move" transaction, although either org
@@ -85,7 +73,7 @@ module.exports.isTransactionSucceed = function(transactionId, callback) {
 
 	}).catch((err) => {
 		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
-		callback(err);
+		callback(false);
 	});
 }
 
@@ -141,23 +129,16 @@ module.exports.queryTransaction = function(transactionId, callback) {
 		logger.debug('Sending query request: %s', JSON.stringify(request));
 		
 		return chain.queryByChaincode(request);
-	},
-	(err) => {
-		util.throwError(logger, err.stack ? err.stack : err, 'Failed to send query chaincode due to error: ');
-		return result;
 		
 	}).then((response_payloads) => {
 		logger.debug('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
 		callback(parseQuerySupplyChainResponse(response_payloads));
 		logger.info('END of query transaction.');
 
-	},
-	(err) => {
-		util.throwError(logger, err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
-		callback(err);
 	}).catch((err) => {
-		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
-		callback(err);
+		logger.error('Failed to send query or parse query response due to error: ' + err.stack ? err.stack : err);
+		callback(parseQuerySupplyChainResponse(null));
+		logger.info('END of query transaction.');
 	});
 }
 
@@ -213,23 +194,15 @@ module.exports.queryTransactionHistory = function(transactionId, callback) {
 		logger.debug('Sending query request: %s', JSON.stringify(request));
 		
 		return chain.queryByChaincode(request);
-	},
-	(err) => {
-		util.throwError(logger, err.stack ? err.stack : err, 'Failed to send query chaincode due to error: ');
-		return result;
-		
 	}).then((response_payloads) => {
 		logger.debug('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
 		callback(parseQueryHistoryResponse(response_payloads));
 		logger.info('END of query transaction hitory.');
 
-	},
-	(err) => {
-		util.throwError(logger, err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
-		callback(err);
 	}).catch((err) => {
-		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
-		callback(err);
+		logger.error('Failed to send query or parse query response due to error: ' + err.stack ? err.stack : err);
+		callback(parseQueryHistoryResponse(null));
+		logger.info('END of query transaction.');
 	});
 }
 
@@ -261,11 +234,13 @@ module.exports.queryPeers = function(channelName, callback) {
 			.then((response) => {
 				response.peer = thisPeer.getUrl();
 				processResults(null, response);
-			}, (err) => {
-				processResults(err, null);
 			}).catch((err) => {
-				logger.error('Failed due to unexpected reasons. ' + err.stack ? err.stack : err);
-				processResults(err, null);
+				var response = {
+						channels: null,
+						peer: thisPeer.getUrl()
+					}
+				logger.error('Peer %s has no response, thus it is DOWN. ', thisPeer.getUrl());
+				processResults(null, response);
 			});
 
 		}, function(err, responses) {
@@ -277,12 +252,13 @@ module.exports.queryPeers = function(channelName, callback) {
 			logger.info('END of query peers.');
 		},
 		(err) => {
-			util.throwError(logger, err.stack ? err.stack : err, 'Failed to parse query response due to error: ');
-			callback(err);
+			// No case should be here
+			util.throwError(logger, err.stack ? err.stack : err, 'Unexpected err catched in queryPeers, check it.');
 		});			
 	}).catch((err) => {
-		logger.error.error('Failed to query with error:' + err.stack ? err.stack : err);
-		callback(err);
+		logger.error('Failed to enroll user or read peer list with error:' + err.stack ? err.stack : err);
+		callback(null);
+		logger.info('END of query peers.');
 	});
 }
 
@@ -324,17 +300,17 @@ module.exports.queryConfig = function(channelName, callback) {
 		
 	}).then((response_payloads) => {
 		logger.info('Got config envelope from getChannelConfig.');
-		try {
+//		try {
 			parseQueryChainConfig(response_payloads);
 			ordererStatus.status = 'UP';
 			callback([ordererStatus]);
-		} catch(err) {
-			callback(ordererStatus);
-		}
+//		} catch(err) {
+//			callback([ordererStatus]);
+//		}
 			
 	}).catch((err) => {
 		logger.error.error('Failed to query with error:' + err.stack ? err.stack : err);
-		callback(ordererStatus);
+		callback([ordererStatus]);
 	});
 }
 
@@ -350,15 +326,41 @@ function decodeTransaction(transactionId, processed_transaction, commonProtoPath
 		var channel_header = commonProto.ChannelHeader.decode(payload.header.channel_header);
 		logger.debug('Chain queryTransaction - transaction ID :: %s', channel_header.tx_id);
 		logger.debug('Chain queryTransaction - tranaction validationCode:: %s ', processed_transaction.validationCode);
+		if (transactionId == channel_header.tx_id && 0 == processed_transaction.validationCode) {
+			return true;
+		} else {
+			return false;
+		}
 	} catch(err) {
 		util.throwError(logger, err.stack ? err.stack : err, 'Failed to decode transaction query response.');
-	}
-	
-	if (transactionId == channel_header.tx_id && 0 == processed_transaction.validationCode) {
-		return true;
-	} else {
 		return false;
 	}
+}
+
+
+function getPeerStatus(response, channelName){
+	var peerStatus = {
+			name: response.peer,
+			status: 'DOWN'
+		}
+	if (isPeerInChannel(response, channelName)){
+		peerStatus.status = 'UP';
+	}
+	return peerStatus;
+}
+
+
+function isPeerInChannel(response, channelName) {
+	if (null != response.channels) {
+		for (let num in response.channels) {
+			if (channelName == response.channels[num].channel_id) {
+				logger.debug('Peer %s has joined channel %s', response.peer, 
+						response.channels[num].channel_id);
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 
@@ -433,6 +435,18 @@ function parseQueryChainConfig(config_envelope) {
 
 
 function parseQuerySupplyChainResponse(response_payloads) {
+	// Default response is all empty
+	var result = {
+			blockNumber : '',
+			sku : '',
+			tradeDate : '',
+			traceInfo : '',
+			previousBlockHash : '',
+			currentBlockHash : '',
+			transactionId : '',
+			counter : ''
+		};
+	
 	if (response_payloads) {
 		for(let i = 0; i < response_payloads.length; i++) {
 			logger.debug('Query results [' + i + ']: ' + response_payloads[i]);
@@ -443,7 +457,6 @@ function parseQuerySupplyChainResponse(response_payloads) {
 			result.counter = res_list[3];
 			return result;
 		}
-		//return result;
 	} else {
 		logger.error('response_payloads is null');
 		return result;
@@ -473,24 +486,17 @@ function parseQueryHistoryResponse(response_payloads) {
 
 
 function parseQueryPeerStatusReponse(responses, channelName) {
+	// Only when peer responses with channels including desired channelName,
+	// its status is returned as UP. Other cases are DOWN.
 	var result = [];
-	for (let i in responses) {
-		let response = responses[i];
-		var peerStatus = {
-				name: response.peer,
-				status: 'DOWN'
+	if (responses) {
+		for (let i in responses) {
+			let response = responses[i];
+			if (null != response) {
+				var peerStatus = getPeerStatus(response, channelName);
 			}
-		if (null != response && null != response.channels) {
-			for (let num in response.channels) {
-				if (channelName == response.channels[num].channel_id) {
-					peerStatus.status = 'UP';
-					logger.debug('Peer %s has joined channel %s', response.peer, 
-							response.channels[num].channel_id);
-					break;
-				}
-			}
+			result.push(peerStatus);
 		}
-		result.push(peerStatus);
 	}
 	return result;
 }
