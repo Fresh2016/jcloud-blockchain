@@ -86,6 +86,7 @@ module.exports.queryTransaction = function(transactionId, callback) {
 	var org = defaultOrg;
 	var orgName = util.getOrgNameByOrg(ORGS, org);
 	var chain = setup.setupChainWithOnlyPrimaryPeer(client, ORGS, orgName, org);
+	var block_result = {};
 	
 	return hfc.newDefaultKeyValueStore({
 		path: util.storePathForOrg(orgName)
@@ -107,9 +108,9 @@ module.exports.queryTransaction = function(transactionId, callback) {
 		logger.debug('Chain queryInfo() returned block previousBlockHash = ' + blockchainInfo.previousBlockHash);
 		logger.debug('Chain queryInfo() returned block currentBlockHash = ' + blockchainInfo.currentBlockHash);
 		var block_hash = blockchainInfo.currentBlockHash;
-		result.blockNumber = blockchainInfo.height.low;
-		result.previousBlockHash = blockchainInfo.previousBlockHash;
-		result.currentBlockHash = blockchainInfo.currentBlockHash;
+		block_result.blockNumber = blockchainInfo.height.low;
+		block_result.previousBlockHash = blockchainInfo.previousBlockHash;
+		block_result.currentBlockHash = blockchainInfo.currentBlockHash;
 
 	}).then(() => {
 		nonce = ClientUtils.getNonce()
@@ -132,7 +133,8 @@ module.exports.queryTransaction = function(transactionId, callback) {
 		
 	}).then((response_payloads) => {
 		logger.debug('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
-		callback(parseQuerySupplyChainResponse(response_payloads));
+
+		callback(Object.assign(parseQuerySupplyChainResponse(response_payloads), block_result));
 		logger.info('END of query transaction.');
 
 	}).catch((err) => {
@@ -167,15 +169,6 @@ module.exports.queryTransactionHistory = function(transactionId, callback) {
 		// use default primary peer
 		return chain.queryInfo();
 		
-	}).then((blockchainInfo) => {
-		logger.debug('Chain queryInfo() returned block height = ' + blockchainInfo.height.low);
-		logger.debug('Chain queryInfo() returned block previousBlockHash = ' + blockchainInfo.previousBlockHash);
-		logger.debug('Chain queryInfo() returned block currentBlockHash = ' + blockchainInfo.currentBlockHash);
-		var block_hash = blockchainInfo.currentBlockHash;
-		result.blockNumber = blockchainInfo.height.low;
-		result.previousBlockHash = blockchainInfo.previousBlockHash;
-		result.currentBlockHash = blockchainInfo.currentBlockHash;
-
 	}).then(() => {
 		nonce = ClientUtils.getNonce()
 		var tx_id = chain.buildTransactionID(nonce, the_user);
