@@ -92,8 +92,7 @@ function installChaincode(org) {
 		util.throwError(logger, err, 'Failed to enroll user \'admin\'. ');
 
 	}).then((results) => {
-		var proposalResponses = results[0];
-		return util.checkProposalResponses(proposalResponses, 'Install chaincode', logger);
+		return util.checkProposalResponses(results, 'Install chaincode', logger);
 
 	},
 	(err) => {

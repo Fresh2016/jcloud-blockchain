@@ -21,6 +21,7 @@ var ClientUtils = require('fabric-client/lib/utils.js');
 var Peer = require('fabric-client/lib/Peer.js');
 var Orderer = require('fabric-client/lib/Orderer.js');
 var Submitter = require('./get-submitter.js');
+//var queryClient = require('./query.js');
 var setup = require('./setup.js');
 var util = require('./util.js');
 
@@ -34,6 +35,16 @@ var allEventhubs = [];
 var targets = [];
 var eventhubs = [];
 
+/*TODO: there's a bug that peer down causes grpc emitting error event and nobody handles it, result in program panic.
+events.js:160
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: Connect Failed
+    at ClientDuplexStream._emitStatusIfDone (D:\eclipse-workspace\jcloud-blockchain\node_modules\grpc\src\node\src\client.js:201:19)
+    at ClientDuplexStream._readsDone (D:\eclipse-workspace\jcloud-blockchain\node_modules\grpc\src\node\src\client.js:169:8)
+    at readCallback (D:\eclipse-workspace\jcloud-blockchain\node_modules\grpc\src\node\src\client.js:229:12)
+*/
 
 module.exports.invokeChaincode = function(traceInfo, callback) {
 	logger.info('\n\n***** Hyperledger fabric client: invoke chaincode *****');
@@ -56,33 +67,26 @@ module.exports.invokeChaincode = function(traceInfo, callback) {
 		logger.debug('Successfully enrolled user \'admin\'');
 		return sendTransactionProposal(chain, admin, util.getMspid(ORGS, org), traceInfo);
 
-	}, (err) => {
-		util.throwError(logger, err, 'Failed to enroll user \'admin\'. ');
-
 	}).then((results) => {
-		var proposalResponses = results[0];
-		var proposal = results[1];
-		var header   = results[2];
-
-		if (util.checkProposalResponses(proposalResponses, 'Invoke transaction', logger)) {
+		if (util.checkProposalResponses(results, 'Invoke transaction', logger)) {
+			var proposalResponses = results[0];
+			var proposal = results[1];
+			var header   = results[2];
 			logger.debug('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', 
 					proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature);
 			commitTransaction(chain, proposalResponses, proposal, header);
-		} else {
-			util.throwError(logger, null, 'Failed to send Proposal or receive valid response. Response null or status is not 200. exiting...');
 		}
-	}, (err) => {
-		util.throwError(logger, err.stack ? err.stack : err, 'Failed to send invoke proposal due to error: ');
-
 	}).then((response) => {
-		callback(finishCommit(response, logger, tx_id));
+		if(response) {
+			callback(finishCommit(response, logger, tx_id));
+		} else {
+			util.throwError(logger, null, 'Failed to order the transaction, commit response is null.');
+		}
 		logger.info('END of invoke transaction.');
-	}, (err) => {
-		logger.error('Failed to send transaction due to error: ' + err.stack ? err.stack : err);
-		callback(err);
 	}).catch((err) => {
-		logger.error.error('Failed to invoke transaction with error:' + err.stack ? err.stack : err);
-		callback(err);
+		logger.error('Failed to send invoke proposal or commit transaction with error:' + err.stack ? err.stack : err);
+		callback({TransactionId : null});
+		logger.info('END of invoke transaction.');
 	});
 };
 

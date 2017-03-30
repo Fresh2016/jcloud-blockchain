@@ -60,12 +60,10 @@ module.exports.instantiateChaincode = function(org) {
 		util.throwError(logger, err, 'Failed to enroll user \'admin\'. ');
 
 	}).then((results) => {
-
-		var proposalResponses = results[0];
-		var proposal = results[1];
-		var header   = results[2];
-		
-		if (util.checkProposalResponses(proposalResponses, 'Instantiate transaction', logger)) {
+		if (util.checkProposalResponses(results, 'Instantiate transaction', logger)) {
+			var proposalResponses = results[0];
+			var proposal = results[1];
+			var header   = results[2];
 			logger.debug('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', 
 					proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature);
 			commitInstantiate(proposalResponses, proposal, header);

@@ -128,18 +128,23 @@ function deleteFolderRecursive(path) {
 //Check status code of all responses to 
 //ensure get valid response from all peers
 module.exports.checkProposalResponses = 
-function checkProposalResponses(proposalResponses, proposal_type, logger) {
+function checkProposalResponses(results, proposal_type, logger) {
 	var all_good = true;
 
-	for(var i in proposalResponses) {
-		let one_good = false;
-		if (proposalResponses && proposalResponses[0].response && proposalResponses[0].response.status === 200) {
-			one_good = true;
-			logger.debug(proposal_type + ' proposal was good');
-		} else {
-			logger.error(proposal_type + ' proposal was bad');
+	if (null != results && 3 <= results.length) {
+		var proposalResponses = results[0];
+		for(var i in proposalResponses) {
+			let one_good = false;
+			if (proposalResponses && proposalResponses[0].response && proposalResponses[0].response.status === 200) {
+				one_good = true;
+				logger.debug(proposal_type + ' proposal was good');
+			} else {
+				logger.error(proposal_type + ' proposal was bad');
+			}
+			all_good = all_good & one_good;
 		}
-		all_good = all_good & one_good;
+	} else {
+		all_good = false;
 	}
 	
 	if (all_good) {
