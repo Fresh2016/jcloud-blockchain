@@ -74,15 +74,10 @@ module.exports.invokeChaincode = function(traceInfo, callback) {
 			var header   = results[2];
 			logger.debug('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', 
 					proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature);
-			commitTransaction(chain, proposalResponses, proposal, header);
+			// callback should be passed for sending transactionId back to routes.js
+			return commitTransaction(chain, proposalResponses, proposal, header, tx_id, callback);
 		}
-	}).then((response) => {
-		if(response) {
-			callback(finishCommit(response, logger, tx_id));
-		} else {
-			util.throwError(logger, null, 'Failed to order the transaction, commit response is null.');
-		}
-		logger.info('END of invoke transaction.');
+
 	}).catch((err) => {
 		logger.error('Failed to send invoke proposal or commit transaction with error:' + err.stack ? err.stack : err);
 		callback({TransactionId : null});
@@ -100,7 +95,7 @@ function addTxPromise(eventPromises, eh, deployId) {
 }
 
 
-function commitTransaction(chain, proposalResponses, proposal, header){
+function commitTransaction(chain, proposalResponses, proposal, header, tx_id, callback){
 	var request = {
 		proposalResponses: proposalResponses,
 		proposal: proposal,
@@ -121,9 +116,7 @@ function commitTransaction(chain, proposalResponses, proposal, header){
 	var sendPromise = chain.sendTransaction(request);
 	return Promise.all([sendPromise].concat(eventPromises))
 	.then((results) => {
-		logger.info('Invoke transaction event promise all complete.');
-		return results[0]; // the first returned value is from the 'sendPromise' which is from the 'sendTransaction()' call
-
+		return processCommitResponse(results, callback, tx_id);
 	}).catch((err) => {
 		util.throwError(logger, err, 'Failed to send invoke transaction and get notifications within the timeout period.');
 	});
@@ -157,12 +150,34 @@ function finishCommit(response, logger, tx_id) {
 }
 
 
-function printSuccessHint(tx_id){
-	logger.info('Successfully sent transaction to the orderer.');
+function printSuccessHint(tx_id) {
+	logger.info('Successfully committed transaction to the orderer.');
 	logger.info('******************************************************************');
 	logger.info('To manually run query.js, set the following environment variables:');
 	logger.info('E2E_TX_ID='+'\''+tx_id+'\'');
 	logger.info('******************************************************************');
+}
+
+
+function processCommitResponse(responses, callback, tx_id) {
+	logger.debug('Successfully get transaction commit response: %s', JSON.stringify(responses));
+	
+	try {
+		// First returned value is from the 'sendPromise' which is from the 'sendTransaction()' call
+		let response = responses[0];
+		
+		if(response) {
+			// Sending transactionId back to routes.js
+			logger.info('Invoke transaction event promise all complete.');
+			callback(finishCommit(response, logger, tx_id));
+		}	
+		
+		logger.info('END of invoke transaction.');
+		return true;
+		
+	} catch(err) {
+		util.throwError(logger, err, 'Failed to process commit response. ');
+	}
 }
 
 
