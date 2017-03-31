@@ -162,8 +162,8 @@ function checkTheNext(peerList) {
 
 	}).catch((err) => {
 		logger.debug('Peer %s is not connected, try next.', peer);
-		if (peerList.length) {
-			checkTheNext(peerList);
+		if (0 < peerList.length) {
+			return checkTheNext(peerList);
 		} else {
 			logger.debug('Failed in getting any alive peer, returning nothing.');
 			return null;
@@ -253,7 +253,7 @@ function getValueOfJson(jsonObj, keyword) {
 
 
 function isPortAlive(host, port) {
-	logger.debug('Checking connectivity of %s : %s', host, port);
+	logger.debug('Checking connectivity of %s:%s', host, port);
 	return new Promise((resolve, reject) => {
 		net.createConnection(port, host)
 		.on("connect", function(e) {
@@ -268,7 +268,7 @@ function isPortAlive(host, port) {
 
 
 function popRandom(list) {
-	logger.debug('Poping cell radomly from %s', list);
+	logger.debug('Poping cell randomly from %s', list);
 	if (list) {
 		var i = getRandom(0, list.length);
 		var component = list[i];
