@@ -20,6 +20,7 @@ var hfc = require('fabric-client');
 var ClientUtils = require('fabric-client/lib/utils.js');
 var Orderer = require('fabric-client/lib/Orderer.js');
 var Submitter = require('./get-submitter.js');
+var setup = require('./setup.js');
 var util = require('./util.js');
 
 var logger = ClientUtils.getLogger('create-channel');
