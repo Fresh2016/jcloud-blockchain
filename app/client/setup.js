@@ -60,14 +60,22 @@ function addPeerAll(chain, ORGS) {
 
 
 //Set up the chain with eventhub
-function connectEventHub(eventhubs, allEventhubs, peerInfo) {
+function connectEventHub(eventhubs, peerInfo) {
 	var eventsUrl = peerInfo['events'];
 	let eh = new EventHub();
 
 	eh.setPeerAddr(eventsUrl);
 	eh.connect();
 	eventhubs.push(eh);
-	allEventhubs.push(eh);	
+}
+
+
+//Set up the chain with eventhub
+function connectEventHubAll(eventhubs, ORGS) {
+	var peerList = getPeerAll(ORGS);
+	for (let i in peerList) {
+		connectEventHub(eventhubs, peerList[i]);
+	}
 }
 
 
@@ -222,10 +230,10 @@ function setupChain(client, ORGS, orgName, peerOrg) {
 
 
 //Initialize a new chain for specific org with one peer and connect to its eventbus
-function setupChainWithEventbus(client, eventhubs, allEventhubs, ORGS, peerInfo, asPrimary) {
+function setupChainWithEventbus(client, eventhubs, ORGS, peerInfo, asPrimary) {
 	try{
 		var chain = setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, asPrimary);
-		connectEventHub(eventhubs, allEventhubs, peerInfo);
+		connectEventHub(eventhubs, peerInfo);
 
 		return chain;
 		
@@ -257,13 +265,15 @@ function setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, asPrimary) {
 
 
 // Initialize a new chain with all peers, with default primary peer
-function setupChainWithAllPeers(client, ORGS) {
+function setupChainWithAllPeers(client, ORGS, eventhubs) {
 	try{
 		var chain = client.newChain(util.channel);
 
 		addOrderer(chain, ORGS);
 		addPeerAll(chain, ORGS);
 
+		connectEventHubAll(eventhubs, ORGS);
+		
 		// Remove expired keys before enroll user
 		cleanupKeyValueStore(ORGS);
 

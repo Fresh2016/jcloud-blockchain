@@ -46,20 +46,32 @@ var defaultOrg = 'org2';
 module.exports.isTransactionSucceed = function(transactionId, callback) {
 	logger.info('\n\n***** Hyperledger fabric client: query transaction validationCode by transactionId: %s *****', transactionId);
 
-	// Different org uses different client
+	// client and chain should be claimed here
 	var client = new hfc();
+	var chain = null;
+
+	// this is a query, will just use org2's identity to
+	// submit the request
 	var org = defaultOrg;
-	var orgName = util.getOrgNameByOrg(ORGS, org);
-	var chain = setup.setupChainWithOnlyPrimaryPeer(client, ORGS, orgName, org);
 	
-	return hfc.newDefaultKeyValueStore({
-		path: util.storePathForOrg(orgName)
+	return setup.getAlivePeer(ORGS, org)
+	.then((peerInfo) => {
+		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
+		return setup.setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, true);
+
+	}).then((readyChain) => {
+		logger.debug('Successfully setup chain %s', readyChain.getName());
+		chain = readyChain;
+		var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
+		return hfc.newDefaultKeyValueStore(options);
 		
-	}).then((store) => {
-		client.setStateStore(store);
+	}).then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
 		return Submitter.getSubmitter(client, org, logger);
 
-	}).then((admin) => {
+	}).then((admin) => {		
 		logger.debug('Successfully enrolled user \'admin\'');
 		the_user = admin;
 		the_user.mspImpl._id = util.getMspid(ORGS, org);
@@ -80,22 +92,34 @@ module.exports.isTransactionSucceed = function(transactionId, callback) {
 
 module.exports.queryTransaction = function(transactionId, callback) {
 	logger.info('\n\n***** Hyperledger fabric client: query transaction by transactionId: %s *****', transactionId);
-	
-	// Different org uses different client
+
+	// client and chain should be claimed here
 	var client = new hfc();
+	var chain = null;
+
+	// this is a query, will just use org2's identity to
+	// submit the request
 	var org = defaultOrg;
-	var orgName = util.getOrgNameByOrg(ORGS, org);
-	var chain = setup.setupChainWithOnlyPrimaryPeer(client, ORGS, orgName, org);
 	var block_result = {};
 	
-	return hfc.newDefaultKeyValueStore({
-		path: util.storePathForOrg(orgName)
+	return setup.getAlivePeer(ORGS, org)
+	.then((peerInfo) => {
+		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
+		return setup.setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, true);
+
+	}).then((readyChain) => {
+		logger.debug('Successfully setup chain %s', readyChain.getName());
+		chain = readyChain;
+		var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
+		return hfc.newDefaultKeyValueStore(options);
 		
-	}).then((store) => {
-		client.setStateStore(store);
+	}).then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
 		return Submitter.getSubmitter(client, org, logger);
 
-	}).then((admin) => {
+	}).then((admin) => {	
 		logger.debug('Successfully enrolled user \'admin\'');
 		the_user = admin;
 		the_user.mspImpl._id = util.getMspid(ORGS, org);
@@ -147,21 +171,33 @@ module.exports.queryTransaction = function(transactionId, callback) {
 
 module.exports.queryTransactionHistory = function(transactionId, callback) {
 	logger.info('\n\n***** Hyperledger fabric client: query transaction history by transactionId: %s *****', transactionId);
-	
-	// Different org uses different client
+
+	// client and chain should be claimed here
 	var client = new hfc();
+	var chain = null;
+
+	// this is a query, will just use org2's identity to
+	// submit the request
 	var org = defaultOrg;
-	var orgName = util.getOrgNameByOrg(ORGS, org);
-	var chain = setup.setupChainWithOnlyPrimaryPeer(client, ORGS, orgName, org);
 	
-	return hfc.newDefaultKeyValueStore({
-		path: util.storePathForOrg(orgName)
+	return setup.getAlivePeer(ORGS, org)
+	.then((peerInfo) => {
+		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
+		return setup.setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, true);
+
+	}).then((readyChain) => {
+		logger.debug('Successfully setup chain %s', readyChain.getName());
+		chain = readyChain;
+		var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
+		return hfc.newDefaultKeyValueStore(options);
 		
-	}).then((store) => {
-		client.setStateStore(store);
+	}).then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
 		return Submitter.getSubmitter(client, org, logger);
 
-	}).then((admin) => {
+	}).then((admin) => {		
 		logger.debug('Successfully enrolled user \'admin\'');
 		the_user = admin;
 		the_user.mspImpl._id = util.getMspid(ORGS, org);
@@ -204,19 +240,23 @@ module.exports.queryPeers = function(channelName, callback) {
 	// TODO: channel name is fixed from config file and should be passed from REST request
 	logger.info('\n\n***** Hyperledger fabric client: query peer status of channel: %s *****', channelName);
 
-	// Different org uses different client
+	// client and chain should be claimed here
 	var client = new hfc();
+	var chain = setup.setupChainWithAllPeers(client, ORGS, eventhubs);;
+
+	// this is a transaction, will just use org1's identity to
+	// submit the request
 	var org = defaultOrg;
-	var orgName = util.getOrgNameByOrg(ORGS, org);
-	var chain = setup.setupChainWithAllPeers(client, ORGS, orgName);
-	
-	return hfc.newDefaultKeyValueStore({
-		path: util.storePathForOrg(orgName)
-	}).then((store) => {
-		client.setStateStore(store);
+	var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
+
+	return hfc.newDefaultKeyValueStore(options)
+	.then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
 		return Submitter.getSubmitter(client, org, logger);
-		
-	}).then((admin) => {
+
+	}).then((admin) => {	
 		logger.debug('Successfully enrolled user \'admin\'');
 		the_user = admin;
 		the_user.mspImpl._id = util.getMspid(ORGS, org);
@@ -269,23 +309,37 @@ module.exports.queryConfig = function(channelName, callback) {
 	// TODO: care only 1 orderer. should be order cluster status when we have
 	logger.info('\n\n***** Hyperledger fabric client: query configuration of channel: %s *****', channelName);
 
-	// Different org uses different client
+	// client and chain should be claimed here
 	var client = new hfc();
+	var chain = null;
+
+	// this is a query, will just use org2's identity to
+	// submit the request
 	var org = defaultOrg;
-	var orgName = util.getOrgNameByOrg(ORGS, org);
-	var chain = setup.setupChain(client, ORGS, orgName);
 	var ordererStatus = {
 			name: chain.getOrderers()[0].getUrl(),
 			status: 'DOWN'
 		}
 	
-	return hfc.newDefaultKeyValueStore({
-		path: util.storePathForOrg(orgName)
-	}).then((store) => {
-		client.setStateStore(store);
-		return Submitter.getSubmitter(client, org, logger);
+	return setup.getAlivePeer(ORGS, org)
+	.then((peerInfo) => {
+		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
+		//TODO: maybe it's not needed to add any peer, to be tested
+		return setup.setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, true);
+
+	}).then((readyChain) => {
+		logger.debug('Successfully setup chain %s', readyChain.getName());
+		chain = readyChain;
+		var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
+		return hfc.newDefaultKeyValueStore(options);
 		
-	}).then((admin) => {
+	}).then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
+		return Submitter.getSubmitter(client, org, logger);
+
+	}).then((admin) => {		
 		logger.debug('Successfully enrolled user \'admin\'');
 		the_user = admin;
 		the_user.mspImpl._id = util.getMspid(ORGS, org);

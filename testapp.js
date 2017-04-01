@@ -1,10 +1,8 @@
 createClient = require('./app/client/create-channel.js');
 joinClient = require('./app/client/join-channel.js');
 installClient = require('./app/client/install-chaincode.js');
-instantiateClient = require('./app/client/instantiate-chaincode.js');
 invokeClient = require('./app/client/invoke-transaction.js');
 queryClient = require('./app/client/query.js');
-//queryBlockClient = require('./app/client/query-block.js');
 
 /*
  * for clear docker container and images
@@ -30,22 +28,8 @@ return 'failed';
 
 
 //installClient.installChaincode(sendResponse);
+invokeClient.instantiateChaincode(sendResponse);
 
-
-/*
-instantiateClient.instantiateChaincode('org1')
-.then((result) => {
-	console.log('API: query result %s', JSON.stringify(result));
-	res.json(result); // return all amounts in JSON format
-},
-(err) => {
-console.error('API: query result %s', result);
-res.json('failed');
-}).catch((err) => {
-console.error('API: query result %s', result);
-return 'failed';
-});
-*/
 
 //queryClient.isTransactionSucceed('45907971aeea190eda997232f8147f14e8e0c911a0484bbb883a0c9d10a0ad83', sendResponse);
 //queryClient.queryTransaction('', sendResponse);
@@ -55,7 +39,7 @@ return 'failed';
 //queryClient.queryPeers('mychannel', sendResponse);
 //queryClient.queryOrderers('mychannel', sendResponse);
 
-invokeClient.invokeChaincode('uhmmm...we are testing ...', sendResponse);
+//invokeClient.invokeChaincode('uhmmm...we are testing ...', sendResponse);
 
 
 
