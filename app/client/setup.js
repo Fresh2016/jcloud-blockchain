@@ -50,6 +50,15 @@ function addPeer(chain, ORGS, peerInfo, asPrimary) {
 }
 
 
+//Set up the chain with all peers
+function addPeerAll(chain, ORGS) {
+	var peerList = getPeerAll(ORGS);
+	for (let i in peerList) {
+		addPeer(chain, ORGS, peerList[i], false);
+	}
+}
+
+
 //Set up the chain with eventhub
 function connectEventHub(eventhubs, allEventhubs, peerInfo) {
 	var eventsUrl = peerInfo['events'];
@@ -102,7 +111,7 @@ function cleanupKeyValueStore(ORGS) {
 //Simply and quick check port connectivity, so that
 //instantiate and invoke will not connect DOWN peer
 function getAlivePeer(ORGS, org) {
-	var peerList = getPeerByOrg(ORGS, 'org2');
+	var peerList = getPeerByOrg(ORGS, org);
 	return checkTheNext(peerList);
 }
 
@@ -189,7 +198,7 @@ function popRandom(list) {
 }
 
 
-//initial a new chain for specific org with all peers
+// Initialize a new chain for specific org with all peers
 function setupChain(client, ORGS, orgName, peerOrg) {
 	var chain = client.newChain(util.channel);
 	chain.addOrderer(new Orderer(ORGS.orderer));
@@ -212,14 +221,28 @@ function setupChain(client, ORGS, orgName, peerOrg) {
 
 
 
-// Initial a new chain for specific org with one peer and connect to its eventbus
+//Initialize a new chain for specific org with one peer and connect to its eventbus
 function setupChainWithEventbus(client, eventhubs, allEventhubs, ORGS, peerInfo, asPrimary) {
+	try{
+		var chain = setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, asPrimary);
+		connectEventHub(eventhubs, allEventhubs, peerInfo);
+
+		return chain;
+		
+	} catch(err) {
+		util.throwError(logger, err, 'Failed in setting up chain, check config file.');
+		return null;
+	}
+}
+
+
+// Initialize a new chain for specific org with only peer1 and as primary peer
+function setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, asPrimary) {
 	try{
 		var chain = client.newChain(util.channel);
 
 		addOrderer(chain, ORGS);
 		addPeer(chain, ORGS, peerInfo, asPrimary);
-		connectEventHub(eventhubs, allEventhubs, peerInfo);
 
 		// Remove expired keys before enroll user
 		cleanupKeyValueStore(ORGS);
@@ -233,53 +256,21 @@ function setupChainWithEventbus(client, eventhubs, allEventhubs, ORGS, peerInfo,
 }
 
 
-//initial a new chain for specific org with only peer1 and as primary peer
-function setupChainWithOnlyPrimaryPeer(client, ORGS, orgName, peerOrg) {
-	// set up the chain with orderer
-	var chain = client.newChain(util.channel);
-	chain.addOrderer(new Orderer(ORGS.orderer));
-	
-	// set up the chain to use each org's 'peer1' for
-	// both requests and events
-	for (let key in ORGS) {
-		if (ORGS.hasOwnProperty(key) && typeof ORGS[key].peer1 !== 'undefined') {
-			let peer = new Peer(ORGS[key].peer1.requests);
-			if (!chain.isValidPeer(peer)) {
-				chain.addPeer(peer);
-				//logger.debug('喔～ key is %s, org is %s', key, peerOrg);
-				if (key == peerOrg) {
-					chain.setPrimaryPeer(peer);
-				}
-			}
-		}
+// Initialize a new chain with all peers, with default primary peer
+function setupChainWithAllPeers(client, ORGS) {
+	try{
+		var chain = client.newChain(util.channel);
+
+		addOrderer(chain, ORGS);
+		addPeerAll(chain, ORGS);
+
+		// Remove expired keys before enroll user
+		cleanupKeyValueStore(ORGS);
+
+		return chain;
+		
+	} catch(err) {
+		util.throwError(logger, err, 'Failed in setting up chain, check config file.');
+		return null;
 	}
-	
-	// remove expired keys before enroll admin
-	util.cleanupDir(util.storePathForOrg(orgName));
-	
-	return chain;
-}
-
-
-//initial a new chain with all peers
-function setupChainWithAllPeers(client, ORGS, orgName) {
-	var chain = client.newChain(util.channel);
-	chain.addOrderer(new Orderer(ORGS.orderer));
-
-	// set up the chain to use all peers of all orgs
-	for (peerOrg in ORGS) {
-		for (let key in ORGS[peerOrg]) {
-			if (ORGS[peerOrg].hasOwnProperty(key)) {
-				if (key.indexOf('peer') === 0) {
-					let peer = new Peer(ORGS[peerOrg][key].requests);
-					chain.addPeer(peer);
-				}
-			}
-		}
-	}
-
-	// remove expired keys before enroll admin
-	util.cleanupDir(util.storePathForOrg(orgName));
-	
-	return chain;
 }

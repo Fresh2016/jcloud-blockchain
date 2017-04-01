@@ -22,6 +22,7 @@ var Peer = require('fabric-client/lib/Peer.js');
 var Orderer = require('fabric-client/lib/Orderer.js');
 var EventHub = require('fabric-client/lib/EventHub.js');
 var Submitter = require('./get-submitter.js');
+var setup = require('./setup.js');
 var util = require('./util.js');
 
 var logger = ClientUtils.getLogger('instantiate-chaincode');
@@ -33,31 +34,42 @@ var the_user = null;
 var targets = [];
 var eventhubs = [];
 var allEventhubs = [];
-var client = new hfc();
-var chain = client.newChain(util.channel);
+
+//Invoke transactions just use org1's identity to
+//submit the request. intentionally we are using a different org
+//than the one that submitted the "move" transaction, although either org
+//should work properly
+var defaultOrg = 'org1';
+
 
 module.exports.instantiateChaincode = function(org) {
 	logger.info('\n\n***** Hyperledger fabric client: instantiate chaincode *****');
 
-	// TODO: to be confirmed
+	// client and chain should be claimed here
+	var client = new hfc();
+	var chain = null;
+
 	// this is a transaction, will just use org1's identity to
 	// submit the request
-	var orgName = util.getOrgNameByOrg(ORGS, org);
-
-	setupChain(ORGS, orgName);
-
-	return hfc.newDefaultKeyValueStore({
-		path: util.storePathForOrg(orgName)
-	}).then((store) => {
-		client.setStateStore(store);
+	var org = defaultOrg;
+	var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
+	
+	return hfc.newDefaultKeyValueStore(options)
+	.then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
 		return Submitter.getSubmitter(client, org, logger);
 
 	}).then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
-		return sendInstantiateProposal(admin, util.getMspid(ORGS, org));
+		// Currently fine without eventbus
+		chain = setup.setupChainWithAllPeers(client, ORGS);
+		return admin;
 
-	}, (err) => {
-		util.throwError(logger, err, 'Failed to enroll user \'admin\'. ');
+	}).then((admin) => {
+		logger.info('Successfully enrolled user \'admin\'');
+		return sendInstantiateProposal(chain, admin, util.getMspid(ORGS, org));
 
 	}).then((results) => {
 		if (util.checkProposalResponses(results, 'Instantiate transaction', logger)) {
@@ -66,7 +78,7 @@ module.exports.instantiateChaincode = function(org) {
 			var header   = results[2];
 			logger.debug('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', 
 					proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature);
-			commitInstantiate(proposalResponses, proposal, header);
+			commitInstantiate(chain, proposalResponses, proposal, header);
 		} else {
 			util.throwError(logger, null, 'Failed to send Proposal or receive valid response. Response null or status is not 200. exiting...');
 		}
@@ -82,7 +94,7 @@ module.exports.instantiateChaincode = function(org) {
 };
 
 
-function commitInstantiate(proposalResponses, proposal, header) {
+function commitInstantiate(chain, proposalResponses, proposal, header) {
 	var request = {
 			proposalResponses: proposalResponses,
 			proposal: proposal,
@@ -166,7 +178,7 @@ function registerTxEvent(eh, resolve, reject, expireTime, deployId) {
 }
 
 
-function sendInstantiateProposal(admin, mspid) {
+function sendInstantiateProposal(chain, admin, mspid) {
 
 	the_user = admin;
 	the_user.mspImpl._id = mspid;
@@ -190,38 +202,6 @@ function sendInstantiateProposal(admin, mspid) {
 	logger.debug('Sending instantiate transaction proposal "%s"', JSON.stringify(request));
 
 	return chain.sendInstantiateProposal(request);
-}
-
-
-function setupChain(ORGS, orgName) {
-	// set up the chain with orderer
-	chain.addOrderer(new Orderer(ORGS.orderer));
-
-	// set up the chain to use each org's 'peer1' for
-	// both requests and events
-	for (let key in ORGS) {
-		if (ORGS.hasOwnProperty(key) && typeof ORGS[key].peer1 !== 'undefined') {
-			let peer = new Peer(ORGS[key].peer1.requests);
-			chain.addPeer(peer);
-			if (!chain.isValidPeer(peer)) {
-				chain.addPeer(peer);
-				//logger.debug('喔～ key is %s, org is %s', key, peerOrg);
-				if (key == peerOrg) {
-					logger.debug('set primary peer: %s', JSON.stringify(peer));
-					chain.setPrimaryPeer(peer);
-				}
-			}
-
-			let eh = new EventHub();
-			eh.setPeerAddr(ORGS[key].peer1.events);
-			eh.connect();
-			eventhubs.push(eh);
-			allEventhubs.push(eh);
-		}
-	}
-
-	// remove expired keys before enroll admin
-	util.cleanupDir(util.storePathForOrg(orgName));
 }
 
 
