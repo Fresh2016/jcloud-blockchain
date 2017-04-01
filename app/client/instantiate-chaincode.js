@@ -42,7 +42,8 @@ var allEventhubs = [];
 var defaultOrg = 'org1';
 
 
-module.exports.instantiateChaincode = function(org) {
+module.exports.instantiateChaincode = instantiateChaincode;
+function instantiateChaincode(org) {
 	logger.info('\n\n***** Hyperledger fabric client: instantiate chaincode *****');
 
 	// client and chain should be claimed here
