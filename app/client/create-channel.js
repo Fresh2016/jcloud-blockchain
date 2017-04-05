@@ -31,26 +31,31 @@ var targets = [];
 var client = new hfc();
 var chain = client.newChain(util.channel);
 
+//Only for creating a key value store with org name, not used in create-channel
+var defaultOrg = 'org1';
+
 module.exports.createChannel = createChannel;
 
-function createChannel(org) {
+function createChannel() {
 	logger.info('\n\n***** Hyperledger fabric client: create channel via %s *****', org);
 
-	var orgName = util.getOrgNameByOrg(ORGS, org);
-	chain.addOrderer(new Orderer(ORGS.orderer));
+	// client and chain should be claimed here
+	var client = new hfc();
+	var chain = setup.setupChainWithOnlyOrderer(client, ORGS);
 
-	// remove expired keys before enroll admin
-	util.cleanupDir(util.storePathForOrg(orgName));
+	// this is a transaction, will just use org1's identity to
+	// submit the request
+	var org = defaultOrg;
+	var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
 
-	return hfc.newDefaultKeyValueStore({
-		path: util.storePathForOrg(orgName)
-	})
-	.then((store) => {
-		client.setStateStore(store);
+	return hfc.newDefaultKeyValueStore(options)
+	.then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
 		return Submitter.getSubmitter(client, org, logger);
-		
-	})
-	.then((admin) => {
+
+	}).then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
 		the_user = admin;
 
@@ -60,34 +65,23 @@ function createChannel(org) {
 		// readin the envelope to send to the orderer
 		return util.readFile(util.txFilePath);
 		
-	}, (err) => {
-		util.throwError(logger, err, 'Failed to enroll user \'admin\'. ');
-		
-	})
-	.then((txFileData) => {
+	}).then((txFileData) => {
 		logger.info('Successfully read file');
 		var request = {
 			envelope : txFileData
 		};
 		// send to orderer
 		return chain.createChannel(request);
-	}, (err) => {
-		util.throwError(logger, err, 'Failed to read file for channel template: ');
-		
-	})
-	.then((response) => {
+	}).then((response) => {
 		finishCreation(response, 5000);
 
-	}, (err) => {
-		util.throwError(logger, err, 'Failed to create the channel: ');
-		
-	})
-	.then((nothing) => {
+	}).then((nothing) => {
 		logger.info('Successfully waited to make sure new channel was created.');
-		return 'SUCCESS';
-	}, (err) => {
-		logger.error('Failed to sleep due to error: ' + err.stack ? err.stack : err);
-		return 'FAILED';
+		logger.info('END of invoke transaction.');
+	}).catch((err) => {
+		logger.error('Failed to create the channel with error:' + err.stack ? err.stack : err);
+		callback();
+		logger.info('END of invoke transaction.');
 	});
 };
 
@@ -101,9 +95,4 @@ function finishCreation(response, sleepTime) {
 	} else {
 		util.throwError(logger, err, 'Failed to create the channel: ');
 	}
-}
-
-
-function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms));
 }

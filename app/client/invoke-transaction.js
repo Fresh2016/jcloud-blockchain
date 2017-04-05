@@ -61,7 +61,7 @@ function instantiateChaincode(callback) {
 
 	// client and chain should be claimed here
 	var client = new hfc();
-	var chain = setup.setupChainWithAllPeers(client, ORGS, eventhubs);;
+	var chain = setup.setupChainWithAllPeers(client, ORGS, eventhubs);
 
 	// this is a transaction, will just use org1's identity to
 	// submit the request

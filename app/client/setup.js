@@ -29,6 +29,7 @@ var logger = ClientUtils.getLogger('setup-chain');
 module.exports.getAlivePeer = getAlivePeer;
 module.exports.setupChain = setupChain;
 module.exports.setupChainWithEventbus = setupChainWithEventbus;
+module.exports.setupChainWithOnlyOrderer = setupChainWithOnlyOrderer;
 module.exports.setupChainWithOnlyPrimaryPeer = setupChainWithOnlyPrimaryPeer;
 module.exports.setupChainWithAllPeers = setupChainWithAllPeers;
 
@@ -234,6 +235,25 @@ function setupChainWithEventbus(client, eventhubs, ORGS, peerInfo, asPrimary) {
 	try{
 		var chain = setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, asPrimary);
 		connectEventHub(eventhubs, peerInfo);
+
+		return chain;
+		
+	} catch(err) {
+		util.throwError(logger, err, 'Failed in setting up chain, check config file.');
+		return null;
+	}
+}
+
+
+//Initialize a new chain only orderer (TODO: in future should be orderers)
+function setupChainWithOnlyOrderer(client, ORGS) {
+	try{
+		var chain = client.newChain(util.channel);
+
+		addOrderer(chain, ORGS);
+
+		// Remove expired keys before enroll user
+		cleanupKeyValueStore(ORGS);
 
 		return chain;
 		
