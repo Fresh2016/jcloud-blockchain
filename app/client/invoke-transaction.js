@@ -38,7 +38,8 @@ var eventhubs = [];
 //than the one that submitted the "move" transaction, although either org
 //should work properly
 var defaultOrg = 'org1';
-
+// Used by transaction event listener
+var defaultExpireTime = 30000;
 
 module.exports.instantiateChaincode = instantiateChaincode;
 module.exports.invokeChaincode = invokeChaincode;
@@ -47,7 +48,7 @@ module.exports.invokeChaincode = invokeChaincode;
 function addTxPromise(eventPromises, eh, deployId) {
 	let txPromise = new Promise((resolve, reject) => {
 		// set expireTime as 30s
-		registerTxEvent(eh, resolve, reject, 30000, deployId);
+		registerTxEvent(eh, resolve, reject, defaultExpireTime, deployId);
 	});
 	eventPromises.push(txPromise);
 }
