@@ -18,7 +18,6 @@ var path = require('path');
 
 var hfc = require('fabric-client');
 var ClientUtils = require('fabric-client/lib/utils.js');
-var Orderer = require('fabric-client/lib/Orderer.js');
 var Submitter = require('./get-submitter.js');
 var setup = require('./setup.js');
 var util = require('./util.js');
@@ -26,18 +25,14 @@ var util = require('./util.js');
 var logger = ClientUtils.getLogger('create-channel');
 var ORGS = util.ORGS;
 
-var the_user = null;
-var targets = [];
-var client = new hfc();
-var chain = client.newChain(util.channel);
-
 //Only for creating a key value store with org name, not used in create-channel
 var defaultOrg = 'org1';
+var defaultSleepTime = 5000;
 
 module.exports.createChannel = createChannel;
 
 function createChannel() {
-	logger.info('\n\n***** Hyperledger fabric client: create channel via %s *****', org);
+	logger.info('\n\n***** Hyperledger fabric client: create channel *****');
 
 	// client and chain should be claimed here
 	var client = new hfc();
@@ -57,31 +52,28 @@ function createChannel() {
 
 	}).then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
-		the_user = admin;
 
 		//FIXME: temporary fix until mspid is configured into Chain
-		the_user.mspImpl._id = util.getMspid(ORGS, org);
+		admin.mspImpl._id = util.getMspid(ORGS, org);
 
-		// readin the envelope to send to the orderer
+		// read in the envelope to send to the orderer
 		return util.readFile(util.txFilePath);
 		
 	}).then((txFileData) => {
-		logger.info('Successfully read file');
 		var request = {
 			envelope : txFileData
 		};
+		logger.debug('Successfully read envelop file and sending creation request: ' + 
+				request.envelope.toString('utf8', 0, 100) + '\n ......');
+
 		// send to orderer
 		return chain.createChannel(request);
-	}).then((response) => {
-		finishCreation(response, 5000);
 
-	}).then((nothing) => {
-		logger.info('Successfully waited to make sure new channel was created.');
-		logger.info('END of invoke transaction.');
+	}).then((response) => {
+		return finishCreation(response, defaultSleepTime);
 	}).catch((err) => {
-		logger.error('Failed to create the channel with error:' + err.stack ? err.stack : err);
-		callback();
-		logger.info('END of invoke transaction.');
+		logger.error('Failed to create the channel with error: %s', err);
+		return new Promise((resolve, reject) => reject(err));
 	});
 };
 
@@ -90,9 +82,19 @@ function finishCreation(response, sleepTime) {
 	logger.debug('Successfully sent Request and received Response: Status - %s', response.status);
 
 	if (response && response.status === 'SUCCESS') {
-		logger.info('Successfully created the channel.');
-		sleep(sleepTime);
+		logger.debug('Successfully created the channel.');
+		return sleep(sleepTime)
+		.then(() => {
+			logger.debug('Successfully waited to make sure new channel was created.');
+			logger.info('END of create channel.');
+		});
 	} else {
 		util.throwError(logger, err, 'Failed to create the channel: ');
 	}
+}
+
+
+// TODO: it seems sleep doesn't work at all
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms));
 }

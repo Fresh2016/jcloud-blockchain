@@ -16,6 +16,9 @@ createClient.createChannel()
 	console.log('API: query result %s', JSON.stringify(result));
 	joinClient.joinChannel(sendResponse);
 	res.json(result); // return all amounts in JSON format
+}).catch((err) => {
+	console.log('Return without executing joining and installing');
+	return false;
 });
 
 
