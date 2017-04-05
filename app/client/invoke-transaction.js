@@ -21,6 +21,7 @@ var ClientUtils = require('fabric-client/lib/utils.js');
 var Peer = require('fabric-client/lib/Peer.js');
 var Orderer = require('fabric-client/lib/Orderer.js');
 var Submitter = require('./get-submitter.js');
+var exe = require('./execute-recursively.js');
 var setup = require('./setup.js');
 var util = require('./util.js');
 
@@ -54,99 +55,6 @@ module.exports.instantiateChaincode = instantiateChaincode;
 module.exports.invokeChaincode = invokeChaincode;
 
 
-// Exported functions
-function instantiateChaincode(callback) {
-	logger.info('\n\n***** Hyperledger fabric client: instantiate chaincode *****');
-
-	// client and chain should be claimed here
-	var client = new hfc();
-	var chain = setup.setupChainWithAllPeers(client, ORGS, eventhubs);
-
-	// this is a transaction, will just use org1's identity to
-	// submit the request
-	var org = defaultOrg;
-	var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
-
-	return hfc.newDefaultKeyValueStore(options)
-	.then((keyValueStore) => {
-		client.setStateStore(keyValueStore);
-		return Submitter.getSubmitter(client, org, logger);
-
-	}).then((admin) => {
-		logger.info('Successfully enrolled user \'admin\'');
-		return sendInstantiateProposal(chain, admin, util.getMspid(ORGS, org));
-
-	}).then((results) => {
-		if (util.checkProposalResponses(results, 'Instantiate transaction', logger)) {
-			var proposalResponses = results[0];
-			var proposal = results[1];
-			var header   = results[2];
-			logger.debug('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', 
-					proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature);
-			// callback should be passed for sending transactionId back to routes.js, currently not used yet
-			return commitTransaction(chain, proposalResponses, proposal, header, tx_id, callback);
-		}
-	}).catch((err) => {
-		logger.error('Failed to send instantiate proposal or commit transaction with error:' + err.stack ? err.stack : err);
-		callback();
-		logger.info('END of invoke transaction.');
-	});
-};
-
-
-function invokeChaincode(traceInfo, callback) {
-	logger.info('\n\n***** Hyperledger fabric client: invoke chaincode *****');
-
-	// client and chain should be claimed here
-	var client = new hfc();
-	var chain = null;
-
-	// this is a transaction, will just use org1's identity to
-	// submit the request
-	var org = defaultOrg;
-	
-	return setup.getAlivePeer(ORGS, org)
-	.then((peerInfo) => {
-		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
-		return setup.setupChainWithEventbus(client, eventhubs, ORGS, peerInfo, true);
-
-	}).then((readyChain) => {
-		logger.debug('Successfully setup chain %s', readyChain.getName());
-		chain = readyChain;
-		var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
-		return hfc.newDefaultKeyValueStore(options);
-		
-	}).then((keyValueStore) => {
-		client.setStateStore(keyValueStore);
-		return Submitter.getSubmitter(client, org, logger);
-
-	}).then((admin) => {
-		logger.debug('Successfully enrolled user \'admin\'');
-		return sendTransactionProposal(chain, admin, util.getMspid(ORGS, org), traceInfo);
-
-	}).then((results) => {
-		if (util.checkProposalResponses(results, 'Invoke transaction', logger)) {
-			var proposalResponses = results[0];
-			var proposal = results[1];
-			var header   = results[2];
-			logger.debug('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', 
-					proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature);
-			// callback should be passed for sending transactionId back to routes.js
-			return commitTransaction(chain, proposalResponses, proposal, header, tx_id, callback);
-		}
-	}).catch((err) => {
-		logger.error('Failed to send invoke proposal or commit transaction with error:' + err.stack ? err.stack : err);
-		callback({TransactionId : null});
-		logger.info('END of invoke transaction.');
-	});
-};
-
-
-// Private functions
 function addTxPromise(eventPromises, eh, deployId) {
 	let txPromise = new Promise((resolve, reject) => {
 		// set expireTime as 30s
@@ -213,7 +121,7 @@ function addTxPromise(eventPromises, eh, deployId) {
 */
 
 
-function commitTransaction(chain, proposalResponses, proposal, header, tx_id, callback){
+function commitTransaction(chain, proposalResponses, proposal, header, tx_id){
 	var request = {
 		proposalResponses: proposalResponses,
 		proposal: proposal,
@@ -234,7 +142,7 @@ function commitTransaction(chain, proposalResponses, proposal, header, tx_id, ca
 	var sendPromise = chain.sendTransaction(request);
 	return Promise.all([sendPromise].concat(eventPromises))
 	.then((results) => {
-		return processCommitResponse(results, callback, tx_id);
+		return processCommitResponse(results, tx_id);
 	}).catch((err) => {
 		util.throwError(logger, err, 'Failed to commit and get notifications within the timeout period.');
 	});
@@ -268,6 +176,108 @@ function finishCommit(response, logger, tx_id) {
 }
 
 
+function instantiateChaincode() {
+	logger.info('\n\n***** Hyperledger fabric client: instantiate chaincode *****');
+	
+	var orgs = util.getOrgs(ORGS);
+	logger.info('There are %s organizations: %s. Going to instantiate chaincode one by one.', orgs.length, orgs);
+
+	return exe.executeTheNext(orgs, instantiateChaincodeByOrg, 'Instantiate Chaincode')
+	.catch((err) => {
+		logger.error('Failed to instantiate chaincode with error: %s', err);
+		// Failure back and accept further err processing
+		return new Promise((resolve, reject) => reject(err));
+	});
+};
+
+
+function instantiateChaincodeByOrg(org) {
+	// client and chain should be claimed here
+	var client = new hfc();
+	var orgName = util.getOrgNameByOrg(ORGS, org);
+	var chain = setup.setupChain(client, ORGS, orgName, org);
+	
+	var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
+
+	return hfc.newDefaultKeyValueStore(options)
+	.then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
+		return Submitter.getSubmitter(client, org, logger);
+
+	}).then((admin) => {
+		logger.info('Successfully enrolled user \'admin\'');
+		return sendInstantiateProposal(chain, admin, util.getMspid(ORGS, org));
+
+	}).then((results) => {
+		if (util.checkProposalResponses(results, 'Instantiate transaction', logger)) {
+			var proposalResponses = results[0];
+			var proposal = results[1];
+			var header   = results[2];
+			logger.debug('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', 
+					proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature);
+
+			return commitTransaction(chain, proposalResponses, proposal, header, tx_id);
+		}
+	}).catch((err) => {
+		logger.error('Failed to instantiate chaincode with error: ' + err.stack ? err.stack : err);
+		// Failure back and accept further err processing
+		return new Promise((resolve, reject) => reject(err));
+	});
+};
+
+
+function invokeChaincode(traceInfo, callback) {
+	logger.info('\n\n***** Hyperledger fabric client: invoke chaincode *****');
+
+	// client and chain should be claimed here
+	var client = new hfc();
+	var chain = null;
+
+	// this is a transaction, will just use org1's identity to
+	// submit the request
+	var org = defaultOrg;
+	
+	return setup.getAlivePeer(ORGS, org)
+	.then((peerInfo) => {
+		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
+		return setup.setupChainWithEventbus(client, eventhubs, ORGS, peerInfo, true);
+
+	}).then((readyChain) => {
+		logger.debug('Successfully setup chain %s', readyChain.getName());
+		chain = readyChain;
+		var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
+		return hfc.newDefaultKeyValueStore(options);
+		
+	}).then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
+		return Submitter.getSubmitter(client, org, logger);
+
+	}).then((admin) => {
+		logger.debug('Successfully enrolled user \'admin\'');
+		return sendTransactionProposal(chain, admin, util.getMspid(ORGS, org), traceInfo);
+
+	}).then((results) => {
+		if (util.checkProposalResponses(results, 'Invoke transaction', logger)) {
+			var proposalResponses = results[0];
+			var proposal = results[1];
+			var header   = results[2];
+			logger.debug('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', 
+					proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature);
+			// callback should be passed for sending transactionId back to routes.js
+			return commitTransaction(chain, proposalResponses, proposal, header, tx_id, callback);
+		}
+	}).catch((err) => {
+		logger.error('Failed to send invoke proposal or commit transaction with error:' + err.stack ? err.stack : err);
+		callback({TransactionId : null});
+		logger.info('END of invoke transaction.');
+	});
+};
+
+
 function printSuccessHint(tx_id) {
 	logger.info('Successfully committed transaction to the orderer.');
 	logger.info('******************************************************************');
@@ -277,7 +287,7 @@ function printSuccessHint(tx_id) {
 }
 
 
-function processCommitResponse(responses, callback, tx_id) {
+function processCommitResponse(responses, tx_id) {
 	logger.debug('Successfully get transaction commit response: %s', JSON.stringify(responses));
 	
 	try {
@@ -287,11 +297,8 @@ function processCommitResponse(responses, callback, tx_id) {
 		if(response) {
 			// Sending transactionId back to routes.js
 			logger.info('Invoke transaction event promise all complete.');
-			callback(finishCommit(response, logger, tx_id));
-		}	
-		
-		logger.info('END of invoke transaction.');
-		return true;
+			return finishCommit(response, logger, tx_id);
+		}
 		
 	} catch(err) {
 		util.throwError(logger, err, 'Failed to process commit response. ');
