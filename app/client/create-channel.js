@@ -93,7 +93,7 @@ function finishCreation(response, sleepTime) {
 			return response;
 		});
 	} else {
-		util.throwError(logger, err, 'Failed to create the channel: ');
+		util.throwError(logger, null, 'Failed to create the channel: ');
 	}
 }
 
