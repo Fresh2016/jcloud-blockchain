@@ -70,23 +70,27 @@ function createChannel() {
 		return chain.createChannel(request);
 
 	}).then((response) => {
+		// Check response status and return a new promise if success
 		return finishCreation(response, defaultSleepTime);
+
 	}).catch((err) => {
 		logger.error('Failed to create the channel with error: %s', err);
+		// Failure back and accept further err processing
 		return new Promise((resolve, reject) => reject(err));
 	});
 };
 
 
 function finishCreation(response, sleepTime) {
-	logger.debug('Successfully sent Request and received Response: Status - %s', response.status);
-
 	if (response && response.status === 'SUCCESS') {
-		logger.debug('Successfully created the channel.');
+		logger.debug('Successfully sent Request and received Response: Status - %s', response.status);
+		logger.debug('Going to sleep %d sec for waiting creation done.', sleepTime/1000.0);
+
 		return sleep(sleepTime)
 		.then(() => {
 			logger.debug('Successfully waited to make sure new channel was created.');
 			logger.info('END of create channel.');
+			return response;
 		});
 	} else {
 		util.throwError(logger, err, 'Failed to create the channel: ');
@@ -94,7 +98,6 @@ function finishCreation(response, sleepTime) {
 }
 
 
-// TODO: it seems sleep doesn't work at all
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }

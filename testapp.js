@@ -13,7 +13,7 @@ docker rmi -f $(docker images | grep supplychain | awk '{print $3 }')
 
 createClient.createChannel()
 .then((result) => {
-	console.log('API: query result %s', JSON.stringify(result));
+	console.log('API: create channel result %s', JSON.stringify(result));
 	joinClient.joinChannel(sendResponse);
 	res.json(result); // return all amounts in JSON format
 }).catch((err) => {
