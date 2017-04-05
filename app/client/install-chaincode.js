@@ -68,17 +68,21 @@ function installChaincodeByOrg(org) {
 		logger.info('Successfully enrolled user \'admin\'');
 		return sendInstallProposal(chain, admin, util.getMspid(ORGS, org));
 
-	},
-	(err) => {
-		util.throwError(logger, err, 'Failed to enroll user \'admin\'. ');
-
 	}).then((results) => {
-		return util.checkProposalResponses(results, 'Install chaincode', logger);
+		var response = {
+				status : 'failed'
+		}
+		if (util.checkProposalResponses(results, 'Install chaincode', logger)) {
+			response.status = 'success';
+		}
+		return response;
 
-	},
-	(err) => {
-		util.throwError(logger, err.stack ? err.stack : err, 'Failed to send install proposal due to error: ');
+	}).catch((err) => {
+		logger.error('Failed to install chaincode with error: %s', err);
+		// Failure back and accept further err processing
+		return new Promise((resolve, reject) => reject(err));
 	});
+	
 }
 
 
