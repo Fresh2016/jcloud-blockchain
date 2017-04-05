@@ -29,35 +29,14 @@ var defaultUserOrg = 'org1';
 var defaultUsrname = 'admin';
 var defaultPwd = 'adminpw';
 
-module.exports.getSubmitter = function(client, org, logger) {
-	if (arguments.length < 2) throw new Error('"client" and "test" are both required parameters');
-
-	/*
-	var fromConfig, userOrg;
-	if (typeof loadFromConfig === 'boolean') {
-		fromConfig = loadFromConfig;
-	} else {
-		fromConfig = false;
-	}
-
-	if (typeof loadFromConfig === 'string') {
-		userOrg = loadFromConfig;
-	} else {
-		if (typeof org === 'string') {
-			userOrg = org;
-		} else {
-			userOrg = defaultUserOrg;
-		}
-	}
-	*/
-
-	return getSubmitter(defaultUsrname, defaultPwd, client, false, org, logger);
-};
+module.exports.getSubmitter = getSubmitter;
 
 
-
-function getSubmitter(username, password, client, loadFromConfig, userOrg, logger) {
+function getSubmitter(client, userOrg, logger) {
 	var caUrl = ORGS[userOrg].ca;
+	var username = defaultUsrname;
+	var password = defaultPwd;
+	var loadFromConfig = false;
 
 	return client.getUserContext(username)
 	.then((user) => {

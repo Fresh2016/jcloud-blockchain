@@ -32,7 +32,11 @@ var tx_id = null;
 var nonce = null;
 var the_user = null;
 
-module.exports.joinChannel = function(callback) {
+module.exports.joinChannel = joinChannel;
+
+
+//TODO: async should be refactored as promise
+function joinChannel(callback) {
 
 	logger.info('\n\n***** Hyperledger fabric client: join channel *****');
 	
@@ -41,7 +45,7 @@ module.exports.joinChannel = function(callback) {
 
 	// Send concurrent proposal
 	return async.mapSeries(orgs, function(org, processResults) {
-	    joinChannel(org)
+	    joinChannelTemp(org)
 		.then(() => {
 			logger.info('Successfully joined peers in organization "%s" to the channel', org);
 			processResults(null, 'SUCCESS');
@@ -62,7 +66,7 @@ module.exports.joinChannel = function(callback) {
 };
 
 
-function joinChannel(org) {
+function joinChannelTemp(org) {
 	logger.info('Calling peers in organization "%s" to join the channel', org);
 
 	// Different org uses different client

@@ -36,7 +36,11 @@ var targets = [];
 // Temporarily set GOPATH to chaincode_repo
 process.env.GOPATH = path.join(__dirname, '/chaincode_repo');
 
-module.exports.installChaincode = function(callback) {
+module.exports.installChaincode = installChaincode;
+
+
+// TODO: async should be refactored as promise
+function installChaincode(callback) {
 	logger.info('\n\n***** Hyperledger fabric client: install chaincode *****');
 	
 	var orgs = util.getOrgs(ORGS);
@@ -47,7 +51,7 @@ module.exports.installChaincode = function(callback) {
 
 	// Send concurrent proposal
 	return async.mapSeries(orgs, function(org, processResults) {
-		installChaincode(org)
+		installChaincodeTemp(org)
 		.then(() => {
 			logger.info('Successfully installed chaincode in peers of organization %s', org);
 			processResults(null, 'SUCCESS');
@@ -69,7 +73,7 @@ module.exports.installChaincode = function(callback) {
 }
 
 
-function installChaincode(org) {
+function installChaincodeTemp(org) {
 	logger.info('Calling peers in organization "%s" to install chaincode', org);
 
 	// Different org uses different client

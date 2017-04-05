@@ -43,6 +43,8 @@ var defaultOrg = 'org1';
 
 
 module.exports.instantiateChaincode = instantiateChaincode;
+
+
 function instantiateChaincode(org) {
 	logger.info('\n\n***** Hyperledger fabric client: instantiate chaincode *****');
 
