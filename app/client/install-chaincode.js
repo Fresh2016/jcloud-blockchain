@@ -15,22 +15,19 @@
  */
 
 var path = require('path');
-var async = require('async');
+//var async = require('async');
 
 var hfc = require('fabric-client');
 var ClientUtils = require('fabric-client/lib/utils.js');
 var Peer = require('fabric-client/lib/Peer.js');
 var Orderer = require('fabric-client/lib/Orderer.js');
 var Submitter = require('./get-submitter.js');
+var exe = require('./execute-recursively.js');
 var setup = require('./setup.js');
 var util = require('./util.js');
 
 var logger = ClientUtils.getLogger('install-chaincode');
 var ORGS = util.ORGS;
-
-var tx_id = null;
-var nonce = null;
-var targets = [];
 
 // Temporarily set GOPATH to chaincode_repo
 process.env.GOPATH = path.join(__dirname, '/chaincode_repo');
@@ -38,7 +35,24 @@ process.env.GOPATH = path.join(__dirname, '/chaincode_repo');
 module.exports.installChaincode = installChaincode;
 
 
+function installChaincode() {
+	logger.info('\n\n***** Hyperledger fabric client: install chaincode *****');
+	
+	var orgs = util.getOrgs(ORGS);
+	logger.info('There are %s organizations: %s. Going to install chaincode one by one.', orgs.length, orgs);
+
+	return exe.executeTheNext(orgs, installChaincodeTemp, 'Install Chaincode')
+	.catch((err) => {
+		logger.error('Failed to install chaincode with error: %s', err);
+		// Failure back and accept further err processing
+		return new Promise((resolve, reject) => reject(err));
+	});
+};
+
+
 // TODO: async should be refactored as promise
+// to be deleted
+/*
 function installChaincode(callback) {
 	logger.info('\n\n***** Hyperledger fabric client: install chaincode *****');
 	
@@ -70,7 +84,7 @@ function installChaincode(callback) {
 	});
 
 }
-
+*/
 
 function installChaincodeTemp(org) {
 	logger.info('Calling peers in organization "%s" to install chaincode', org);
@@ -107,8 +121,8 @@ function installChaincodeTemp(org) {
 function sendInstallProposal(chain, admin, mspid) {
 	admin.mspImpl._id = mspid;
 
-	nonce = ClientUtils.getNonce()
-	tx_id = chain.buildTransactionID(nonce, admin);
+	var nonce = ClientUtils.getNonce()
+	var tx_id = chain.buildTransactionID(nonce, admin);
 	var targets = chain.getPeers();
 
 	var request = {
