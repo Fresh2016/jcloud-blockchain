@@ -30,7 +30,6 @@ var ORGS = util.ORGS;
 
 var tx_id = null;
 var nonce = null;
-var the_user = null;
 var targets = [];
 
 // Temporarily set GOPATH to chaincode_repo
@@ -106,11 +105,10 @@ function installChaincodeTemp(org) {
 
 
 function sendInstallProposal(chain, admin, mspid) {
-	the_user = admin;
-	the_user.mspImpl._id = mspid;
+	admin.mspImpl._id = mspid;
 
 	nonce = ClientUtils.getNonce()
-	tx_id = chain.buildTransactionID(nonce, the_user);
+	tx_id = chain.buildTransactionID(nonce, admin);
 	var targets = chain.getPeers();
 
 	var request = {

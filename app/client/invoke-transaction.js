@@ -29,7 +29,6 @@ var ORGS = util.ORGS;
 
 var tx_id = null;
 var nonce = null;
-var the_user = null;
 var targets = [];
 var eventhubs = [];
 
@@ -312,12 +311,10 @@ function registerTxEvent(eh, resolve, reject, expireTime, deployId) {
 
 
 function sendInstantiateProposal(chain, admin, mspid) {
-
-	the_user = admin;
-	the_user.mspImpl._id = mspid;
+	admin.mspImpl._id = mspid;
 
 	nonce = ClientUtils.getNonce()
-	tx_id = chain.buildTransactionID(nonce, the_user);
+	tx_id = chain.buildTransactionID(nonce, admin);
 
 	// send proposal to endorser
 	// for supplychain
@@ -339,11 +336,10 @@ function sendInstantiateProposal(chain, admin, mspid) {
 
 
 function sendTransactionProposal(chain, admin, mspid, traceInfo) {
-	
-	the_user = admin;
-	the_user.mspImpl._id = mspid;
+	admin.mspImpl._id = mspid;
+
 	nonce = ClientUtils.getNonce()
-	tx_id = chain.buildTransactionID(nonce, the_user);
+	tx_id = chain.buildTransactionID(nonce, admin);
 
 	logger.info('Sending transaction proposal "%s"', tx_id);
 

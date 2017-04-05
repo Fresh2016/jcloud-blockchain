@@ -30,7 +30,6 @@ var ORGS = util.ORGS;
 
 var tx_id = null;
 var nonce = null;
-var the_user = null;
 
 module.exports.joinChannel = joinChannel;
 
@@ -83,13 +82,12 @@ function joinChannelTemp(org) {
 	})
 	.then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
-		the_user = admin;
 
 		//FIXME: temporary fix until mspid is configured into Chain
-		the_user.mspImpl._id = ORGS[org].mspid;
+		admin.mspImpl._id = util.getMspid(ORGS, org);
 
 		nonce = ClientUtils.getNonce()
-		tx_id = chain.buildTransactionID(nonce, the_user);
+		tx_id = chain.buildTransactionID(nonce, admin);
 		var targets = chain.getPeers();
 		
 		var request = {

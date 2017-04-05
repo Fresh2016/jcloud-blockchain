@@ -29,7 +29,6 @@ var logger = ClientUtils.getLogger('query-chaincode');
 var ORGS = util.ORGS;
 
 var nonce = null;
-var the_user = null;
 var targets = [];
 
 // Used by decodeTransaction
@@ -269,8 +268,9 @@ function isTransactionSucceed(transactionId, callback) {
 
 	}).then((admin) => {		
 		logger.debug('Successfully enrolled user \'admin\'');
-		the_user = admin;
-		the_user.mspImpl._id = util.getMspid(ORGS, org);
+
+		//FIXME: temporary fix until mspid is configured into Chain
+		admin.mspImpl._id = util.getMspid(ORGS, org);
 
 		// use default primary peer
 		return queryTransactionByTxId(chain, transactionId);
@@ -323,8 +323,10 @@ function queryConfig(channelName, callback) {
 
 	}).then((admin) => {		
 		logger.debug('Successfully enrolled user \'admin\'');
-		the_user = admin;
-		the_user.mspImpl._id = util.getMspid(ORGS, org);
+
+		//FIXME: temporary fix until mspid is configured into Chain
+		admin.mspImpl._id = util.getMspid(ORGS, org);
+
 		return chain.getChannelConfig();
 		
 	}).then((response_payloads) => {
@@ -374,8 +376,9 @@ function queryPeers(channelName, callback) {
 
 	}).then((admin) => {	
 		logger.debug('Successfully enrolled user \'admin\'');
-		the_user = admin;
-		the_user.mspImpl._id = util.getMspid(ORGS, org);
+
+		//FIXME: temporary fix until mspid is configured into Chain
+		admin.mspImpl._id = util.getMspid(ORGS, org);
 		
 		var peers = chain.getPeers();
 		async.mapSeries(peers, function(thisPeer, processResults) {
@@ -423,6 +426,7 @@ function queryTransaction(transactionId, callback) {
 	// submit the request
 	var org = defaultOrg;
 	var block_result = {};
+	var the_user = null;
 	
 	return setup.getAlivePeer(ORGS, org)
 	.then((peerInfo) => {
@@ -444,7 +448,9 @@ function queryTransaction(transactionId, callback) {
 	}).then((admin) => {	
 		logger.debug('Successfully enrolled user \'admin\'');
 		the_user = admin;
-		the_user.mspImpl._id = util.getMspid(ORGS, org);
+
+		//FIXME: temporary fix until mspid is configured into Chain
+		admin.mspImpl._id = util.getMspid(ORGS, org);
 		
 		// use default primary peer
 		return chain.queryInfo();
@@ -502,7 +508,8 @@ function queryTransactionHistory(transactionId, callback) {
 	// this is a query, will just use org2's identity to
 	// submit the request
 	var org = defaultOrg;
-	
+	var the_user = null;
+
 	return setup.getAlivePeer(ORGS, org)
 	.then((peerInfo) => {
 		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
@@ -523,7 +530,9 @@ function queryTransactionHistory(transactionId, callback) {
 	}).then((admin) => {		
 		logger.debug('Successfully enrolled user \'admin\'');
 		the_user = admin;
-		the_user.mspImpl._id = util.getMspid(ORGS, org);
+
+		//FIXME: temporary fix until mspid is configured into Chain
+		admin.mspImpl._id = util.getMspid(ORGS, org);
 		
 		// use default primary peer
 		return chain.queryInfo();
