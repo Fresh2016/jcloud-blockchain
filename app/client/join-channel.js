@@ -33,70 +33,36 @@ module.exports.joinChannel = joinChannel;
 
 function checkTheNext(orgs) {
 	// Get orgs join channel one by one util all orgs joined it
-	let org = orgs[0];
-	orgs.splice(0, 1);
+	let org = pop(orgs);
 	
-/*	joinChannelByOrg(org)
-	.then(() => {
+	return joinChannelByOrg(org)
+	.then((response) => {
 		logger.info('Successfully joined peers in organization "%s" to the channel', org);
-		processResults(null, 'SUCCESS');
-	}).catch((err) => {
-		logger.error('Failed to join peers in organization ' + org + 
-				' to the channel' + err.stack ? err.stack : err);
-		processResults(err, 'FAILED');
+		logger.debug('Get success responses: %j', response);
+		if (0 < orgs.length) {
+			return checkTheNext(orgs);
+		} else {
+			logger.info('END of join channel.');
+			return new Promise((resolve, reject) => {});
+		}
+		return true;
 	});
-*/	
-	if (0 < orgs.length) {
-		logger.info('going to call joinChannel with orgs: %s', orgs);
-		checkTheNext(orgs);
-	} else {
-		logger.info('END of join channel.');
-		return new Promise((resolve, reject) => {});
-	}
-	
+	// No catch() needed as joinChannel will do it at the end
 }
 
 
-//TODO: async should be refactored as promise
 function joinChannel() {
-
 	logger.info('\n\n***** Hyperledger fabric client: join channel *****');
 	
 	var orgs = util.getOrgs(ORGS);
 	logger.info('There are %s organizations: %s. Going to join channel one by one.', orgs.length, orgs);
 
-	checkTheNext(orgs);
-	/*
-	// Send concurrent proposal
-	async.mapSeries(orgs, function(org, processResults) {
-	    joinChannelByOrg(org)
-		.then(() => {
-			logger.info('Successfully joined peers in organization "%s" to the channel', org);
-			processResults(null, 'SUCCESS');
-		}).catch((err) => {
-			logger.error('Failed to join peers in organization ' + org + 
-					' to the channel' + err.stack ? err.stack : err);
-			processResults(err, 'FAILED');
-		});
-
-	}, (err, results) => {
-		// Here's processResults
-		logger.debug('processResults get callback with results %s and err %s.', results, err);
-		logger.info('END of join channel.');
-
-		// callback to routes.js
-		return new Promise((resolve, reject) => {
-			if (err) {
-				reject(err);
-			} else {
-				resolve(results);
-			}
-		}).catch((err) => {
-			console.log('Return without executing joining and installing');
-			return false;
-		});
-	});	
-	*/
+	return checkTheNext(orgs)
+	.catch((err) => {
+		logger.error('Failed to join channel with error: %s', err);
+		// Failure back and accept further err processing
+		return new Promise((resolve, reject) => reject(err));
+	});
 };
 
 
@@ -135,11 +101,11 @@ function joinChannelByOrg(org) {
 		};
 		logger.debug('Sending join channel request: %j', request);
 
-		return null;//return chain.joinChannel(request);
+		return chain.joinChannel(request);
 
 	}).then((responses) => {
 		// Check response status and return a new promise if success
-		return finishJoin(responses);
+		return finishJoinByOrg(responses);
 
 	}).catch((err) => {
 		logger.error('Failed to join channel with error: %s', err);
@@ -149,15 +115,28 @@ function joinChannelByOrg(org) {
 }
 
 
-function finishJoin(responses) {
+function finishJoinByOrg(responses) {
 	if(responses[0] && responses[0].response && responses[0].response.status == 200) {
-		logger.debug('Successfully sent Request and received Response: Status - %s', response.status);
-		logger.info('END of join channel.');
+		logger.debug('Successfully sent Request and received Response: Status - %s', responses[0].response.status);
 
 		return new Promise((resolve, reject) => resolve(responses[0]));
 	}
 	else {
 		// Seems a bug in Chain.js that it returns error as response
-		util.throwError(logger, JSON.stringify(responses), 'Failed to join the channel: ');
+		util.throwError(logger, JSON.stringify(responses), 'Get failure responses: ');
+	}
+}
+
+
+function pop(list) {
+	logger.debug('Poping cell from %s', JSON.stringify(list));
+	if (list) {
+		var component = list[0];
+		list.splice(0, 1);
+		logger.debug('Successfully pop %s, now list becomes %s', JSON.stringify(component), JSON.stringify(list));
+		return component;
+	} else {
+		logger.error('Empty list, return nothing.');
+		return null;
 	}
 }
