@@ -27,7 +27,7 @@ var ORGS = util.ORGS;
 
 //Only for creating a key value store with org name, not used in create-channel
 var defaultOrg = 'org1';
-var defaultSleepTime = 5000;
+var defaultSleepTime = 1000;
 
 module.exports.createChannel = createChannel;
 
