@@ -29,7 +29,6 @@ var logger = ClientUtils.getLogger('query-chaincode');
 var ORGS = util.ORGS;
 
 var nonce = null;
-var the_user = null;
 var targets = [];
 
 // Used by decodeTransaction
@@ -43,323 +42,13 @@ var transProtoPath = './node_modules/fabric-client/lib/protos/peer/transaction.p
 // should work properly
 var defaultOrg = 'org2';
 
-module.exports.isTransactionSucceed = function(transactionId, callback) {
-	logger.info('\n\n***** Hyperledger fabric client: query transaction validationCode by transactionId: %s *****', transactionId);
 
-	// client and chain should be claimed here
-	var client = new hfc();
-	var chain = null;
-
-	// this is a query, will just use org2's identity to
-	// submit the request
-	var org = defaultOrg;
-	
-	return setup.getAlivePeer(ORGS, org)
-	.then((peerInfo) => {
-		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
-		return setup.setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, true);
-
-	}).then((readyChain) => {
-		logger.debug('Successfully setup chain %s', readyChain.getName());
-		chain = readyChain;
-		var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
-		return hfc.newDefaultKeyValueStore(options);
-		
-	}).then((keyValueStore) => {
-		client.setStateStore(keyValueStore);
-		return Submitter.getSubmitter(client, org, logger);
-
-	}).then((admin) => {		
-		logger.debug('Successfully enrolled user \'admin\'');
-		the_user = admin;
-		the_user.mspImpl._id = util.getMspid(ORGS, org);
-
-		// use default primary peer
-		return queryTransactionByTxId(chain, transactionId);
-		
-	}).then((processed_transaction) => {
-		callback(decodeTransaction(transactionId, processed_transaction, commonProtoPath, transProtoPath));
-		logger.info('END of query transaction status.');
-
-	}).catch((err) => {
-		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
-		callback(false);
-	});
-}
-
-
-module.exports.queryTransaction = function(transactionId, callback) {
-	logger.info('\n\n***** Hyperledger fabric client: query transaction by transactionId: %s *****', transactionId);
-
-	// client and chain should be claimed here
-	var client = new hfc();
-	var chain = null;
-
-	// this is a query, will just use org2's identity to
-	// submit the request
-	var org = defaultOrg;
-	var block_result = {};
-	
-	return setup.getAlivePeer(ORGS, org)
-	.then((peerInfo) => {
-		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
-		return setup.setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, true);
-
-	}).then((readyChain) => {
-		logger.debug('Successfully setup chain %s', readyChain.getName());
-		chain = readyChain;
-		var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
-		return hfc.newDefaultKeyValueStore(options);
-		
-	}).then((keyValueStore) => {
-		client.setStateStore(keyValueStore);
-		return Submitter.getSubmitter(client, org, logger);
-
-	}).then((admin) => {	
-		logger.debug('Successfully enrolled user \'admin\'');
-		the_user = admin;
-		the_user.mspImpl._id = util.getMspid(ORGS, org);
-		
-		// use default primary peer
-		return chain.queryInfo();
-		
-	}).then((blockchainInfo) => {
-		logger.debug('Chain queryInfo() returned block height = ' + blockchainInfo.height.low);
-		logger.debug('Chain queryInfo() returned block previousBlockHash = ' + blockchainInfo.previousBlockHash);
-		logger.debug('Chain queryInfo() returned block currentBlockHash = ' + blockchainInfo.currentBlockHash);
-		var block_hash = blockchainInfo.currentBlockHash;
-		block_result.blockNumber = blockchainInfo.height.low;
-		block_result.previousBlockHash = blockchainInfo.previousBlockHash;
-		block_result.currentBlockHash = blockchainInfo.currentBlockHash;
-
-	}).then(() => {
-		nonce = ClientUtils.getNonce()
-		var tx_id = chain.buildTransactionID(nonce, the_user);
-
-		// send query
-		// for supplychain
-		var request = {
-			chaincodeId : util.chaincodeId,
-			chaincodeVersion : util.chaincodeVersion,
-			chainId: util.channel,
-			txId: tx_id,
-			nonce: nonce,
-			fcn: 'queryTrade',
-			args: ["Sku", "TradeDate", "TraceInfo"]
-		};
-		logger.debug('Sending query request: %s', JSON.stringify(request));
-		
-		return chain.queryByChaincode(request);
-		
-	}).then((response_payloads) => {
-		logger.debug('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
-
-		callback(Object.assign(parseQuerySupplyChainResponse(response_payloads), block_result));
-		logger.info('END of query transaction.');
-
-	}).catch((err) => {
-		logger.error('Failed to send query or parse query response due to error: ' + err.stack ? err.stack : err);
-		callback(parseQuerySupplyChainResponse(null));
-		logger.info('END of query transaction.');
-	});
-}
-
-
-module.exports.queryTransactionHistory = function(transactionId, callback) {
-	logger.info('\n\n***** Hyperledger fabric client: query transaction history by transactionId: %s *****', transactionId);
-
-	// client and chain should be claimed here
-	var client = new hfc();
-	var chain = null;
-
-	// this is a query, will just use org2's identity to
-	// submit the request
-	var org = defaultOrg;
-	
-	return setup.getAlivePeer(ORGS, org)
-	.then((peerInfo) => {
-		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
-		return setup.setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, true);
-
-	}).then((readyChain) => {
-		logger.debug('Successfully setup chain %s', readyChain.getName());
-		chain = readyChain;
-		var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
-		return hfc.newDefaultKeyValueStore(options);
-		
-	}).then((keyValueStore) => {
-		client.setStateStore(keyValueStore);
-		return Submitter.getSubmitter(client, org, logger);
-
-	}).then((admin) => {		
-		logger.debug('Successfully enrolled user \'admin\'');
-		the_user = admin;
-		the_user.mspImpl._id = util.getMspid(ORGS, org);
-		
-		// use default primary peer
-		return chain.queryInfo();
-		
-	}).then(() => {
-		nonce = ClientUtils.getNonce()
-		var tx_id = chain.buildTransactionID(nonce, the_user);
-
-		// send query
-		// for supplychain
-		var request = {
-			chaincodeId : util.chaincodeId,
-			chaincodeVersion : util.chaincodeVersion,
-			chainId: util.channel,
-			txId: tx_id,
-			nonce: nonce,
-			fcn: 'getTradeHistory',
-			args: ["TransactionId", "TraceInfo"]
-		};
-		logger.debug('Sending query request: %s', JSON.stringify(request));
-		
-		return chain.queryByChaincode(request);
-	}).then((response_payloads) => {
-		logger.debug('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
-		callback(parseQueryHistoryResponse(response_payloads));
-		logger.info('END of query transaction hitory.');
-
-	}).catch((err) => {
-		logger.error('Failed to send query or parse query response due to error: ' + err.stack ? err.stack : err);
-		callback(parseQueryHistoryResponse(null));
-		logger.info('END of query transaction.');
-	});
-}
-
-
-module.exports.queryPeers = function(channelName, callback) {
-	// TODO: channel name is fixed from config file and should be passed from REST request
-	logger.info('\n\n***** Hyperledger fabric client: query peer status of channel: %s *****', channelName);
-
-	// client and chain should be claimed here
-	var client = new hfc();
-	var chain = setup.setupChainWithAllPeers(client, ORGS, eventhubs);;
-
-	// this is a transaction, will just use org1's identity to
-	// submit the request
-	var org = defaultOrg;
-	var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
-
-	return hfc.newDefaultKeyValueStore(options)
-	.then((keyValueStore) => {
-		client.setStateStore(keyValueStore);
-		return Submitter.getSubmitter(client, org, logger);
-
-	}).then((admin) => {	
-		logger.debug('Successfully enrolled user \'admin\'');
-		the_user = admin;
-		the_user.mspImpl._id = util.getMspid(ORGS, org);
-		
-		var peers = chain.getPeers();
-		async.mapSeries(peers, function(thisPeer, processResults) {
-			chain.queryChannels(thisPeer)
-			.then((response) => {
-				response.peer = thisPeer.getUrl();
-				processResults(null, response);
-			}).catch((err) => {
-				var response = {
-						channels: null,
-						peer: thisPeer.getUrl()
-					}
-				logger.error('Peer %s has no response, thus it is DOWN. ', thisPeer.getUrl());
-				processResults(null, response);
-			});
-
-		}, function(err, responses) {
-			logger.debug('processResults get callback with results %s and err %s.', 
-					JSON.stringify(responses), JSON.stringify(err));
-			var result = parseQueryPeerStatusReponse(responses, channelName);
-			logger.debug('Returning peer status: %s', JSON.stringify(result));
-			callback(result);
-			logger.info('END of query peers.');
-		},
-		(err) => {
-			// No case should be here
-			util.throwError(logger, err.stack ? err.stack : err, 'Unexpected err catched in queryPeers, check it.');
-		});			
-	}).catch((err) => {
-		logger.error('Failed to enroll user or read peer list with error:' + err.stack ? err.stack : err);
-		callback(null);
-		logger.info('END of query peers.');
-	});
-}
-
-
-module.exports.queryOrderers = function(channelName, callback) {
-	// TODO: channel name is fixed from config file and should be passed from REST request
-	logger.info('\n\n***** Hyperledger fabric client: query orderer status of channel: %s *****', channelName);
-	
-	return module.exports.queryConfig(channelName, callback);
-}
-
-
-module.exports.queryConfig = function(channelName, callback) {
-	// TODO: channel name is fixed from config file and should be passed from REST request
-	// TODO: care only 1 orderer. should be order cluster status when we have
-	logger.info('\n\n***** Hyperledger fabric client: query configuration of channel: %s *****', channelName);
-
-	// client and chain should be claimed here
-	var client = new hfc();
-	var chain = null;
-
-	// this is a query, will just use org2's identity to
-	// submit the request
-	var org = defaultOrg;
-	var ordererStatus = {
-			name: chain.getOrderers()[0].getUrl(),
-			status: 'DOWN'
-		}
-	
-	return setup.getAlivePeer(ORGS, org)
-	.then((peerInfo) => {
-		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
-		//TODO: maybe it's not needed to add any peer, to be tested
-		return setup.setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, true);
-
-	}).then((readyChain) => {
-		logger.debug('Successfully setup chain %s', readyChain.getName());
-		chain = readyChain;
-		var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
-		return hfc.newDefaultKeyValueStore(options);
-		
-	}).then((keyValueStore) => {
-		client.setStateStore(keyValueStore);
-		return Submitter.getSubmitter(client, org, logger);
-
-	}).then((admin) => {		
-		logger.debug('Successfully enrolled user \'admin\'');
-		the_user = admin;
-		the_user.mspImpl._id = util.getMspid(ORGS, org);
-		return chain.getChannelConfig();
-		
-	}).then((response_payloads) => {
-		logger.info('Got config envelope from getChannelConfig.');
-//		try {
-			parseQueryChainConfig(response_payloads);
-			ordererStatus.status = 'UP';
-			callback([ordererStatus]);
-//		} catch(err) {
-//			callback([ordererStatus]);
-//		}
-			
-	}).catch((err) => {
-		logger.error.error('Failed to query with error:' + err.stack ? err.stack : err);
-		callback([ordererStatus]);
-	});
-}
+module.exports.isTransactionSucceed = isTransactionSucceed;
+module.exports.queryConfig = queryConfig;
+module.exports.queryPeers = queryPeers;
+module.exports.queryOrderers = queryOrderers;
+module.exports.queryTransaction = queryTransaction;
+module.exports.queryTransactionHistory = queryTransactionHistory;
 
 
 function decodeTransaction(transactionId, processed_transaction, commonProtoPath, transProtoPath) {
@@ -547,6 +236,339 @@ function parseQueryPeerStatusReponse(responses, channelName) {
 	}
 	return result;
 }
+
+
+function isTransactionSucceed(transactionId, callback) {
+	logger.info('\n\n***** Hyperledger fabric client: query transaction validationCode by transactionId: %s *****', transactionId);
+
+	// client and chain should be claimed here
+	var client = new hfc();
+	var chain = null;
+
+	// this is a query, will just use org2's identity to
+	// submit the request
+	var org = defaultOrg;
+	
+	return setup.getAlivePeer(ORGS, org)
+	.then((peerInfo) => {
+		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
+		return setup.setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, true);
+
+	}).then((readyChain) => {
+		logger.debug('Successfully setup chain %s', readyChain.getName());
+		chain = readyChain;
+		var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
+		return hfc.newDefaultKeyValueStore(options);
+		
+	}).then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
+		return Submitter.getSubmitter(client, org, logger);
+
+	}).then((admin) => {		
+		logger.debug('Successfully enrolled user \'admin\'');
+
+		//FIXME: temporary fix until mspid is configured into Chain
+		admin.mspImpl._id = util.getMspid(ORGS, org);
+
+		// use default primary peer
+		return queryTransactionByTxId(chain, transactionId);
+		
+	}).then((processed_transaction) => {
+		callback(decodeTransaction(transactionId, processed_transaction, commonProtoPath, transProtoPath));
+		logger.info('END of query transaction status.');
+
+	}).catch((err) => {
+		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
+		callback(false);
+	});
+}
+
+
+function queryConfig(channelName, callback) {
+	// TODO: channel name is fixed from config file and should be passed from REST request
+	// TODO: care only 1 orderer. should be order cluster status when we have
+	logger.info('\n\n***** Hyperledger fabric client: query configuration of channel: %s *****', channelName);
+
+	// client and chain should be claimed here
+	var client = new hfc();
+	var chain = null;
+
+	// this is a query, will just use org2's identity to
+	// submit the request
+	var org = defaultOrg;
+	var ordererStatus = {
+			name: chain.getOrderers()[0].getUrl(),
+			status: 'DOWN'
+		}
+	
+	return setup.getAlivePeer(ORGS, org)
+	.then((peerInfo) => {
+		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
+		//TODO: maybe it's not needed to add any peer, to be tested
+		return setup.setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, true);
+
+	}).then((readyChain) => {
+		logger.debug('Successfully setup chain %s', readyChain.getName());
+		chain = readyChain;
+		var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
+		return hfc.newDefaultKeyValueStore(options);
+		
+	}).then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
+		return Submitter.getSubmitter(client, org, logger);
+
+	}).then((admin) => {		
+		logger.debug('Successfully enrolled user \'admin\'');
+
+		//FIXME: temporary fix until mspid is configured into Chain
+		admin.mspImpl._id = util.getMspid(ORGS, org);
+
+		return chain.getChannelConfig();
+		
+	}).then((response_payloads) => {
+		logger.info('Got config envelope from getChannelConfig.');
+//		try {
+			parseQueryChainConfig(response_payloads);
+			ordererStatus.status = 'UP';
+			callback([ordererStatus]);
+//		} catch(err) {
+//			callback([ordererStatus]);
+//		}
+			
+	}).catch((err) => {
+		logger.error.error('Failed to query with error:' + err.stack ? err.stack : err);
+		callback([ordererStatus]);
+	});
+}
+
+
+function queryOrderers(channelName, callback) {
+	// TODO: channel name is fixed from config file and should be passed from REST request
+	logger.info('\n\n***** Hyperledger fabric client: query orderer status of channel: %s *****', channelName);
+	
+	return module.exports.queryConfig(channelName, callback);
+}
+
+
+function queryPeers(channelName, callback) {
+	// TODO: channel name is fixed from config file and should be passed from REST request
+	logger.info('\n\n***** Hyperledger fabric client: query peer status of channel: %s *****', channelName);
+
+	// client and chain should be claimed here
+	var client = new hfc();
+	var chain = setup.setupChainWithAllPeers(client, ORGS, eventhubs);;
+
+	// this is a transaction, will just use org1's identity to
+	// submit the request
+	var org = defaultOrg;
+	var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
+
+	return hfc.newDefaultKeyValueStore(options)
+	.then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
+		return Submitter.getSubmitter(client, org, logger);
+
+	}).then((admin) => {	
+		logger.debug('Successfully enrolled user \'admin\'');
+
+		//FIXME: temporary fix until mspid is configured into Chain
+		admin.mspImpl._id = util.getMspid(ORGS, org);
+		
+		var peers = chain.getPeers();
+		async.mapSeries(peers, function(thisPeer, processResults) {
+			chain.queryChannels(thisPeer)
+			.then((response) => {
+				response.peer = thisPeer.getUrl();
+				processResults(null, response);
+			}).catch((err) => {
+				var response = {
+						channels: null,
+						peer: thisPeer.getUrl()
+					}
+				logger.error('Peer %s has no response, thus it is DOWN. ', thisPeer.getUrl());
+				processResults(null, response);
+			});
+
+		}, function(err, responses) {
+			logger.debug('processResults get callback with results %s and err %s.', 
+					JSON.stringify(responses), JSON.stringify(err));
+			var result = parseQueryPeerStatusReponse(responses, channelName);
+			logger.debug('Returning peer status: %s', JSON.stringify(result));
+			callback(result);
+			logger.info('END of query peers.');
+		},
+		(err) => {
+			// No case should be here
+			util.throwError(logger, err.stack ? err.stack : err, 'Unexpected err catched in queryPeers, check it.');
+		});			
+	}).catch((err) => {
+		logger.error('Failed to enroll user or read peer list with error:' + err.stack ? err.stack : err);
+		callback(null);
+		logger.info('END of query peers.');
+	});
+}
+
+
+function queryTransaction(transactionId, callback) {
+	logger.info('\n\n***** Hyperledger fabric client: query transaction by transactionId: %s *****', transactionId);
+
+	// client and chain should be claimed here
+	var client = new hfc();
+	var chain = null;
+
+	// this is a query, will just use org2's identity to
+	// submit the request
+	var org = defaultOrg;
+	var block_result = {};
+	var the_user = null;
+	
+	return setup.getAlivePeer(ORGS, org)
+	.then((peerInfo) => {
+		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
+		return setup.setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, true);
+
+	}).then((readyChain) => {
+		logger.debug('Successfully setup chain %s', readyChain.getName());
+		chain = readyChain;
+		var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
+		return hfc.newDefaultKeyValueStore(options);
+		
+	}).then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
+		return Submitter.getSubmitter(client, org, logger);
+
+	}).then((admin) => {	
+		logger.debug('Successfully enrolled user \'admin\'');
+		the_user = admin;
+
+		//FIXME: temporary fix until mspid is configured into Chain
+		admin.mspImpl._id = util.getMspid(ORGS, org);
+		
+		// use default primary peer
+		return chain.queryInfo();
+		
+	}).then((blockchainInfo) => {
+		logger.debug('Chain queryInfo() returned block height = ' + blockchainInfo.height.low);
+		logger.debug('Chain queryInfo() returned block previousBlockHash = ' + blockchainInfo.previousBlockHash);
+		logger.debug('Chain queryInfo() returned block currentBlockHash = ' + blockchainInfo.currentBlockHash);
+		var block_hash = blockchainInfo.currentBlockHash;
+		block_result.blockNumber = blockchainInfo.height.low;
+		block_result.previousBlockHash = blockchainInfo.previousBlockHash;
+		block_result.currentBlockHash = blockchainInfo.currentBlockHash;
+
+	}).then(() => {
+		nonce = ClientUtils.getNonce()
+		var tx_id = chain.buildTransactionID(nonce, the_user);
+
+		// send query
+		// for supplychain
+		var request = {
+			chaincodeId : util.chaincodeId,
+			chaincodeVersion : util.chaincodeVersion,
+			chainId: util.channel,
+			txId: tx_id,
+			nonce: nonce,
+			fcn: 'queryTrade',
+			args: ["Sku", "TradeDate", "TraceInfo"]
+		};
+		logger.debug('Sending query request: %s', JSON.stringify(request));
+		
+		return chain.queryByChaincode(request);
+		
+	}).then((response_payloads) => {
+		logger.debug('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
+
+		callback(Object.assign(parseQuerySupplyChainResponse(response_payloads), block_result));
+		logger.info('END of query transaction.');
+
+	}).catch((err) => {
+		logger.error('Failed to send query or parse query response due to error: ' + err.stack ? err.stack : err);
+		callback(parseQuerySupplyChainResponse(null));
+		logger.info('END of query transaction.');
+	});
+}
+
+
+
+function queryTransactionHistory(transactionId, callback) {
+	logger.info('\n\n***** Hyperledger fabric client: query transaction history by transactionId: %s *****', transactionId);
+
+	// client and chain should be claimed here
+	var client = new hfc();
+	var chain = null;
+
+	// this is a query, will just use org2's identity to
+	// submit the request
+	var org = defaultOrg;
+	var the_user = null;
+
+	return setup.getAlivePeer(ORGS, org)
+	.then((peerInfo) => {
+		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
+		return setup.setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, true);
+
+	}).then((readyChain) => {
+		logger.debug('Successfully setup chain %s', readyChain.getName());
+		chain = readyChain;
+		var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
+		return hfc.newDefaultKeyValueStore(options);
+		
+	}).then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
+		return Submitter.getSubmitter(client, org, logger);
+
+	}).then((admin) => {		
+		logger.debug('Successfully enrolled user \'admin\'');
+		the_user = admin;
+
+		//FIXME: temporary fix until mspid is configured into Chain
+		admin.mspImpl._id = util.getMspid(ORGS, org);
+		
+		// use default primary peer
+		return chain.queryInfo();
+		
+	}).then(() => {
+		nonce = ClientUtils.getNonce()
+		var tx_id = chain.buildTransactionID(nonce, the_user);
+
+		// send query
+		// for supplychain
+		var request = {
+			chaincodeId : util.chaincodeId,
+			chaincodeVersion : util.chaincodeVersion,
+			chainId: util.channel,
+			txId: tx_id,
+			nonce: nonce,
+			fcn: 'getTradeHistory',
+			args: ["TransactionId", "TraceInfo"]
+		};
+		logger.debug('Sending query request: %s', JSON.stringify(request));
+		
+		return chain.queryByChaincode(request);
+	}).then((response_payloads) => {
+		logger.debug('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
+		callback(parseQueryHistoryResponse(response_payloads));
+		logger.info('END of query transaction hitory.');
+
+	}).catch((err) => {
+		logger.error('Failed to send query or parse query response due to error: ' + err.stack ? err.stack : err);
+		callback(parseQueryHistoryResponse(null));
+		logger.info('END of query transaction.');
+	});
+}
+
+
+
 
 
 function queryTransactionByTxId(chain, transactionId){

@@ -15,77 +15,63 @@
  */
 
 var path = require('path');
-var async = require('async');
 
 var hfc = require('fabric-client');
 var ClientUtils = require('fabric-client/lib/utils.js');
 var Orderer = require('fabric-client/lib/Orderer.js');
 var Peer = require('fabric-client/lib/Peer.js');
 var Submitter = require('./get-submitter.js');
+var exe = require('./execute-recursively.js');
 var setup = require('./setup.js');
 var util = require('./util.js');
 
 var logger = ClientUtils.getLogger('join-channel');
 var ORGS = util.ORGS;
 
-var tx_id = null;
-var nonce = null;
-var the_user = null;
+module.exports.joinChannel = joinChannel;
 
-module.exports.joinChannel = function(callback) {
 
+function joinChannel() {
 	logger.info('\n\n***** Hyperledger fabric client: join channel *****');
 	
 	var orgs = util.getOrgs(ORGS);
 	logger.info('There are %s organizations: %s. Going to join channel one by one.', orgs.length, orgs);
 
-	// Send concurrent proposal
-	return async.mapSeries(orgs, function(org, processResults) {
-	    joinChannel(org)
-		.then(() => {
-			logger.info('Successfully joined peers in organization "%s" to the channel', org);
-			processResults(null, 'SUCCESS');
-		}, (err) => {
-			util.throwError(logger, err.stack ? err.stack : err, 
-					'Failed to join peers in organization ' + org + ' to the channel');
-		}).catch((err) => {
-			logger.error('Failed due to unexpected reasons. ' + err.stack ? err.stack : err);
-			processResults(null, 'FAILED');
-		});
-
-	}, function(err, results) {
-		logger.debug('processResults get callback with results %s and err %s.', results, err);
-		// callback to routes.js
-		callback(results);
-		logger.info('END of join channel.');
-	});	
+	return exe.executeTheNext(orgs, joinChannelByOrg, 'Join Channel')
+	.catch((err) => {
+		logger.error('Failed to join channel with error: %s', err);
+		// Failure back and accept further err processing
+		return new Promise((resolve, reject) => reject(err));
+	});
 };
 
 
-function joinChannel(org) {
+// As different org holds different certs, only peers in the same org can join the channel in once operation
+function joinChannelByOrg(org) {
 	logger.info('Calling peers in organization "%s" to join the channel', org);
 
-	// Different org uses different client
+	// client and chain should be claimed here
 	var client = new hfc();
 	var orgName = util.getOrgNameByOrg(ORGS, org);
 	var chain = setup.setupChain(client, ORGS, orgName, org);
+	
+	var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
 
-	return hfc.newDefaultKeyValueStore({
-		path: util.storePathForOrg(orgName)
-	})
-	.then((store) => {
-		client.setStateStore(store);
+	return hfc.newDefaultKeyValueStore(options)
+	.then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
 		return Submitter.getSubmitter(client, org, logger);
-	})
-	.then((admin) => {
+
+	}).then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
-		the_user = admin;
 
 		//FIXME: temporary fix until mspid is configured into Chain
-		the_user.mspImpl._id = ORGS[org].mspid;
+		admin.mspImpl._id = util.getMspid(ORGS, org);
 
-		nonce = ClientUtils.getNonce()
-		tx_id = chain.buildTransactionID(nonce, the_user);
+		var nonce = ClientUtils.getNonce()
+		var tx_id = chain.buildTransactionID(nonce, admin);
 		var targets = chain.getPeers();
 		
 		var request = {
@@ -93,21 +79,29 @@ function joinChannel(org) {
 			txId : 	tx_id,
 			nonce : nonce
 		};
-		return chain.joinChannel(request);
-	}, (err) => {
-		logger.error('Failed to enroll user \'admin\' due to error: ' + err.stack ? err.stack : err);
-		throw new Error('Failed to enroll user \'admin\' due to error: ' + err.stack ? err.stack : err);
-	})
-	.then((results) => {
-		logger.info('Join Channel response: %j', results);
+		logger.debug('Sending join channel request: %j', request);
 
-		if(results[0] && results[0].response && results[0].response.status == 200)
-			logger.info('Successfully joined channel.');
-		else {
-			logger.error(' Failed to join channel');
-			throw new Error('Failed to join channel');
-		}
-	}, (err) => {
-		logger.error('Failed to join channel due to error: ' + err.stack ? err.stack : err);
+		return chain.joinChannel(request);
+
+	}).then((responses) => {
+		// Check response status and return a new promise if success
+		return finishJoinByOrg(responses);
+
+	}).catch((err) => {
+		logger.error('Failed to join channel with error: %s', err);
+		// Failure back and accept further err processing
+		return new Promise((resolve, reject) => reject(err));
 	});
+}
+
+
+function finishJoinByOrg(responses) {
+	if(responses[0] && responses[0].response && responses[0].response.status == 200) {
+		logger.debug('Successfully sent Request and received Response: Status - %s', responses[0].response.status);
+		return responses[0];
+	}
+	else {
+		// Seems a bug in Chain.js that it returns error as response
+		util.throwError(logger, JSON.stringify(responses), 'Get failure responses: ');
+	}
 }

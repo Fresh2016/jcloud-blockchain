@@ -21,6 +21,7 @@ var ClientUtils = require('fabric-client/lib/utils.js');
 var Peer = require('fabric-client/lib/Peer.js');
 var Orderer = require('fabric-client/lib/Orderer.js');
 var Submitter = require('./get-submitter.js');
+var exe = require('./execute-recursively.js');
 var setup = require('./setup.js');
 var util = require('./util.js');
 
@@ -29,7 +30,6 @@ var ORGS = util.ORGS;
 
 var tx_id = null;
 var nonce = null;
-var the_user = null;
 var targets = [];
 var eventhubs = [];
 
@@ -38,34 +38,98 @@ var eventhubs = [];
 //than the one that submitted the "move" transaction, although either org
 //should work properly
 var defaultOrg = 'org1';
-
-
-/*TODO: there's a bug that peer down causes grpc emitting error event and nobody handles it, result in program panic.
-events.js:160
-      throw er; // Unhandled 'error' event
-      ^
-
-Error: Connect Failed
-    at ClientDuplexStream._emitStatusIfDone (D:\eclipse-workspace\jcloud-blockchain\node_modules\grpc\src\node\src\client.js:201:19)
-    at ClientDuplexStream._readsDone (D:\eclipse-workspace\jcloud-blockchain\node_modules\grpc\src\node\src\client.js:169:8)
-    at readCallback (D:\eclipse-workspace\jcloud-blockchain\node_modules\grpc\src\node\src\client.js:229:12)
-*/
+// Used by transaction event listener
+var defaultExpireTime = 30000;
 
 module.exports.instantiateChaincode = instantiateChaincode;
 module.exports.invokeChaincode = invokeChaincode;
 
 
-// Exported functions
-function instantiateChaincode(callback) {
-	logger.info('\n\n***** Hyperledger fabric client: instantiate chaincode *****');
+function addTxPromise(eventPromises, eh, deployId) {
+	let txPromise = new Promise((resolve, reject) => {
+		// set expireTime as 30s
+		registerTxEvent(eh, resolve, reject, defaultExpireTime, deployId);
+	});
+	eventPromises.push(txPromise);
+}
 
+
+function commitTransaction(chain, proposalResponses, proposal, header, tx_id){
+	var request = {
+		proposalResponses: proposalResponses,
+		proposal: proposal,
+		header: header
+	};
+	logger.debug('Commit request is %s ', JSON.stringify(request));
+
+	// set the transaction listener and set a timeout of 30sec
+	// if the transaction did not get committed within the timeout period,
+	// fail the test
+	var deployId = tx_id.toString();
+
+	var eventPromises = [];
+	eventhubs.forEach((eh) => {
+		addTxPromise(eventPromises, eh, deployId);
+	});	
+
+	var sendPromise = chain.sendTransaction(request);
+	return Promise.all([sendPromise].concat(eventPromises))
+	.then((results) => {
+		return processCommitResponse(results, tx_id);
+	}).catch((err) => {
+		util.throwError(logger, err, 'Failed to commit and get notifications within the timeout period.');
+	});
+}
+
+
+function disconnectEventhub(context, ehs, f) {
+	// Disconnect the event hub
+	return function() {
+		for(var key in ehs) {
+			var eventhub = ehs[key];
+			if (eventhub && eventhub.isconnected()) {
+				logger.debug('Disconnecting the event hub');
+				eventhub.disconnect();
+			}
+		}
+		f.apply(context, arguments);
+	};
+}
+
+function finishCommit(response, logger, tx_id) {
+	if (response.status === 'SUCCESS') {
+		printSuccessHint(tx_id);
+		var result = {
+				TransactionId : tx_id
+			};
+		return result;			
+	} else {
+		util.throwError(logger, response.status, 'Failed to order the transaction. Error code: ');
+	}
+}
+
+
+function instantiateChaincode() {
+	logger.info('\n\n***** Hyperledger fabric client: instantiate chaincode *****');
+	
+	var orgs = util.getOrgs(ORGS);
+	logger.info('There are %s organizations: %s. Going to instantiate chaincode one by one.', orgs.length, orgs);
+
+	return exe.executeTheNext(orgs, instantiateChaincodeByOrg, 'Instantiate Chaincode')
+	.catch((err) => {
+		logger.error('Failed to instantiate chaincode with error: %s', err);
+		// Failure back and accept further err processing
+		return new Promise((resolve, reject) => reject(err));
+	});
+};
+
+
+function instantiateChaincodeByOrg(org) {
 	// client and chain should be claimed here
 	var client = new hfc();
-	var chain = setup.setupChainWithAllPeers(client, ORGS, eventhubs);;
-
-	// this is a transaction, will just use org1's identity to
-	// submit the request
-	var org = defaultOrg;
+	var orgName = util.getOrgNameByOrg(ORGS, org);
+	var chain = setup.setupChain(client, ORGS, orgName, org);
+	
 	var options = { 
 			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
 		};
@@ -86,13 +150,13 @@ function instantiateChaincode(callback) {
 			var header   = results[2];
 			logger.debug('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', 
 					proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature);
-			// callback should be passed for sending transactionId back to routes.js, currently not used yet
-			return commitTransaction(chain, proposalResponses, proposal, header, tx_id, callback);
+
+			return commitTransaction(chain, proposalResponses, proposal, header, tx_id);
 		}
 	}).catch((err) => {
-		logger.error('Failed to send instantiate proposal or commit transaction with error:' + err.stack ? err.stack : err);
-		callback();
-		logger.info('END of invoke transaction.');
+		logger.error('Failed to instantiate chaincode with error: ' + err.stack ? err.stack : err);
+		// Failure back and accept further err processing
+		return new Promise((resolve, reject) => reject(err));
 	});
 };
 
@@ -147,128 +211,6 @@ function invokeChaincode(traceInfo, callback) {
 };
 
 
-// Private functions
-function addTxPromise(eventPromises, eh, deployId) {
-	let txPromise = new Promise((resolve, reject) => {
-		// set expireTime as 30s
-		registerTxEvent(eh, resolve, reject, 30000, deployId);
-	});
-	eventPromises.push(txPromise);
-}
-
-
-/* to be deleted
- * function commitInstantiate(chain, proposalResponses, proposal, header) {
-	var request = {
-			proposalResponses: proposalResponses,
-			proposal: proposal,
-			header: header
-		};
-	logger.debug('Commit request is %s ', JSON.stringify(request));
-
-	// set the transaction listener and set a timeout of 30sec
-	// if the transaction did not get committed within the timeout period,
-	// fail the test
-	var deployId = tx_id.toString();
-	
-	var eventPromises = [];
-	eventhubs.forEach((eh) => {
-		addTxPromise(eventPromises, eh, deployId);
-	});	
-
-
-	var eventPromises = [];
-	eventhubs.forEach((eh) => {
-		let txPromise = new Promise((resolve, reject) => {
-		let handle = setTimeout(reject, 30000);
-
-		eh.registerTxEvent(deployId.toString(), (tx, code) => {
-			logger.info('The chaincode instantiate transaction has been committed on peer '+ eh.ep.addr);
-			clearTimeout(handle);
-			eh.unregisterTxEvent(deployId);
-
-			if (code !== 'VALID') {
-				logger.error('The chaincode instantiate transaction was invalid, code = ' + code);
-				reject();
-			} else {
-				logger.info('The chaincode instantiate transaction was valid.');
-				resolve();
-			}
-		});
-		});
-
-		eventPromises.push(txPromise);
-	});
-
-	
-	var sendPromise = chain.sendTransaction(request);
-	return Promise.all([sendPromise].concat(eventPromises))
-	.then((results) => {
-		logger.info('Instantiate transaction event promise all complete.');
-		return results[0]; // the first returned value is from the 'sendPromise' which is from the 'sendTransaction()' call
-
-	}).catch((err) => {
-		util.throwError(logger, err, 'Failed to send instantiate transaction and get notifications within the timeout period.');
-	});	
-}
-*/
-
-
-function commitTransaction(chain, proposalResponses, proposal, header, tx_id, callback){
-	var request = {
-		proposalResponses: proposalResponses,
-		proposal: proposal,
-		header: header
-	};
-	logger.debug('Commit request is %s ', JSON.stringify(request));
-
-	// set the transaction listener and set a timeout of 30sec
-	// if the transaction did not get committed within the timeout period,
-	// fail the test
-	var deployId = tx_id.toString();
-
-	var eventPromises = [];
-	eventhubs.forEach((eh) => {
-		addTxPromise(eventPromises, eh, deployId);
-	});	
-
-	var sendPromise = chain.sendTransaction(request);
-	return Promise.all([sendPromise].concat(eventPromises))
-	.then((results) => {
-		return processCommitResponse(results, callback, tx_id);
-	}).catch((err) => {
-		util.throwError(logger, err, 'Failed to commit and get notifications within the timeout period.');
-	});
-}
-
-
-function disconnectEventhub(context, ehs, f) {
-	// Disconnect the event hub
-	return function() {
-		for(var key in ehs) {
-			var eventhub = ehs[key];
-			if (eventhub && eventhub.isconnected()) {
-				logger.debug('Disconnecting the event hub');
-				eventhub.disconnect();
-			}
-		}
-		f.apply(context, arguments);
-	};
-}
-
-function finishCommit(response, logger, tx_id) {
-	if (response.status === 'SUCCESS') {
-		printSuccessHint(tx_id);
-		var result = {
-				TransactionId : tx_id
-			};
-		return result;			
-	} else {
-		util.throwError(logger, response.status, 'Failed to order the transaction. Error code: ');
-	}
-}
-
-
 function printSuccessHint(tx_id) {
 	logger.info('Successfully committed transaction to the orderer.');
 	logger.info('******************************************************************');
@@ -278,7 +220,7 @@ function printSuccessHint(tx_id) {
 }
 
 
-function processCommitResponse(responses, callback, tx_id) {
+function processCommitResponse(responses, tx_id) {
 	logger.debug('Successfully get transaction commit response: %s', JSON.stringify(responses));
 	
 	try {
@@ -288,11 +230,8 @@ function processCommitResponse(responses, callback, tx_id) {
 		if(response) {
 			// Sending transactionId back to routes.js
 			logger.info('Invoke transaction event promise all complete.');
-			callback(finishCommit(response, logger, tx_id));
-		}	
-		
-		logger.info('END of invoke transaction.');
-		return true;
+			return finishCommit(response, logger, tx_id);
+		}
 		
 	} catch(err) {
 		util.throwError(logger, err, 'Failed to process commit response. ');
@@ -312,12 +251,10 @@ function registerTxEvent(eh, resolve, reject, expireTime, deployId) {
 
 
 function sendInstantiateProposal(chain, admin, mspid) {
-
-	the_user = admin;
-	the_user.mspImpl._id = mspid;
+	admin.mspImpl._id = mspid;
 
 	nonce = ClientUtils.getNonce()
-	tx_id = chain.buildTransactionID(nonce, the_user);
+	tx_id = chain.buildTransactionID(nonce, admin);
 
 	// send proposal to endorser
 	// for supplychain
@@ -339,11 +276,10 @@ function sendInstantiateProposal(chain, admin, mspid) {
 
 
 function sendTransactionProposal(chain, admin, mspid, traceInfo) {
-	
-	the_user = admin;
-	the_user.mspImpl._id = mspid;
+	admin.mspImpl._id = mspid;
+
 	nonce = ClientUtils.getNonce()
-	tx_id = chain.buildTransactionID(nonce, the_user);
+	tx_id = chain.buildTransactionID(nonce, admin);
 
 	logger.info('Sending transaction proposal "%s"', tx_id);
 
@@ -380,6 +316,6 @@ function txEventListener(eh, resolve, reject, handle, deployId) {
 		resolve();
 	}
 	*/
-	logger.debug('The balance transfer transaction has been committed on peer '+ eh.ep.addr);
+	logger.debug('The transaction has been committed on peer '+ eh.ep.addr);
 	resolve();	
 }

@@ -15,61 +15,42 @@
  */
 
 var path = require('path');
-var async = require('async');
+//var async = require('async');
 
 var hfc = require('fabric-client');
 var ClientUtils = require('fabric-client/lib/utils.js');
 var Peer = require('fabric-client/lib/Peer.js');
 var Orderer = require('fabric-client/lib/Orderer.js');
 var Submitter = require('./get-submitter.js');
+var exe = require('./execute-recursively.js');
 var setup = require('./setup.js');
 var util = require('./util.js');
 
 var logger = ClientUtils.getLogger('install-chaincode');
 var ORGS = util.ORGS;
 
-var tx_id = null;
-var nonce = null;
-var the_user = null;
-var targets = [];
-
 // Temporarily set GOPATH to chaincode_repo
 process.env.GOPATH = path.join(__dirname, '/chaincode_repo');
 
-module.exports.installChaincode = function(callback) {
+module.exports.installChaincode = installChaincode;
+
+
+function installChaincode() {
 	logger.info('\n\n***** Hyperledger fabric client: install chaincode *****');
 	
 	var orgs = util.getOrgs(ORGS);
 	logger.info('There are %s organizations: %s. Going to install chaincode one by one.', orgs.length, orgs);
-	
-	//TODO: testing if it's ok to install all peers at the same time
-	//orgs = ['org1'];
 
-	// Send concurrent proposal
-	return async.mapSeries(orgs, function(org, processResults) {
-		installChaincode(org)
-		.then(() => {
-			logger.info('Successfully installed chaincode in peers of organization %s', org);
-			processResults(null, 'SUCCESS');
-		}, (err) => {
-			util.throwError(logger, err.stack ? err.stack : err, 
-					'Failed to install chaincode in peers of organization ' + org);
-		}).catch((err) => {
-			logger.error('Failed due to unexpected reasons. ' + err.stack ? err.stack : err);
-			processResults(null, 'FAILED');
-		});
-
-	}, function(err, results) {
-		logger.debug('processResults get callback with results %s and err %s.', results, err);
-		// callback to routes.js
-		callback(results);
-		logger.info('END of install chaincode.');
+	return exe.executeTheNext(orgs, installChaincodeByOrg, 'Install Chaincode')
+	.catch((err) => {
+		logger.error('Failed to install chaincode with error: %s', err);
+		// Failure back and accept further err processing
+		return new Promise((resolve, reject) => reject(err));
 	});
+};
 
-}
 
-
-function installChaincode(org) {
+function installChaincodeByOrg(org) {
 	logger.info('Calling peers in organization "%s" to install chaincode', org);
 
 	// Different org uses different client
@@ -87,26 +68,29 @@ function installChaincode(org) {
 		logger.info('Successfully enrolled user \'admin\'');
 		return sendInstallProposal(chain, admin, util.getMspid(ORGS, org));
 
-	},
-	(err) => {
-		util.throwError(logger, err, 'Failed to enroll user \'admin\'. ');
-
 	}).then((results) => {
-		return util.checkProposalResponses(results, 'Install chaincode', logger);
+		var response = {
+				status : 'failed'
+		}
+		if (util.checkProposalResponses(results, 'Install chaincode', logger)) {
+			response.status = 'success';
+		}
+		return response;
 
-	},
-	(err) => {
-		util.throwError(logger, err.stack ? err.stack : err, 'Failed to send install proposal due to error: ');
+	}).catch((err) => {
+		logger.error('Failed to install chaincode with error: %s', err);
+		// Failure back and accept further err processing
+		return new Promise((resolve, reject) => reject(err));
 	});
+	
 }
 
 
 function sendInstallProposal(chain, admin, mspid) {
-	the_user = admin;
-	the_user.mspImpl._id = mspid;
+	admin.mspImpl._id = mspid;
 
-	nonce = ClientUtils.getNonce()
-	tx_id = chain.buildTransactionID(nonce, the_user);
+	var nonce = ClientUtils.getNonce()
+	var tx_id = chain.buildTransactionID(nonce, admin);
 	var targets = chain.getPeers();
 
 	var request = {

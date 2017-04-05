@@ -18,7 +18,6 @@ var path = require('path');
 
 var hfc = require('fabric-client');
 var ClientUtils = require('fabric-client/lib/utils.js');
-var Orderer = require('fabric-client/lib/Orderer.js');
 var Submitter = require('./get-submitter.js');
 var setup = require('./setup.js');
 var util = require('./util.js');
@@ -26,78 +25,75 @@ var util = require('./util.js');
 var logger = ClientUtils.getLogger('create-channel');
 var ORGS = util.ORGS;
 
-var the_user = null;
-var targets = [];
-var client = new hfc();
-var chain = client.newChain(util.channel);
+//Only for creating a key value store with org name, not used in create-channel
+var defaultOrg = 'org1';
+var defaultSleepTime = 1000;
 
-module.exports.createChannel = function(org) {
-	logger.info('\n\n***** Hyperledger fabric client: create channel via %s *****', org);
+module.exports.createChannel = createChannel;
 
-	var orgName = util.getOrgNameByOrg(ORGS, org);
-	chain.addOrderer(new Orderer(ORGS.orderer));
+function createChannel() {
+	logger.info('\n\n***** Hyperledger fabric client: create channel *****');
 
-	// remove expired keys before enroll admin
-	util.cleanupDir(util.storePathForOrg(orgName));
+	// client and chain should be claimed here
+	var client = new hfc();
+	var chain = setup.setupChainWithOnlyOrderer(client, ORGS);
 
-	return hfc.newDefaultKeyValueStore({
-		path: util.storePathForOrg(orgName)
-	})
-	.then((store) => {
-		client.setStateStore(store);
+	// this is a transaction, will just use org1's identity to
+	// submit the request
+	var org = defaultOrg;
+	var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
+
+	return hfc.newDefaultKeyValueStore(options)
+	.then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
 		return Submitter.getSubmitter(client, org, logger);
-		
-	})
-	.then((admin) => {
+
+	}).then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
-		the_user = admin;
 
 		//FIXME: temporary fix until mspid is configured into Chain
-		the_user.mspImpl._id = util.getMspid(ORGS, org);
+		admin.mspImpl._id = util.getMspid(ORGS, org);
 
-		// readin the envelope to send to the orderer
+		// read in the envelope to send to the orderer
 		return util.readFile(util.txFilePath);
 		
-	}, (err) => {
-		util.throwError(logger, err, 'Failed to enroll user \'admin\'. ');
-		
-	})
-	.then((txFileData) => {
-		logger.info('Successfully read file');
+	}).then((txFileData) => {
 		var request = {
 			envelope : txFileData
 		};
+		logger.debug('Successfully read envelop file and sending creation request: ' + 
+				request.envelope.toString('utf8', 0, 100) + '\n ......');
+
 		// send to orderer
 		return chain.createChannel(request);
-	}, (err) => {
-		util.throwError(logger, err, 'Failed to read file for channel template: ');
-		
-	})
-	.then((response) => {
-		finishCreation(response, 5000);
 
-	}, (err) => {
-		util.throwError(logger, err, 'Failed to create the channel: ');
-		
-	})
-	.then((nothing) => {
-		logger.info('Successfully waited to make sure new channel was created.');
-		return 'SUCCESS';
-	}, (err) => {
-		logger.error('Failed to sleep due to error: ' + err.stack ? err.stack : err);
-		return 'FAILED';
+	}).then((response) => {
+		// Check response status and return a new promise if success
+		return finishCreation(response, defaultSleepTime);
+
+	}).catch((err) => {
+		logger.error('Failed to create the channel with error: %s', err);
+		// Failure back and accept further err processing
+		return new Promise((resolve, reject) => reject(err));
 	});
 };
 
 
 function finishCreation(response, sleepTime) {
-	logger.debug('Successfully sent Request and received Response: Status - %s', response.status);
-
 	if (response && response.status === 'SUCCESS') {
-		logger.info('Successfully created the channel.');
-		sleep(sleepTime);
+		logger.debug('Successfully sent Request and received Response: Status - %s', response.status);
+		logger.debug('Going to sleep %d sec for waiting creation done.', sleepTime/1000.0);
+
+		return sleep(sleepTime)
+		.then(() => {
+			logger.debug('Successfully waited to make sure new channel was created.');
+			logger.info('END of create channel.');
+			return response;
+		});
 	} else {
-		util.throwError(logger, err, 'Failed to create the channel: ');
+		util.throwError(logger, null, 'Failed to create the channel: ');
 	}
 }
 
