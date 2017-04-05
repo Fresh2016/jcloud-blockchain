@@ -10,20 +10,28 @@ docker rm -f $(docker ps -a | grep supplychain | awk '{print $1 }')
 docker rmi -f $(docker images | grep supplychain | awk '{print $3 }')
  */
 
-
+/*
 createClient.createChannel()
 .then((result) => {
 	console.log('API: create channel result %s', JSON.stringify(result));
-	joinClient.joinChannel(sendResponse);
+	return joinClient.joinChannel();
+}).then((result) => {
 	res.json(result); // return all amounts in JSON format
 }).catch((err) => {
 	console.log('Return without executing joining and installing');
 	return false;
 });
+*/
 
+/*
+joinClient.joinChannel()
+.catch((err) => {
+	console.log('Return without executing joining and installing');
+	return false;
+});
+*/
 
-
-//installClient.installChaincode(sendResponse);
+installClient.installChaincode(sendResponse);
 //invokeClient.instantiateChaincode(sendResponse);
 
 

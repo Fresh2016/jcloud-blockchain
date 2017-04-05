@@ -15,13 +15,13 @@
  */
 
 var path = require('path');
-var async = require('async');
 
 var hfc = require('fabric-client');
 var ClientUtils = require('fabric-client/lib/utils.js');
 var Orderer = require('fabric-client/lib/Orderer.js');
 var Peer = require('fabric-client/lib/Peer.js');
 var Submitter = require('./get-submitter.js');
+var exe = require('./execute-recursively.js');
 var setup = require('./setup.js');
 var util = require('./util.js');
 
@@ -31,33 +31,13 @@ var ORGS = util.ORGS;
 module.exports.joinChannel = joinChannel;
 
 
-function checkTheNext(orgs) {
-	// Get orgs join channel one by one util all orgs joined it
-	let org = pop(orgs);
-	
-	return joinChannelByOrg(org)
-	.then((response) => {
-		logger.info('Successfully joined peers in organization "%s" to the channel', org);
-		logger.debug('Get success responses: %j', response);
-		if (0 < orgs.length) {
-			return checkTheNext(orgs);
-		} else {
-			logger.info('END of join channel.');
-			return new Promise((resolve, reject) => {});
-		}
-		return true;
-	});
-	// No catch() needed as joinChannel will do it at the end
-}
-
-
 function joinChannel() {
 	logger.info('\n\n***** Hyperledger fabric client: join channel *****');
 	
 	var orgs = util.getOrgs(ORGS);
 	logger.info('There are %s organizations: %s. Going to join channel one by one.', orgs.length, orgs);
 
-	return checkTheNext(orgs)
+	return exe.executeTheNext(orgs, joinChannelByOrg, 'Join Channel')
 	.catch((err) => {
 		logger.error('Failed to join channel with error: %s', err);
 		// Failure back and accept further err processing
@@ -124,19 +104,5 @@ function finishJoinByOrg(responses) {
 	else {
 		// Seems a bug in Chain.js that it returns error as response
 		util.throwError(logger, JSON.stringify(responses), 'Get failure responses: ');
-	}
-}
-
-
-function pop(list) {
-	logger.debug('Poping cell from %s', JSON.stringify(list));
-	if (list) {
-		var component = list[0];
-		list.splice(0, 1);
-		logger.debug('Successfully pop %s, now list becomes %s', JSON.stringify(component), JSON.stringify(list));
-		return component;
-	} else {
-		logger.error('Empty list, return nothing.');
-		return null;
 	}
 }
