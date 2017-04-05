@@ -31,39 +31,77 @@ var ORGS = util.ORGS;
 module.exports.joinChannel = joinChannel;
 
 
+function checkTheNext(orgs) {
+	// Get orgs join channel one by one util all orgs joined it
+	let org = orgs[0];
+	orgs.splice(0, 1);
+	
+/*	joinChannelByOrg(org)
+	.then(() => {
+		logger.info('Successfully joined peers in organization "%s" to the channel', org);
+		processResults(null, 'SUCCESS');
+	}).catch((err) => {
+		logger.error('Failed to join peers in organization ' + org + 
+				' to the channel' + err.stack ? err.stack : err);
+		processResults(err, 'FAILED');
+	});
+*/	
+	if (0 < orgs.length) {
+		logger.info('going to call joinChannel with orgs: %s', orgs);
+		checkTheNext(orgs);
+	} else {
+		logger.info('END of join channel.');
+		return new Promise((resolve, reject) => {});
+	}
+	
+}
+
+
 //TODO: async should be refactored as promise
-function joinChannel(callback) {
+function joinChannel() {
 
 	logger.info('\n\n***** Hyperledger fabric client: join channel *****');
 	
 	var orgs = util.getOrgs(ORGS);
 	logger.info('There are %s organizations: %s. Going to join channel one by one.', orgs.length, orgs);
 
+	checkTheNext(orgs);
+	/*
 	// Send concurrent proposal
-	return async.mapSeries(orgs, function(org, processResults) {
+	async.mapSeries(orgs, function(org, processResults) {
 	    joinChannelByOrg(org)
 		.then(() => {
 			logger.info('Successfully joined peers in organization "%s" to the channel', org);
 			processResults(null, 'SUCCESS');
-		}, (err) => {
-			util.throwError(logger, err.stack ? err.stack : err, 
-					'Failed to join peers in organization ' + org + ' to the channel');
 		}).catch((err) => {
-			logger.error('Failed due to unexpected reasons. ' + err.stack ? err.stack : err);
-			processResults(null, 'FAILED');
+			logger.error('Failed to join peers in organization ' + org + 
+					' to the channel' + err.stack ? err.stack : err);
+			processResults(err, 'FAILED');
 		});
 
-	}, function(err, results) {
+	}, (err, results) => {
+		// Here's processResults
 		logger.debug('processResults get callback with results %s and err %s.', results, err);
-		// callback to routes.js
-		callback(results);
 		logger.info('END of join channel.');
+
+		// callback to routes.js
+		return new Promise((resolve, reject) => {
+			if (err) {
+				reject(err);
+			} else {
+				resolve(results);
+			}
+		}).catch((err) => {
+			console.log('Return without executing joining and installing');
+			return false;
+		});
 	});	
+	*/
 };
 
 
 // As different org holds different certs, only peers in the same org can join the channel in once operation
-function joinChannelByOrg(org, callback) {
+function joinChannelByOrg(org) {
 	logger.info('Calling peers in organization "%s" to join the channel', org);
 
 	// client and chain should be claimed here
@@ -95,21 +133,31 @@ function joinChannelByOrg(org, callback) {
 			txId : 	tx_id,
 			nonce : nonce
 		};
-		return chain.joinChannel(request);
-	}, (err) => {
-		logger.error('Failed to enroll user \'admin\' due to error: ' + err.stack ? err.stack : err);
-		throw new Error('Failed to enroll user \'admin\' due to error: ' + err.stack ? err.stack : err);
-	})
-	.then((results) => {
-		logger.info('Join Channel response: %j', results);
+		logger.debug('Sending join channel request: %j', request);
 
-		if(results[0] && results[0].response && results[0].response.status == 200)
-			logger.info('Successfully joined channel.');
-		else {
-			logger.error(' Failed to join channel');
-			throw new Error('Failed to join channel');
-		}
-	}, (err) => {
-		logger.error('Failed to join channel due to error: ' + err.stack ? err.stack : err);
+		return null;//return chain.joinChannel(request);
+
+	}).then((responses) => {
+		// Check response status and return a new promise if success
+		return finishJoin(responses);
+
+	}).catch((err) => {
+		logger.error('Failed to join channel with error: %s', err);
+		// Failure back and accept further err processing
+		return new Promise((resolve, reject) => reject(err));
 	});
+}
+
+
+function finishJoin(responses) {
+	if(responses[0] && responses[0].response && responses[0].response.status == 200) {
+		logger.debug('Successfully sent Request and received Response: Status - %s', response.status);
+		logger.info('END of join channel.');
+
+		return new Promise((resolve, reject) => resolve(responses[0]));
+	}
+	else {
+		// Seems a bug in Chain.js that it returns error as response
+		util.throwError(logger, JSON.stringify(responses), 'Failed to join the channel: ');
+	}
 }
