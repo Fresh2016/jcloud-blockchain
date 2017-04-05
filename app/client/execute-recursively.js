@@ -34,7 +34,7 @@ function executeTheNext(orgs, functionByOrg, actionString) {
 			return executeTheNext(orgs, functionByOrg, actionString);
 		} else {
 			logger.info('END of %s.', actionString);
-			return new Promise((resolve, reject) => {});
+			return new Promise((resolve, reject) => resolve(response));
 		}
 		return true;
 	});

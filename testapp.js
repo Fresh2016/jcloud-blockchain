@@ -31,7 +31,28 @@ joinClient.joinChannel()
 });
 */
 
-installClient.installChaincode(sendResponse);
+// TODO: there's bug that causes catching err here even in both success response
+installClient.installChaincode()
+.then(() => {
+	console.log('API: create channel result ');
+	//console.log('API: create channel result %s', JSON.stringify(result));
+	return invokeClient.instantiateChaincode();
+}).then((result) => {
+	res.json(result); // return all amounts in JSON format
+}).catch((err) => {
+	console.log('Return without executing installing and instantiating');
+	return false;
+});
+
+
+/*
+invokeClient.instantiateChaincode()
+.catch((err) => {
+	console.log('Return without executing installing and instantiating');
+	return false;
+});
+*/
+
 //invokeClient.instantiateChaincode(sendResponse);
 
 
