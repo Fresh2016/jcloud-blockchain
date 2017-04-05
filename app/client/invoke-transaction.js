@@ -40,17 +40,6 @@ var eventhubs = [];
 var defaultOrg = 'org1';
 
 
-/*TODO: there's a bug that peer down causes grpc emitting error event and nobody handles it, result in program panic.
-events.js:160
-      throw er; // Unhandled 'error' event
-      ^
-
-Error: Connect Failed
-    at ClientDuplexStream._emitStatusIfDone (D:\eclipse-workspace\jcloud-blockchain\node_modules\grpc\src\node\src\client.js:201:19)
-    at ClientDuplexStream._readsDone (D:\eclipse-workspace\jcloud-blockchain\node_modules\grpc\src\node\src\client.js:169:8)
-    at readCallback (D:\eclipse-workspace\jcloud-blockchain\node_modules\grpc\src\node\src\client.js:229:12)
-*/
-
 module.exports.instantiateChaincode = instantiateChaincode;
 module.exports.invokeChaincode = invokeChaincode;
 
@@ -62,63 +51,6 @@ function addTxPromise(eventPromises, eh, deployId) {
 	});
 	eventPromises.push(txPromise);
 }
-
-
-/* to be deleted
- * function commitInstantiate(chain, proposalResponses, proposal, header) {
-	var request = {
-			proposalResponses: proposalResponses,
-			proposal: proposal,
-			header: header
-		};
-	logger.debug('Commit request is %s ', JSON.stringify(request));
-
-	// set the transaction listener and set a timeout of 30sec
-	// if the transaction did not get committed within the timeout period,
-	// fail the test
-	var deployId = tx_id.toString();
-	
-	var eventPromises = [];
-	eventhubs.forEach((eh) => {
-		addTxPromise(eventPromises, eh, deployId);
-	});	
-
-
-	var eventPromises = [];
-	eventhubs.forEach((eh) => {
-		let txPromise = new Promise((resolve, reject) => {
-		let handle = setTimeout(reject, 30000);
-
-		eh.registerTxEvent(deployId.toString(), (tx, code) => {
-			logger.info('The chaincode instantiate transaction has been committed on peer '+ eh.ep.addr);
-			clearTimeout(handle);
-			eh.unregisterTxEvent(deployId);
-
-			if (code !== 'VALID') {
-				logger.error('The chaincode instantiate transaction was invalid, code = ' + code);
-				reject();
-			} else {
-				logger.info('The chaincode instantiate transaction was valid.');
-				resolve();
-			}
-		});
-		});
-
-		eventPromises.push(txPromise);
-	});
-
-	
-	var sendPromise = chain.sendTransaction(request);
-	return Promise.all([sendPromise].concat(eventPromises))
-	.then((results) => {
-		logger.info('Instantiate transaction event promise all complete.');
-		return results[0]; // the first returned value is from the 'sendPromise' which is from the 'sendTransaction()' call
-
-	}).catch((err) => {
-		util.throwError(logger, err, 'Failed to send instantiate transaction and get notifications within the timeout period.');
-	});	
-}
-*/
 
 
 function commitTransaction(chain, proposalResponses, proposal, header, tx_id){
@@ -383,6 +315,6 @@ function txEventListener(eh, resolve, reject, handle, deployId) {
 		resolve();
 	}
 	*/
-	logger.debug('The balance transfer transaction has been committed on peer '+ eh.ep.addr);
+	logger.debug('The transaction has been committed on peer '+ eh.ep.addr);
 	resolve();	
 }
