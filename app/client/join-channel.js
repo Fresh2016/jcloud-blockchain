@@ -28,9 +28,6 @@ var util = require('./util.js');
 var logger = ClientUtils.getLogger('join-channel');
 var ORGS = util.ORGS;
 
-var tx_id = null;
-var nonce = null;
-
 module.exports.joinChannel = joinChannel;
 
 
@@ -44,7 +41,7 @@ function joinChannel(callback) {
 
 	// Send concurrent proposal
 	return async.mapSeries(orgs, function(org, processResults) {
-	    joinChannelTemp(org)
+	    joinChannelByOrg(org)
 		.then(() => {
 			logger.info('Successfully joined peers in organization "%s" to the channel', org);
 			processResults(null, 'SUCCESS');
@@ -65,29 +62,32 @@ function joinChannel(callback) {
 };
 
 
-function joinChannelTemp(org) {
+// As different org holds different certs, only peers in the same org can join the channel in once operation
+function joinChannelByOrg(org, callback) {
 	logger.info('Calling peers in organization "%s" to join the channel', org);
 
-	// Different org uses different client
+	// client and chain should be claimed here
 	var client = new hfc();
 	var orgName = util.getOrgNameByOrg(ORGS, org);
 	var chain = setup.setupChain(client, ORGS, orgName, org);
+	
+	var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
 
-	return hfc.newDefaultKeyValueStore({
-		path: util.storePathForOrg(orgName)
-	})
-	.then((store) => {
-		client.setStateStore(store);
+	return hfc.newDefaultKeyValueStore(options)
+	.then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
 		return Submitter.getSubmitter(client, org, logger);
-	})
-	.then((admin) => {
+
+	}).then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
 
 		//FIXME: temporary fix until mspid is configured into Chain
 		admin.mspImpl._id = util.getMspid(ORGS, org);
 
-		nonce = ClientUtils.getNonce()
-		tx_id = chain.buildTransactionID(nonce, admin);
+		var nonce = ClientUtils.getNonce()
+		var tx_id = chain.buildTransactionID(nonce, admin);
 		var targets = chain.getPeers();
 		
 		var request = {
