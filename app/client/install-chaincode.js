@@ -41,7 +41,7 @@ function installChaincode() {
 	var orgs = util.getOrgs(ORGS);
 	logger.info('There are %s organizations: %s. Going to install chaincode one by one.', orgs.length, orgs);
 
-	return exe.executeTheNext(orgs, installChaincodeTemp, 'Install Chaincode')
+	return exe.executeTheNext(orgs, installChaincodeByOrg, 'Install Chaincode')
 	.catch((err) => {
 		logger.error('Failed to install chaincode with error: %s', err);
 		// Failure back and accept further err processing
@@ -50,43 +50,7 @@ function installChaincode() {
 };
 
 
-// TODO: async should be refactored as promise
-// to be deleted
-/*
-function installChaincode(callback) {
-	logger.info('\n\n***** Hyperledger fabric client: install chaincode *****');
-	
-	var orgs = util.getOrgs(ORGS);
-	logger.info('There are %s organizations: %s. Going to install chaincode one by one.', orgs.length, orgs);
-	
-	//TODO: testing if it's ok to install all peers at the same time
-	//orgs = ['org1'];
-
-	// Send concurrent proposal
-	return async.mapSeries(orgs, function(org, processResults) {
-		installChaincodeTemp(org)
-		.then(() => {
-			logger.info('Successfully installed chaincode in peers of organization %s', org);
-			processResults(null, 'SUCCESS');
-		}, (err) => {
-			util.throwError(logger, err.stack ? err.stack : err, 
-					'Failed to install chaincode in peers of organization ' + org);
-		}).catch((err) => {
-			logger.error('Failed due to unexpected reasons. ' + err.stack ? err.stack : err);
-			processResults(null, 'FAILED');
-		});
-
-	}, function(err, results) {
-		logger.debug('processResults get callback with results %s and err %s.', results, err);
-		// callback to routes.js
-		callback(results);
-		logger.info('END of install chaincode.');
-	});
-
-}
-*/
-
-function installChaincodeTemp(org) {
+function installChaincodeByOrg(org) {
 	logger.info('Calling peers in organization "%s" to install chaincode', org);
 
 	// Different org uses different client
