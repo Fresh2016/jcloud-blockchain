@@ -98,8 +98,7 @@ function joinChannelByOrg(org) {
 function finishJoinByOrg(responses) {
 	if(responses[0] && responses[0].response && responses[0].response.status == 200) {
 		logger.debug('Successfully sent Request and received Response: Status - %s', responses[0].response.status);
-
-		return new Promise((resolve, reject) => resolve(responses[0]));
+		return responses[0];
 	}
 	else {
 		// Seems a bug in Chain.js that it returns error as response
