@@ -22,7 +22,7 @@ module.exports.executeTheNext = executeTheNext;
 
 
 function executeTheNext(orgs, functionByOrg, actionString) {
-	// Get orgs executing some action one by one util all orgs done
+	// Get orgs executing some action one by one until all orgs done
 	// e.g. functionByOrg is joinChannelByOrg and actionString is 'Join Channel'
 	let org = pop(orgs);
 	
