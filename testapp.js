@@ -90,4 +90,4 @@ function sendResponse(result){
 	}
 }
 
-//测试new repo
+//Test new repo.
