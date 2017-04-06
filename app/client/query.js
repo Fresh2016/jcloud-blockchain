@@ -341,7 +341,7 @@ function queryConfig(channelName, callback) {
 //		}
 			
 	}).catch((err) => {
-		logger.error.error('Failed to query with error:' + err.stack ? err.stack : err);
+		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
 		callback([ordererStatus]);
 	});
 }

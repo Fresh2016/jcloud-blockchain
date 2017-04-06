@@ -64,7 +64,7 @@ function getSubmitter(client, userOrg, logger) {
 				}).then(() => {
 					return resolve(member);
 				}).catch((err) => {
-					logger.error('Failed to enroll and persist user. Error: ' + err.stack ? err.stack : err);
+					logger.error('Failed to enroll and persist user with error: ' + err.stack ? err.stack : err);
 					return 'failed';
 				});
 			} else {

@@ -39,7 +39,7 @@ function joinChannel() {
 
 	return exe.executeTheNext(orgs, joinChannelByOrg, 'Join Channel')
 	.catch((err) => {
-		logger.error('Failed to join channel with error: %s', err);
+		logger.error('Failed to join channel with error: ' + err.stack ? err.stack : err);
 		// Failure back and accept further err processing
 		return new Promise((resolve, reject) => reject(err));
 	});
@@ -88,7 +88,7 @@ function joinChannelByOrg(org) {
 		return finishJoinByOrg(responses);
 
 	}).catch((err) => {
-		logger.error('Failed to join channel with error: %s', err);
+		logger.error('Failed to join channel with error: ' + err.stack ? err.stack : err);
 		// Failure back and accept further err processing
 		return new Promise((resolve, reject) => reject(err));
 	});

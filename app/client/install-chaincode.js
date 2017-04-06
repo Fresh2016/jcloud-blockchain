@@ -43,7 +43,7 @@ function installChaincode() {
 
 	return exe.executeTheNext(orgs, installChaincodeByOrg, 'Install Chaincode')
 	.catch((err) => {
-		logger.error('Failed to install chaincode with error: %s', err);
+		logger.error('Failed to install chaincode with error: ' + err.stack ? err.stack : err);
 		// Failure back and accept further err processing
 		return new Promise((resolve, reject) => reject(err));
 	});
@@ -78,7 +78,7 @@ function installChaincodeByOrg(org) {
 		return response;
 
 	}).catch((err) => {
-		logger.error('Failed to install chaincode with error: %s', err);
+		logger.error('Failed to install chaincode with error: ' + err.stack ? err.stack : err);
 		// Failure back and accept further err processing
 		return new Promise((resolve, reject) => reject(err));
 	});

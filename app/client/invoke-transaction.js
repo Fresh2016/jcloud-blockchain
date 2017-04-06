@@ -28,8 +28,6 @@ var util = require('./util.js');
 var logger = ClientUtils.getLogger('invoke-chaincode');
 var ORGS = util.ORGS;
 
-var tx_id = null;
-var nonce = null;
 var targets = [];
 var eventhubs = [];
 
@@ -117,7 +115,7 @@ function instantiateChaincode() {
 
 	return exe.executeTheNext(orgs, instantiateChaincodeByOrg, 'Instantiate Chaincode')
 	.catch((err) => {
-		logger.error('Failed to instantiate chaincode with error: %s', err);
+		logger.error('Failed to instantiate chaincode with error: ' + err.stack ? err.stack : err);
 		// Failure back and accept further err processing
 		return new Promise((resolve, reject) => reject(err));
 	});
@@ -161,7 +159,7 @@ function instantiateChaincodeByOrg(org) {
 };
 
 
-function invokeChaincode(traceInfo, callback) {
+function invokeChaincode(traceInfo) {
 	logger.info('\n\n***** Hyperledger fabric client: invoke chaincode *****');
 
 	// client and chain should be claimed here
@@ -200,13 +198,13 @@ function invokeChaincode(traceInfo, callback) {
 			var header   = results[2];
 			logger.debug('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', 
 					proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature);
-			// callback should be passed for sending transactionId back to routes.js
-			return commitTransaction(chain, proposalResponses, proposal, header, tx_id, callback);
+
+			return commitTransaction(chain, proposalResponses, proposal, header, tx_id);
 		}
 	}).catch((err) => {
-		logger.error('Failed to send invoke proposal or commit transaction with error:' + err.stack ? err.stack : err);
-		callback({TransactionId : null});
-		logger.info('END of invoke transaction.');
+		logger.error('Failed to invoke transaction with error: ' + err.stack ? err.stack : err);
+		// Failure back and accept further err processing
+		return new Promise((resolve, reject) => reject(err));
 	});
 };
 
@@ -253,8 +251,8 @@ function registerTxEvent(eh, resolve, reject, expireTime, deployId) {
 function sendInstantiateProposal(chain, admin, mspid) {
 	admin.mspImpl._id = mspid;
 
-	nonce = ClientUtils.getNonce()
-	tx_id = chain.buildTransactionID(nonce, admin);
+	var nonce = ClientUtils.getNonce()
+	var tx_id = chain.buildTransactionID(nonce, admin);
 
 	// send proposal to endorser
 	// for supplychain
@@ -278,8 +276,8 @@ function sendInstantiateProposal(chain, admin, mspid) {
 function sendTransactionProposal(chain, admin, mspid, traceInfo) {
 	admin.mspImpl._id = mspid;
 
-	nonce = ClientUtils.getNonce()
-	tx_id = chain.buildTransactionID(nonce, admin);
+	var nonce = ClientUtils.getNonce()
+	var tx_id = chain.buildTransactionID(nonce, admin);
 
 	logger.info('Sending transaction proposal "%s"', tx_id);
 

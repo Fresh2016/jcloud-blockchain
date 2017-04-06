@@ -74,7 +74,7 @@ function createChannel() {
 		return finishCreation(response, defaultSleepTime);
 
 	}).catch((err) => {
-		logger.error('Failed to create the channel with error: %s', err);
+		logger.error('Failed to create the channel with error: ' + err.stack ? err.stack : err);
 		// Failure back and accept further err processing
 		return new Promise((resolve, reject) => reject(err));
 	});
