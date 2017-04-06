@@ -59,6 +59,15 @@ function addPeerAll(chain, ORGS) {
 }
 
 
+//Set up the chain with peers in org
+function addPeerByOrg(chain, ORGS, org) {
+	var peerList = getPeerByOrg(ORGS, org);
+	for (let i in peerList) {
+		addPeer(chain, ORGS, peerList[i], false);
+	}
+}
+
+
 //Set up the chain with eventhub
 function connectEventHub(eventhubs, peerInfo) {
 	var eventsUrl = peerInfo['events'];
@@ -207,10 +216,14 @@ function popRandom(list) {
 
 
 // Initialize a new chain for specific org with all peers
-function setupChainByOrg(client, ORGS, orgName, peerOrg) {
+function setupChainByOrg(client, ORGS, orgName, org) {
 	var chain = client.newChain(util.channel);
-	chain.addOrderer(new Orderer(ORGS.orderer));
 
+	addOrderer(chain, ORGS);
+
+	addPeerByOrg(chain, ORGS, org);
+	
+	/*
 	// set up the chain to only use peers in the specific org
 	for (let key in ORGS[peerOrg]) {
 		if (ORGS[peerOrg].hasOwnProperty(key)) {
@@ -219,10 +232,10 @@ function setupChainByOrg(client, ORGS, orgName, peerOrg) {
 				chain.addPeer(peer);
 			}
 		}
-	}
+	}*/
 
-	// remove expired keys before enroll admin
-	util.cleanupDir(util.storePathForOrg(orgName));
+	// Remove expired keys before enroll user
+	cleanupKeyValueStore(ORGS);
 	
 	return chain;
 }
@@ -268,7 +281,9 @@ function setupChainWithPeer(client, ORGS, peerInfo, asPrimary, eventhubs, withEh
 }
 
 
-// Initialize a new chain with all peers, with default primary peer
+// Initialize a new chain with all peers, with default primary peer.
+// Note it could be used only in case that does not require MSP identity,
+// such as queryPeers. Otherwise wrong identity error occurs.
 function setupChainWithAllPeers(client, ORGS, eventhubs) {
 	try{
 		var chain = client.newChain(util.channel);
