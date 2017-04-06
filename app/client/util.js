@@ -86,7 +86,7 @@ function checkProposalResponses(results, proposal_type, logger) {
 	if (all_good) {
 		logger.info('Successfully sent %s Proposal and received ProposalResponse: Status - %s', proposal_type, proposalResponses[0].response.status);
 	} else {
-		module.exports.throwError(logger, null, 'Failed to send Proposal or receive valid response. Response null or invalid.');
+		logger.error('Failed to send Proposal or receive valid ProposalResponse from peers.');
 	}
 	
 	return all_good;

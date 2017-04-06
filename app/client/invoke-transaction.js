@@ -151,6 +151,8 @@ function instantiateChaincodeByOrg(org) {
 					proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature);
 
 			return commitTransaction(chain, proposalResponses, proposal, header, eventhubs, tx_id.value);
+		} else {
+			util.throwError(logger, null, 'Bad proposal responses. ');
 		}
 	}).catch((err) => {
 		logger.error('Failed to instantiate chaincode with error: ' + err.stack ? err.stack : err);
@@ -203,6 +205,8 @@ function invokeChaincode(traceInfo) {
 					proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature);
 
 			return commitTransaction(chain, proposalResponses, proposal, header, eventhubs, tx_id.value);
+		} else {
+			util.throwError(logger, null, 'Bad proposal responses. ');
 		}
 	}).catch((err) => {
 		logger.error('Failed to invoke transaction with error: ' + err.stack ? err.stack : err);
