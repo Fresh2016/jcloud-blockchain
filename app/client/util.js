@@ -84,7 +84,7 @@ function checkProposalResponses(results, proposal_type, logger) {
 	}
 	
 	if (all_good) {
-		logger.info('Successfully sent %s Proposal and received ProposalResponse: Status - %s', proposal_type, proposalResponses[0].response.status);
+		logger.debug('Successfully sent %s Proposal and received ProposalResponse: Status - %s', proposal_type, proposalResponses[0].response.status);
 	} else {
 		logger.error('Failed to send Proposal or receive valid ProposalResponse from peers.');
 	}

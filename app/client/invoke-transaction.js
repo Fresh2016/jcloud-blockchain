@@ -121,6 +121,25 @@ function instantiateChaincode() {
 };
 
 
+function generateInvokeRequest(fcn, nonce, tx_id, traceInfo) {
+	var request = {
+			chainId: util.channel,
+			chaincodeId: util.chaincodeId,
+			chaincodeVersion: util.chaincodeVersion,
+			fcn: fcn,
+			args: ["Sku", "Sku654321", "TraceInfo", traceInfo],
+			txId: tx_id,
+			nonce: nonce
+		};
+	
+	if ('init' == fcn) {
+		request.chaincodePath = util.chaincodePath;
+	}
+	
+	return request;
+}
+
+
 function instantiateChaincodeByOrg(org) {
 	// Client and chain should be claimed here
 	var client = new hfc();
@@ -261,20 +280,8 @@ function sendInstantiateProposal(chain, admin, mspid, tx_id) {
 	var nonce = ClientUtils.getNonce();
 	tx_id.value = chain.buildTransactionID(nonce, admin);
 
-	// send proposal to endorser
-	// for supplychain
-	var request = {
-			chaincodePath: util.chaincodePath,
-			chaincodeId: util.chaincodeId,
-			chaincodeVersion: util.chaincodeVersion,
-			fcn: 'init',
-			args: ["Sku", "Sku654321", "TraceInfo", "this is genesis block"],
-			chainId: util.channel,
-			txId: tx_id.value,
-			nonce: nonce
-		};
-
-	logger.debug('Sending instantiate transaction proposal "%s"', JSON.stringify(request));
+	var request = generateInvokeRequest('init', nonce, tx_id.value, "this is genesis block");
+	logger.debug('Sending instantiate proposal "%s"', JSON.stringify(request));
 
 	return chain.sendInstantiateProposal(request);
 }
@@ -286,19 +293,9 @@ function sendTransactionProposal(chain, admin, mspid, traceInfo, tx_id) {
 	var nonce = ClientUtils.getNonce();
 	tx_id.value = chain.buildTransactionID(nonce, admin);
 
-	logger.info('Sending transaction proposal "%s"', tx_id);
+	var request = generateInvokeRequest('addNewTrade', nonce, tx_id.value, traceInfo);
+	logger.debug('Sending invoke transaction proposal "%s"', JSON.stringify(request));
 
-	// send proposal to endorser
-	// for supplychain
-	var request = {
-		chaincodeId : util.chaincodeId,
-		chaincodeVersion : util.chaincodeVersion,
-		fcn: 'addNewTrade',
-		args: ["Sku", "Sku654321", "TraceInfo", traceInfo],
-		chainId: util.channel,
-		txId: tx_id.value,
-		nonce: nonce
-	};
 	return chain.sendTransactionProposal(request);
 }
 
