@@ -11,6 +11,7 @@ docker rmi -f $(docker images | grep supplychain | awk '{print $3 }')
  */
 
 
+
 createClient.createChannel()
 .then((result) => {
 	console.log('API: create channel result %s', JSON.stringify(result));
@@ -19,7 +20,7 @@ createClient.createChannel()
 	console.log('shiying is aaaa.');
 	//res.json(result); // return all amounts in JSON format
 }).catch((err) => {
-	console.log('Return without executing joining and installing');
+	console.log('Return without executing joining');
 	return false;
 });
 
@@ -27,7 +28,7 @@ createClient.createChannel()
 /*
 joinClient.joinChannel()
 .catch((err) => {
-	console.log('Return without executing joining and installing');
+	console.log('Return without executing joining');
 	return false;
 });
 */
