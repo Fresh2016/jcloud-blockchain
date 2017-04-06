@@ -27,7 +27,7 @@ var logger = ClientUtils.getLogger('setup-chain');
 
 // Export functions
 module.exports.getAlivePeer = getAlivePeer;
-module.exports.setupChain = setupChain;
+module.exports.setupChainByOrg = setupChainByOrg;
 module.exports.setupChainWithOnlyOrderer = setupChainWithOnlyOrderer;
 module.exports.setupChainWithPeer = setupChainWithPeer;
 module.exports.setupChainWithAllPeers = setupChainWithAllPeers;
@@ -207,7 +207,7 @@ function popRandom(list) {
 
 
 // Initialize a new chain for specific org with all peers
-function setupChain(client, ORGS, orgName, peerOrg) {
+function setupChainByOrg(client, ORGS, orgName, peerOrg) {
 	var chain = client.newChain(util.channel);
 	chain.addOrderer(new Orderer(ORGS.orderer));
 

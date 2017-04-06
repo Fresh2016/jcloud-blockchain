@@ -56,7 +56,7 @@ function installChaincodeByOrg(org) {
 	// Different org uses different client
 	var client = new hfc();
 	var orgName = util.getOrgNameByOrg(ORGS, org);
-	var chain = setup.setupChain(client, ORGS, orgName, org);
+	var chain = setup.setupChainByOrg(client, ORGS, orgName, org);
 	
 	return hfc.newDefaultKeyValueStore({
 		path: util.storePathForOrg(orgName)
