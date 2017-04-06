@@ -29,7 +29,6 @@ var logger = ClientUtils.getLogger('invoke-chaincode');
 var ORGS = util.ORGS;
 
 var targets = [];
-var eventhubs = [];
 
 //Invoke transactions just use org1's identity to
 //submit the request. intentionally we are using a different org
@@ -52,7 +51,7 @@ function addTxPromise(eventPromises, eh, deployId) {
 }
 
 
-function commitTransaction(chain, proposalResponses, proposal, header, tx_id){
+function commitTransaction(chain, proposalResponses, proposal, header, eventhubs, tx_id) {
 	var request = {
 		proposalResponses: proposalResponses,
 		proposal: proposal,
@@ -123,11 +122,13 @@ function instantiateChaincode() {
 
 
 function instantiateChaincodeByOrg(org) {
-	// client and chain should be claimed here
+	// Client and chain should be claimed here
 	var client = new hfc();
-	var orgName = util.getOrgNameByOrg(ORGS, org);
-	var chain = setup.setupChainByOrg(client, ORGS, orgName, org);
-	
+	// TODO: add event to instantiate
+	var eventhubs = [];
+	var chain = setup.setupChainByOrg(client, ORGS, org);
+	var tx_id = { value : null };
+
 	var options = { 
 			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
 		};
@@ -139,7 +140,7 @@ function instantiateChaincodeByOrg(org) {
 
 	}).then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
-		return sendInstantiateProposal(chain, admin, util.getMspid(ORGS, org));
+		return sendInstantiateProposal(chain, admin, util.getMspid(ORGS, org), tx_id);
 
 	}).then((results) => {
 		if (util.checkProposalResponses(results, 'Instantiate transaction', logger)) {
@@ -149,7 +150,7 @@ function instantiateChaincodeByOrg(org) {
 			logger.debug('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', 
 					proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature);
 
-			return commitTransaction(chain, proposalResponses, proposal, header, tx_id);
+			return commitTransaction(chain, proposalResponses, proposal, header, eventhubs, tx_id.value);
 		}
 	}).catch((err) => {
 		logger.error('Failed to instantiate chaincode with error: ' + err.stack ? err.stack : err);
@@ -169,6 +170,8 @@ function invokeChaincode(traceInfo) {
 	// this is a transaction, will just use org1's identity to
 	// submit the request
 	var org = defaultOrg;
+	var tx_id = { value : null };
+	var eventhubs = [];
 	
 	return setup.getAlivePeer(ORGS, org)
 	.then((peerInfo) => {
@@ -189,7 +192,7 @@ function invokeChaincode(traceInfo) {
 
 	}).then((admin) => {
 		logger.debug('Successfully enrolled user \'admin\'');
-		return sendTransactionProposal(chain, admin, util.getMspid(ORGS, org), traceInfo);
+		return sendTransactionProposal(chain, admin, util.getMspid(ORGS, org), traceInfo, tx_id);
 
 	}).then((results) => {
 		if (util.checkProposalResponses(results, 'Invoke transaction', logger)) {
@@ -199,7 +202,7 @@ function invokeChaincode(traceInfo) {
 			logger.debug('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', 
 					proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature);
 
-			return commitTransaction(chain, proposalResponses, proposal, header, tx_id);
+			return commitTransaction(chain, proposalResponses, proposal, header, eventhubs, tx_id.value);
 		}
 	}).catch((err) => {
 		logger.error('Failed to invoke transaction with error: ' + err.stack ? err.stack : err);
@@ -248,11 +251,11 @@ function registerTxEvent(eh, resolve, reject, expireTime, deployId) {
 }
 
 
-function sendInstantiateProposal(chain, admin, mspid) {
+function sendInstantiateProposal(chain, admin, mspid, tx_id) {
 	admin.mspImpl._id = mspid;
 
-	var nonce = ClientUtils.getNonce()
-	var tx_id = chain.buildTransactionID(nonce, admin);
+	var nonce = ClientUtils.getNonce();
+	tx_id.value = chain.buildTransactionID(nonce, admin);
 
 	// send proposal to endorser
 	// for supplychain
@@ -263,7 +266,7 @@ function sendInstantiateProposal(chain, admin, mspid) {
 			fcn: 'init',
 			args: ["Sku", "Sku654321", "TraceInfo", "this is genesis block"],
 			chainId: util.channel,
-			txId: tx_id,
+			txId: tx_id.value,
 			nonce: nonce
 		};
 
@@ -273,11 +276,11 @@ function sendInstantiateProposal(chain, admin, mspid) {
 }
 
 
-function sendTransactionProposal(chain, admin, mspid, traceInfo) {
+function sendTransactionProposal(chain, admin, mspid, traceInfo, tx_id) {
 	admin.mspImpl._id = mspid;
 
-	var nonce = ClientUtils.getNonce()
-	var tx_id = chain.buildTransactionID(nonce, admin);
+	var nonce = ClientUtils.getNonce();
+	tx_id.value = chain.buildTransactionID(nonce, admin);
 
 	logger.info('Sending transaction proposal "%s"', tx_id);
 
@@ -289,7 +292,7 @@ function sendTransactionProposal(chain, admin, mspid, traceInfo) {
 		fcn: 'addNewTrade',
 		args: ["Sku", "Sku654321", "TraceInfo", traceInfo],
 		chainId: util.channel,
-		txId: tx_id,
+		txId: tx_id.value,
 		nonce: nonce
 	};
 	return chain.sendTransactionProposal(request);

@@ -52,8 +52,7 @@ function joinChannelByOrg(org) {
 
 	// client and chain should be claimed here
 	var client = new hfc();
-	var orgName = util.getOrgNameByOrg(ORGS, org);
-	var chain = setup.setupChainByOrg(client, ORGS, orgName, org);
+	var chain = setup.setupChainByOrg(client, ORGS, org);
 	
 	var options = { 
 			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 

@@ -55,15 +55,17 @@ function installChaincodeByOrg(org) {
 
 	// Different org uses different client
 	var client = new hfc();
-	var orgName = util.getOrgNameByOrg(ORGS, org);
-	var chain = setup.setupChainByOrg(client, ORGS, orgName, org);
-	
-	return hfc.newDefaultKeyValueStore({
-		path: util.storePathForOrg(orgName)
-	}).then((store) => {
-		client.setStateStore(store);
+	var chain = setup.setupChainByOrg(client, ORGS, org);
+
+	var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
+
+	return hfc.newDefaultKeyValueStore(options)
+	.then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
 		return Submitter.getSubmitter(client, org, logger);
-		
+
 	}).then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
 		return sendInstallProposal(chain, admin, util.getMspid(ORGS, org));
