@@ -216,7 +216,7 @@ function popRandom(list) {
 
 
 // Initialize a new chain for specific org with all peers
-function setupChainByOrg(client, ORGS, orgName, org) {
+function setupChainByOrg(client, ORGS, org) {
 	try{
 		var chain = client.newChain(util.channel);
 
@@ -262,6 +262,10 @@ function setupChainWithPeer(client, ORGS, peerInfo, asPrimary, eventhubs, withEh
 
 		addOrderer(chain, ORGS);
 		addPeer(chain, ORGS, peerInfo, asPrimary);
+		
+		if (withEh) {
+			connectEventHub(eventhubs, peerInfo);
+		}
 
 		// Remove expired keys before enroll user
 		cleanupKeyValueStore(ORGS);
