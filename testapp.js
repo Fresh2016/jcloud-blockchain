@@ -33,7 +33,7 @@ joinClient.joinChannel()
 */
 
 
-/*
+//TODO：出bug了，两个org的数据不一致？
 installClient.installChaincode()
 .then(() => {
 	console.log('API: create channel result ');
@@ -46,7 +46,7 @@ installClient.installChaincode()
 	console.log('Return without executing installing and instantiating');
 	return false;
 });
-*/
+
 
 /*
 invokeClient.instantiateChaincode()

@@ -217,27 +217,21 @@ function popRandom(list) {
 
 // Initialize a new chain for specific org with all peers
 function setupChainByOrg(client, ORGS, orgName, org) {
-	var chain = client.newChain(util.channel);
+	try{
+		var chain = client.newChain(util.channel);
 
-	addOrderer(chain, ORGS);
+		addOrderer(chain, ORGS);
+		addPeerByOrg(chain, ORGS, org);
 
-	addPeerByOrg(chain, ORGS, org);
-	
-	/*
-	// set up the chain to only use peers in the specific org
-	for (let key in ORGS[peerOrg]) {
-		if (ORGS[peerOrg].hasOwnProperty(key)) {
-			if (key.indexOf('peer') === 0) {
-				let peer = new Peer(ORGS[peerOrg][key].requests);
-				chain.addPeer(peer);
-			}
-		}
-	}*/
+		// Remove expired keys before enroll user
+		cleanupKeyValueStore(ORGS);
+		
+		return chain;
 
-	// Remove expired keys before enroll user
-	cleanupKeyValueStore(ORGS);
-	
-	return chain;
+	} catch(err) {
+		util.throwError(logger, err, 'Failed in setting up chain, check config file.');
+		return null;
+	}
 }
 
 
