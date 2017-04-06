@@ -88,6 +88,15 @@ function connectEventHubAll(eventhubs, ORGS) {
 }
 
 
+//Set up the chain with eventhub
+function connectEventHubByOrg(eventhubs, ORGS, org) {
+	var peerList = getPeerByOrg(ORGS, org);
+	for (let i in peerList) {
+		connectEventHub(eventhubs, peerList[i]);
+	}
+}
+
+
 function checkTheNext(peerList) {
 	// Looking for alive peer recursively and returning its url
 	
@@ -216,12 +225,16 @@ function popRandom(list) {
 
 
 // Initialize a new chain for specific org with all peers
-function setupChainByOrg(client, ORGS, org) {
+function setupChainByOrg(client, ORGS, org, eventhubs, withEh) {
 	try{
 		var chain = client.newChain(util.channel);
 
 		addOrderer(chain, ORGS);
 		addPeerByOrg(chain, ORGS, org);
+
+		if (withEh) {
+			connectEventHubByOrg(eventhubs, ORGS, org);
+		}
 
 		// Remove expired keys before enroll user
 		cleanupKeyValueStore(ORGS);

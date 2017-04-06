@@ -28,6 +28,9 @@ var util = require('./util.js');
 var logger = ClientUtils.getLogger('join-channel');
 var ORGS = util.ORGS;
 
+//Used by decodeTransaction
+var commonProtoPath = './node_modules/fabric-client/lib/protos/common/common.proto';
+
 module.exports.joinChannel = joinChannel;
 
 
@@ -52,8 +55,9 @@ function joinChannelByOrg(org) {
 
 	// client and chain should be claimed here
 	var client = new hfc();
-	var chain = setup.setupChainByOrg(client, ORGS, org);
-	
+	var eventhubs = [];
+	var chain = setup.setupChainByOrg(client, ORGS, org, eventhubs, true);
+
 	var options = { 
 			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
 		};
@@ -80,8 +84,43 @@ function joinChannelByOrg(org) {
 		};
 		logger.debug('Sending join channel request: %j', request);
 
-		return chain.joinChannel(request);
+		//return chain.joinChannel(request);
 
+		
+		var eventPromises = [];
+		eventhubs.forEach((eh) => {
+			let txPromise = new Promise((resolve, reject) => {
+				let handle = setTimeout(reject, 30000);
+
+				eh.registerBlockEvent((block) => {
+					clearTimeout(handle);
+
+					// in real-world situations, a peer may have more than one channels so
+					// we must check that this block came from the channel we asked the peer to join
+					if(block.data.data.length === 1) {
+						// Config block must only contain one transaction
+						// set to be able to decode grpc objects
+						var grpc = require('grpc');
+						var commonProto = grpc.load(commonProtoPath).common;
+						var envelope = commonProto.Envelope.decode(block.data.data[0]);
+						var payload = commonProto.Payload.decode(envelope.payload);
+						var channel_header = commonProto.ChannelHeader.decode(payload.header.channel_header);
+
+						if (channel_header.channel_id === util.channel) {
+							logger.debug('The new channel has been successfully joined on peer '+ eh.ep.addr);
+							resolve();
+						}
+					}
+				});
+			});
+
+			eventPromises.push(txPromise);
+		});
+
+		sendPromise = chain.joinChannel(request);
+		return Promise.all([sendPromise].concat(eventPromises));
+		
+		
 	}).then((responses) => {
 		// Check response status and return a new promise if success
 		return finishJoinByOrg(responses);
@@ -95,9 +134,10 @@ function joinChannelByOrg(org) {
 
 
 function finishJoinByOrg(responses) {
-	if(responses[0] && responses[0].response && responses[0].response.status == 200) {
-		logger.debug('Successfully sent Request and received Response: Status - %s', responses[0].response.status);
-		return responses[0];
+	//if(responses[0] && responses[0].response && responses[0].response.status == 200) {
+	if(responses[0] && responses[0][0] && responses[0][0].response && responses[0][0].response.status == 200) {
+		logger.debug('Successfully sent Request and received Response: Status - %s', responses[0][0].response.status);
+		return responses[0][0];
 	}
 	else {
 		// Seems a bug in Chain.js that it returns error as response

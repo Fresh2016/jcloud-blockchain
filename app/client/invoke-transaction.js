@@ -145,7 +145,7 @@ function instantiateChaincodeByOrg(org) {
 	var client = new hfc();
 	// TODO: add event to instantiate
 	var eventhubs = [];
-	var chain = setup.setupChainByOrg(client, ORGS, org);
+	var chain = setup.setupChainByOrg(client, ORGS, org, eventhubs, true);
 	var tx_id = { value : null };
 
 	var options = { 

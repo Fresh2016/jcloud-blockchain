@@ -10,7 +10,7 @@ docker rm -f $(docker ps -a | grep supplychain | awk '{print $1 }')
 docker rmi -f $(docker images | grep supplychain | awk '{print $3 }')
  */
 
-/*
+
 createClient.createChannel()
 .then((result) => {
 	console.log('API: create channel result %s', JSON.stringify(result));
@@ -22,7 +22,7 @@ createClient.createChannel()
 	console.log('Return without executing joining and installing');
 	return false;
 });
-*/
+
 
 /*
 joinClient.joinChannel()
@@ -33,6 +33,7 @@ joinClient.joinChannel()
 */
 
 
+/*
 //TODO：出bug了，两个org的数据不一致？
 installClient.installChaincode()
 .then(() => {
@@ -46,6 +47,7 @@ installClient.installChaincode()
 	console.log('Return without executing installing and instantiating');
 	return false;
 });
+*/
 
 
 /*
@@ -56,21 +58,24 @@ invokeClient.instantiateChaincode()
 });
 */
 
-//invokeClient.instantiateChaincode(sendResponse);
+
 
 // TODO：出bug了，两个org的数据不一致？
+//TODO:还需要测试杀掉peer时不挂啊
 //queryClient.isTransactionSucceed('698b8351a668bda42ae5e8b548ad04fed963b3f118f1acc4b0d2c9650d36ba35', sendResponse);
 //queryClient.queryTransaction('', sendResponse);
 //queryClient.queryTransactionHistory('', sendResponse);
-
-// TODO:还需要测试杀掉peer时不挂啊
 //queryClient.queryPeers('mychannel', sendResponse);
 //queryClient.queryOrderers('mychannel', sendResponse);
 
-//invokeClient.invokeChaincode('uhmmm...we are testing ...', sendResponse);
 
-
-
+/*
+invokeClient.invokeChaincode('uhmmm...we are testing ...')
+.catch((err) => {
+	console.log('Return without executing installing and instantiating');
+	return false;
+});
+*/
 
 
 function sendResponse(result){

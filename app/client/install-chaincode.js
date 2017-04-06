@@ -55,7 +55,7 @@ function installChaincodeByOrg(org) {
 
 	// Different org uses different client
 	var client = new hfc();
-	var chain = setup.setupChainByOrg(client, ORGS, org);
+	var chain = setup.setupChainByOrg(client, ORGS, org, null, false);//TODO:, eventhubs, true
 
 	var options = { 
 			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
