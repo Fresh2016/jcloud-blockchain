@@ -33,7 +33,7 @@ joinClient.joinChannel()
 */
 
 
-// fix the bug that causes catching err here even in both success response
+/*
 installClient.installChaincode()
 .then(() => {
 	console.log('API: create channel result ');
@@ -46,7 +46,7 @@ installClient.installChaincode()
 	console.log('Return without executing installing and instantiating');
 	return false;
 });
-
+*/
 
 /*
 invokeClient.instantiateChaincode()
@@ -58,8 +58,8 @@ invokeClient.instantiateChaincode()
 
 //invokeClient.instantiateChaincode(sendResponse);
 
-
-//queryClient.isTransactionSucceed('45907971aeea190eda997232f8147f14e8e0c911a0484bbb883a0c9d10a0ad83', sendResponse);
+// TODO：出bug了，两个org的数据不一致？
+//queryClient.isTransactionSucceed('698b8351a668bda42ae5e8b548ad04fed963b3f118f1acc4b0d2c9650d36ba35', sendResponse);
 //queryClient.queryTransaction('', sendResponse);
 //queryClient.queryTransactionHistory('', sendResponse);
 

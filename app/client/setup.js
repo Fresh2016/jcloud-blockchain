@@ -28,9 +28,8 @@ var logger = ClientUtils.getLogger('setup-chain');
 // Export functions
 module.exports.getAlivePeer = getAlivePeer;
 module.exports.setupChain = setupChain;
-module.exports.setupChainWithEventbus = setupChainWithEventbus;
 module.exports.setupChainWithOnlyOrderer = setupChainWithOnlyOrderer;
-module.exports.setupChainWithOnlyPrimaryPeer = setupChainWithOnlyPrimaryPeer;
+module.exports.setupChainWithPeer = setupChainWithPeer;
 module.exports.setupChainWithAllPeers = setupChainWithAllPeers;
 
 
@@ -229,22 +228,6 @@ function setupChain(client, ORGS, orgName, peerOrg) {
 }
 
 
-
-//Initialize a new chain for specific org with one peer and connect to its eventbus
-function setupChainWithEventbus(client, eventhubs, ORGS, peerInfo, asPrimary) {
-	try{
-		var chain = setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, asPrimary);
-		connectEventHub(eventhubs, peerInfo);
-
-		return chain;
-		
-	} catch(err) {
-		util.throwError(logger, err, 'Failed in setting up chain, check config file.');
-		return null;
-	}
-}
-
-
 //Initialize a new chain only orderer (TODO: in future should be orderers)
 function setupChainWithOnlyOrderer(client, ORGS) {
 	try{
@@ -264,8 +247,9 @@ function setupChainWithOnlyOrderer(client, ORGS) {
 }
 
 
-// Initialize a new chain for specific org with only peer1 and as primary peer
-function setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, asPrimary) {
+// Initialize a new chain for specific org with specific peer,
+// options include if the peer works as primary peer, and if it connectes to eventhubs
+function setupChainWithPeer(client, ORGS, peerInfo, asPrimary, eventhubs, withEh) {
 	try{
 		var chain = client.newChain(util.channel);
 

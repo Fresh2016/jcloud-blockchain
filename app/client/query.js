@@ -252,7 +252,7 @@ function isTransactionSucceed(transactionId, callback) {
 	return setup.getAlivePeer(ORGS, org)
 	.then((peerInfo) => {
 		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
-		return setup.setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, true);
+		return setup.setupChainWithPeer(client, ORGS, peerInfo, true, null, false);
 
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
@@ -299,7 +299,7 @@ function queryConfig(channelName, callback) {
 	// submit the request
 	var org = defaultOrg;
 	var ordererStatus = {
-			name: chain.getOrderers()[0].getUrl(),
+			name: '',
 			status: 'DOWN'
 		}
 	
@@ -307,11 +307,12 @@ function queryConfig(channelName, callback) {
 	.then((peerInfo) => {
 		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
 		//TODO: maybe it's not needed to add any peer, to be tested
-		return setup.setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, true);
+		return setup.setupChainWithPeer(client, ORGS, peerInfo, true, null, false);
 
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
 		chain = readyChain;
+		ordererStatus.name = chain.getOrderers()[0].getUrl();
 		var options = { 
 			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
 		};
@@ -360,7 +361,8 @@ function queryPeers(channelName, callback) {
 
 	// client and chain should be claimed here
 	var client = new hfc();
-	var chain = setup.setupChainWithAllPeers(client, ORGS, eventhubs);;
+	var eventhubs = [];
+	var chain = setup.setupChainWithAllPeers(client, ORGS, eventhubs);
 
 	// this is a transaction, will just use org1's identity to
 	// submit the request
@@ -431,7 +433,7 @@ function queryTransaction(transactionId, callback) {
 	return setup.getAlivePeer(ORGS, org)
 	.then((peerInfo) => {
 		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
-		return setup.setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, true);
+		return setup.setupChainWithPeer(client, ORGS, peerInfo, true, null, false);
 
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
@@ -513,7 +515,7 @@ function queryTransactionHistory(transactionId, callback) {
 	return setup.getAlivePeer(ORGS, org)
 	.then((peerInfo) => {
 		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
-		return setup.setupChainWithOnlyPrimaryPeer(client, ORGS, peerInfo, true);
+		return setup.setupChainWithPeer(client, ORGS, peerInfo, true, null, false);
 
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());

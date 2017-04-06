@@ -44,6 +44,7 @@ module.exports.getKeyOfJson = getKeyOfJson;
 module.exports.getMspid = getMspid;
 module.exports.getOrgs = getOrgs;
 module.exports.getOrgNameByOrg = getOrgNameByOrg;
+module.exports.getUniqueVersion = getUniqueVersion;
 module.exports.getValueOfJson = getValueOfJson;
 module.exports.readFile = readFile;
 module.exports.storePathForOrg = storePathForOrg;
@@ -108,6 +109,12 @@ function deleteFolderRecursive(path) {
      fs.rmdirSync(path);
  }
 }
+
+
+function getUniqueVersion(prefix) {
+	if (!prefix) prefix = 'v';
+	return prefix + Date.now();
+};
 
 
 //Check if directory or file exists

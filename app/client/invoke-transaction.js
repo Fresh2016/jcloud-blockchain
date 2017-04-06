@@ -175,7 +175,7 @@ function invokeChaincode(traceInfo, callback) {
 	return setup.getAlivePeer(ORGS, org)
 	.then((peerInfo) => {
 		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
-		return setup.setupChainWithEventbus(client, eventhubs, ORGS, peerInfo, true);
+		return setup.setupChainWithPeer(client, ORGS, peerInfo, true, eventhubs, true);
 
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
