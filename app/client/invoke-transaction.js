@@ -116,7 +116,8 @@ function instantiateChaincode() {
 	var orgs = util.getOrgs(ORGS);
 	logger.info('There are %s organizations: %s. Going to instantiate chaincode one by one.', orgs.length, orgs);
 
-	return exe.executeTheNext(orgs, instantiateChaincodeByOrg, 'Instantiate Chaincode')
+//	return exe.executeTheNext(orgs, instantiateChaincodeByOrg, 'Instantiate Chaincode')
+	return instantiateChaincodeByOrg('org1')
 	.catch((err) => {
 		logger.error('Failed to instantiate chaincode with error: ' + err.stack ? err.stack : err);
 		// Failure back and accept further err processing
@@ -147,21 +148,42 @@ function generateInvokeRequest(fcn, nonce, tx_id, traceInfo) {
 function instantiateChaincodeByOrg(org) {
 	// Client and chain should be claimed here
 	var client = new hfc();
-	// TODO: add event to instantiate
 	var eventhubs = [];
-	var chain = setup.setupChainByOrg(client, ORGS, org, eventhubs, true);
+	var chain = null;
+//	var chain = setup.setupChainByOrg(client, ORGS, org, eventhubs, true);
+//	var chain = setup.setupChainWithAllPeers(client, ORGS, eventhubs);
 	var tx_id = { value : null };
 
 	var options = { 
 			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
 		};
 
+/*	
 	return hfc.newDefaultKeyValueStore(options)
 	.then((keyValueStore) => {
 		client.setStateStore(keyValueStore);
 		return Submitter.getSubmitter(client, org, logger);
 
 	}).then((admin) => {
+*/
+	return setup.getAlivePeer(ORGS, org)
+	.then((peerInfo) => {
+		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
+		return setup.setupChainWithPeer(client, ORGS, peerInfo, true, null, false);
+
+	}).then((readyChain) => {
+		logger.debug('Successfully setup chain %s', readyChain.getName());
+		chain = readyChain;
+		var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
+		return hfc.newDefaultKeyValueStore(options);
+		
+	}).then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
+		return Submitter.getSubmitter(client, org, logger);
+
+	}).then((admin) => {	
 		logger.info('Successfully enrolled user \'admin\'');
 		return sendInstantiateProposal(chain, admin, util.getMspid(ORGS, org), tx_id);
 
