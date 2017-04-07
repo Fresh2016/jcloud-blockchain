@@ -48,6 +48,8 @@ function addTxPromise(eventPromises, eh, deployId) {
 		registerTxEvent(eh, resolve, reject, defaultExpireTime, deployId);
 	});
 	eventPromises.push(txPromise);
+	// So as to make eh.some stop adding duplicate listener
+	return true;
 }
 
 
@@ -59,14 +61,16 @@ function commitTransaction(chain, proposalResponses, proposal, header, eventhubs
 	};
 	logger.debug('Commit request is %s ', JSON.stringify(request));
 
-	// set the transaction listener and set a timeout of 30sec
+	// Set the transaction listener and set a timeout of 30sec
 	// if the transaction did not get committed within the timeout period,
 	// fail the test
 	var deployId = tx_id.toString();
 
 	var eventPromises = [];
-	eventhubs.forEach((eh) => {
-		addTxPromise(eventPromises, eh, deployId);
+	// Use .some instead of .forEach, avoiding duplicate listeners with same tx id
+	//eventhubs.forEach((eh) => {
+	eventhubs.some((eh) => {
+		return addTxPromise(eventPromises, eh, deployId);
 	});	
 
 	var sendPromise = chain.sendTransaction(request);
@@ -269,7 +273,7 @@ function registerTxEvent(eh, resolve, reject, expireTime, deployId) {
 	logger.debug('registerTxEvent with deployId %s ', deployId);
 
 	eh.registerTxEvent(deployId, (tx, code) => {
-		txEventListener(eh, resolve, reject, handle, deployId);
+		txEventListener(eh, resolve, reject, handle, deployId, tx, code);
 	});
 }
 
@@ -300,8 +304,12 @@ function sendTransactionProposal(chain, admin, mspid, traceInfo, tx_id) {
 }
 
 
-function txEventListener(eh, resolve, reject, handle, deployId) {
-	logger.debug('get callback of deployId %s ', deployId);
+function txEventListener(eh, resolve, reject, handle, deployId, tx, code) {
+	if (deployId == tx) {
+		logger.debug('Event listener for %s now got callback of tx id %s with code %s', deployId, tx, code);
+	} else {
+		logger.error('Event listener for %s got wrong callback of tx id %s', deployId, tx);
+	}
 
 	clearTimeout(handle);
 
