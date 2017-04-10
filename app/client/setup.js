@@ -137,7 +137,8 @@ function cleanupKeyValueStore(ORGS) {
 //Simply and quick check port connectivity, so that
 //instantiate and invoke will not connect DOWN peer
 function getAlivePeer(ORGS, org) {
-	var peerList = getPeerByOrg(ORGS, org);
+	// Only consider anchor peers
+	var peerList = getAnchorPeerByOrg(ORGS, org);
 	return checkTheNext(peerList);
 }
 
@@ -173,6 +174,20 @@ function getPeerByOrg(ORGS, org) {
 	var valueOfPeers = util.getValueOfJson(ORGS[org], 'peer');
 	for (let i in valueOfPeers) {
 		list.push(valueOfPeers[i]);
+	}
+	return list;
+}
+
+
+function getAnchorPeerByOrg(ORGS, org) {
+	var list = [];
+	// There may be multiple anchor peers in an org
+	var valueOfPeers = util.getValueOfJson(ORGS[org], 'peer');
+	for (let i in valueOfPeers) {
+		var isAnchorPeer = JSON.parse(util.getValueOfJson(valueOfPeers[i], 'isAnchor'));
+		if(isAnchorPeer) {
+			list.push(valueOfPeers[i]);
+		}
 	}
 	return list;
 }
