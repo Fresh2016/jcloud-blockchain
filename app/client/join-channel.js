@@ -107,7 +107,7 @@ function sendJoinProposal(chain, admin, mspid, eventhubs) {
 
 	var eventPromises = [];
 	eventhubs.forEach((eh) => {
-		Listener.addBlockPromise(eventPromises, eh, tx_id);
+		Listener.addPromise(eventPromises, 'block', eh, tx_id);
 	});	
 
 	var sendPromise = chain.joinChannel(request);

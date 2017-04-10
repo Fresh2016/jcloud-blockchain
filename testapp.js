@@ -11,7 +11,7 @@ docker rmi -f $(docker images | grep supplychain | awk '{print $3 }')
  */
 
 
-
+///*
 createClient.createChannel()
 .then((result) => {
 	console.log('API: create channel result %s', JSON.stringify(result));
@@ -23,7 +23,7 @@ createClient.createChannel()
 	console.log('Return without executing joining');
 	return false;
 });
-
+//*/
 
 /*
 joinClient.joinChannel()
@@ -48,7 +48,7 @@ installClient.installChaincode()
 	console.log('Return without executing installing and instantiating');
 	return false;
 });
-*/
+//*/
 
 
 /*

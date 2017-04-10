@@ -41,17 +41,6 @@ module.exports.instantiateChaincode = instantiateChaincode;
 module.exports.invokeChaincode = invokeChaincode;
 
 
-//function addTxPromise(eventPromises, eh, deployId) {
-//	let txPromise = new Promise((resolve, reject) => {
-//		// set expireTime as 30s
-//		registerTxEvent(eh, resolve, reject, defaultExpireTime, deployId);
-//	});
-//	eventPromises.push(txPromise);
-//	// So as to make eh.some stop adding duplicate listener
-//	return true;
-//}
-
-
 function commitTransaction(chain, proposalResponses, proposal, header, eventhubs, tx_id) {
 	var request = {
 		proposalResponses: proposalResponses,
@@ -69,7 +58,7 @@ function commitTransaction(chain, proposalResponses, proposal, header, eventhubs
 	// Use .some instead of .forEach, avoiding duplicate listeners with same tx id
 	//eventhubs.forEach((eh) => {
 	eventhubs.some((eh) => {
-		return Listener.addTxPromise(eventPromises, eh, deployId);
+		return Listener.addPromise(eventPromises, 'tx', eh, deployId);
 	});	
 
 	var sendPromise = chain.sendTransaction(request);
@@ -81,20 +70,6 @@ function commitTransaction(chain, proposalResponses, proposal, header, eventhubs
 	});
 }
 
-
-function disconnectEventhub(context, ehs, f) {
-	// Disconnect the event hub
-	return function() {
-		for(var key in ehs) {
-			var eventhub = ehs[key];
-			if (eventhub && eventhub.isconnected()) {
-				logger.debug('Disconnecting the event hub');
-				eventhub.disconnect();
-			}
-		}
-		f.apply(context, arguments);
-	};
-}
 
 function finishCommit(response, logger, tx_id) {
 	if (response.status === 'SUCCESS') {
@@ -311,30 +286,3 @@ function sendTransactionProposal(chain, admin, mspid, traceInfo, tx_id) {
 
 	return chain.sendTransactionProposal(request);
 }
-
-
-//function txEventListener(eh, resolve, reject, handle, deployId, tx, code) {
-//	if (deployId == tx) {
-//		logger.debug('Event listener for %s now got callback of tx id %s with code %s', deployId, tx, code);
-//	} else {
-//		logger.error('Event listener for %s got wrong callback of tx id %s', deployId, tx);
-//	}
-//
-//	clearTimeout(handle);
-//
-//	//TODO：目前这里会导致程序异常退出
-//	//eh.unregisterTxEvent(deployId);
-//
-//	//TODO: 目前这里会返回一个policy不满足的错误码，需要看下证书生成时的设置
-//	/*
-//	if (code !== 'VALID') {
-//		logger.error('The balance transfer transaction was invalid, code = ' + code);
-//		reject();
-//	} else {
-//		logger.debug('The balance transfer transaction has been committed on peer '+ eh.ep.addr);
-//		resolve();
-//	}
-//	*/
-//	logger.debug('The transaction has been committed on peer '+ eh.ep.addr);
-//	resolve();	
-//}

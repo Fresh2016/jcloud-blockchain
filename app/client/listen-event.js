@@ -25,23 +25,13 @@ var defaultExpireTime = 30000;
 var commonProtoPath = './node_modules/fabric-client/lib/protos/common/common.proto';
 
 
-module.exports.addBlockPromise = addBlockPromise;
-module.exports.addTxPromise = addTxPromise;
+module.exports.addPromise = addPromise;
 
 
-function addBlockPromise(eventPromises, eh, deployId) {
+function addPromise(eventPromises, type, eh, deployId) {
 	let txPromise = new Promise((resolve, reject) => {
 		// set expireTime as 30s
-		registerEvent(eh, 'block', resolve, reject, defaultExpireTime, deployId);
-	});
-	eventPromises.push(txPromise);
-}
-
-
-function addTxPromise(eventPromises, eh, deployId) {
-	let txPromise = new Promise((resolve, reject) => {
-		// set expireTime as 30s
-		registerEvent(eh, 'tx', resolve, reject, defaultExpireTime, deployId);
+		registerEvent(eh, type, resolve, reject, defaultExpireTime, deployId);
 	});
 	eventPromises.push(txPromise);
 	// So as to make eh.some stop adding duplicate listener
@@ -51,9 +41,16 @@ function addTxPromise(eventPromises, eh, deployId) {
 
 function blockEventListener(eh, resolve, reject, handle, deployId, block) {
 	logger.debug('get callback of deployId %s ', deployId);
-	
 	clearTimeout(handle);
+	if (checkChannelInBlockEvent(eh, block)){
+		logger.debug('The new channel has been successfully joined on peer '+ eh.ep.addr);
+		resolve();
+	} else {
+		reject();
+	}
+}
 
+function checkChannelInBlockEvent(eh, block) {
 	// in real-world situations, a peer may have more than one channels so
 	// we must check that this block came from the channel we asked the peer to join
 	if(block.data.data.length === 1) {
@@ -66,29 +63,32 @@ function blockEventListener(eh, resolve, reject, handle, deployId, block) {
 		var channel_header = commonProto.ChannelHeader.decode(payload.header.channel_header);
 
 		if (channel_header.channel_id === util.channel) {
-			logger.debug('The new channel has been successfully joined on peer '+ eh.ep.addr);
-			resolve();
+			return true;
 		}
+		return false;
 	}	
 }
 
-
-//function registerBlockEvent(eh, resolve, reject, expireTime, deployId) {
-//	let handle = setTimeout(reject, expireTime);
-//
-//	logger.debug('registerTxEvent with deployId %s ', deployId);
-//	
-//	eh.registerBlockEvent((block) => {
-//		blockEventListener(eh, resolve, reject, handle, deployId, block);
-//	});
+//function disconnectEventhub(context, ehs, f) {
+//	// Disconnect the event hub
+//	return function() {
+//		for(var key in ehs) {
+//			var eventhub = ehs[key];
+//			if (eventhub && eventhub.isconnected()) {
+//				logger.debug('Disconnecting the event hub');
+//				eventhub.disconnect();
+//			}
+//		}
+//		f.apply(context, arguments);
+//	};
 //}
 
 function registerEvent(eh, type, resolve, reject, expireTime, deployId) {
 	let handle = setTimeout(reject, expireTime);
 
-	logger.debug('registerTxEvent with deployId %s ', deployId);
+	logger.debug('Register %s event with deployId %s ', type, deployId);
 	
-	if ('block' == type) {
+	if ('block' === type) {
 		eh.registerBlockEvent((block) => {
 			blockEventListener(eh, resolve, reject, handle, deployId, block);
 		});
@@ -99,40 +99,29 @@ function registerEvent(eh, type, resolve, reject, expireTime, deployId) {
 	}
 }
 
-
-//function registerTxEvent(eh, resolve, reject, expireTime, deployId) {
-//	let handle = setTimeout(reject, expireTime);
-//
-//	logger.debug('registerTxEvent with deployId %s ', deployId);
-//
-//	eh.registerTxEvent(deployId, (tx, code) => {
-//		txEventListener(eh, resolve, reject, handle, deployId, tx, code);
-//	});
-//}
-
-
 function txEventListener(eh, resolve, reject, handle, deployId, tx, code) {
-	if (deployId == tx) {
+	if (deployId === tx) {
 		logger.debug('Event listener for %s now got callback of tx id %s with code %s', deployId, tx, code);
 	} else {
 		logger.error('Event listener for %s got wrong callback of tx id %s', deployId, tx);
 	}
-
 	clearTimeout(handle);
 
 	//TODO：目前这里会导致程序异常退出
 	//eh.unregisterTxEvent(deployId);
 
-	//TODO: 目前这里会返回一个policy不满足的错误码，需要看下证书生成时的设置
-	/*
-	if (code !== 'VALID') {
-		logger.error('The balance transfer transaction was invalid, code = ' + code);
-		reject();
-	} else {
-		logger.debug('The balance transfer transaction has been committed on peer '+ eh.ep.addr);
-		resolve();
-	}
-	*/
+	// validateCode(eh, code);
 	logger.debug('The transaction has been committed on peer '+ eh.ep.addr);
 	resolve();	
+}
+
+function validateCode(eh, code) {
+	//TODO: 目前这里会返回一个policy不满足的错误码，需要看下证书生成时的设置
+	if (code !== 'VALID') {
+		logger.error('The balance transfer transaction was invalid, code = ' + code);
+		return false;
+	} else {
+		logger.debug('The balance transfer transaction has been committed on peer '+ eh.ep.addr);
+		return true;
+	}
 }
