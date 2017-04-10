@@ -21,6 +21,7 @@ var ClientUtils = require('fabric-client/lib/utils.js');
 var Peer = require('fabric-client/lib/Peer.js');
 var Orderer = require('fabric-client/lib/Orderer.js');
 var Submitter = require('./get-submitter.js');
+var Listener = require('./listen-event.js');
 var exe = require('./execute-recursively.js');
 var setup = require('./setup.js');
 var util = require('./util.js');
@@ -35,22 +36,20 @@ var targets = [];
 //than the one that submitted the "move" transaction, although either org
 //should work properly
 var defaultOrg = 'org1';
-// Used by transaction event listener
-var defaultExpireTime = 30000;
 
 module.exports.instantiateChaincode = instantiateChaincode;
 module.exports.invokeChaincode = invokeChaincode;
 
 
-function addTxPromise(eventPromises, eh, deployId) {
-	let txPromise = new Promise((resolve, reject) => {
-		// set expireTime as 30s
-		registerTxEvent(eh, resolve, reject, defaultExpireTime, deployId);
-	});
-	eventPromises.push(txPromise);
-	// So as to make eh.some stop adding duplicate listener
-	return true;
-}
+//function addTxPromise(eventPromises, eh, deployId) {
+//	let txPromise = new Promise((resolve, reject) => {
+//		// set expireTime as 30s
+//		registerTxEvent(eh, resolve, reject, defaultExpireTime, deployId);
+//	});
+//	eventPromises.push(txPromise);
+//	// So as to make eh.some stop adding duplicate listener
+//	return true;
+//}
 
 
 function commitTransaction(chain, proposalResponses, proposal, header, eventhubs, tx_id) {
@@ -70,7 +69,7 @@ function commitTransaction(chain, proposalResponses, proposal, header, eventhubs
 	// Use .some instead of .forEach, avoiding duplicate listeners with same tx id
 	//eventhubs.forEach((eh) => {
 	eventhubs.some((eh) => {
-		return addTxPromise(eventPromises, eh, deployId);
+		return Listener.addTxPromise(eventPromises, eh, deployId);
 	});	
 
 	var sendPromise = chain.sendTransaction(request);
@@ -276,17 +275,17 @@ function processCommitResponse(responses, tx_id) {
 	}
 }
 
-
-function registerTxEvent(eh, resolve, reject, expireTime, deployId) {
-	let handle = setTimeout(reject, expireTime);
-
-	logger.debug('registerTxEvent with deployId %s ', deployId);
-
-	eh.registerTxEvent(deployId, (tx, code) => {
-		txEventListener(eh, resolve, reject, handle, deployId, tx, code);
-	});
-}
-
+//
+//function registerTxEvent(eh, resolve, reject, expireTime, deployId) {
+//	let handle = setTimeout(reject, expireTime);
+//
+//	logger.debug('registerTxEvent with deployId %s ', deployId);
+//
+//	eh.registerTxEvent(deployId, (tx, code) => {
+//		txEventListener(eh, resolve, reject, handle, deployId, tx, code);
+//	});
+//}
+//
 
 function sendInstantiateProposal(chain, admin, mspid, tx_id) {
 	admin.mspImpl._id = mspid;
@@ -314,28 +313,28 @@ function sendTransactionProposal(chain, admin, mspid, traceInfo, tx_id) {
 }
 
 
-function txEventListener(eh, resolve, reject, handle, deployId, tx, code) {
-	if (deployId == tx) {
-		logger.debug('Event listener for %s now got callback of tx id %s with code %s', deployId, tx, code);
-	} else {
-		logger.error('Event listener for %s got wrong callback of tx id %s', deployId, tx);
-	}
-
-	clearTimeout(handle);
-
-	//TODO：目前这里会导致程序异常退出
-	//eh.unregisterTxEvent(deployId);
-
-	//TODO: 目前这里会返回一个policy不满足的错误码，需要看下证书生成时的设置
-	/*
-	if (code !== 'VALID') {
-		logger.error('The balance transfer transaction was invalid, code = ' + code);
-		reject();
-	} else {
-		logger.debug('The balance transfer transaction has been committed on peer '+ eh.ep.addr);
-		resolve();
-	}
-	*/
-	logger.debug('The transaction has been committed on peer '+ eh.ep.addr);
-	resolve();	
-}
+//function txEventListener(eh, resolve, reject, handle, deployId, tx, code) {
+//	if (deployId == tx) {
+//		logger.debug('Event listener for %s now got callback of tx id %s with code %s', deployId, tx, code);
+//	} else {
+//		logger.error('Event listener for %s got wrong callback of tx id %s', deployId, tx);
+//	}
+//
+//	clearTimeout(handle);
+//
+//	//TODO：目前这里会导致程序异常退出
+//	//eh.unregisterTxEvent(deployId);
+//
+//	//TODO: 目前这里会返回一个policy不满足的错误码，需要看下证书生成时的设置
+//	/*
+//	if (code !== 'VALID') {
+//		logger.error('The balance transfer transaction was invalid, code = ' + code);
+//		reject();
+//	} else {
+//		logger.debug('The balance transfer transaction has been committed on peer '+ eh.ep.addr);
+//		resolve();
+//	}
+//	*/
+//	logger.debug('The transaction has been committed on peer '+ eh.ep.addr);
+//	resolve();	
+//}

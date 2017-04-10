@@ -21,6 +21,7 @@ var ClientUtils = require('fabric-client/lib/utils.js');
 var Orderer = require('fabric-client/lib/Orderer.js');
 var Peer = require('fabric-client/lib/Peer.js');
 var Submitter = require('./get-submitter.js');
+var Listener = require('./listen-event.js');
 var exe = require('./execute-recursively.js');
 var setup = require('./setup.js');
 var util = require('./util.js');
@@ -28,21 +29,7 @@ var util = require('./util.js');
 var logger = ClientUtils.getLogger('join-channel');
 var ORGS = util.ORGS;
 
-//Used by decodeTransaction
-var commonProtoPath = './node_modules/fabric-client/lib/protos/common/common.proto';
-//Used by join event listener
-var defaultExpireTime = 30000;
-
 module.exports.joinChannel = joinChannel;
-
-
-function addTxPromise(eventPromises, eh, deployId) {
-	let txPromise = new Promise((resolve, reject) => {
-		// set expireTime as 30s
-		registerBlockEvent(eh, resolve, reject, defaultExpireTime, deployId);
-	});
-	eventPromises.push(txPromise);
-}
 
 
 //Check response status and return a new promise if success
@@ -103,17 +90,6 @@ function joinChannelByOrg(org) {
 }
 
 
-function registerBlockEvent(eh, resolve, reject, expireTime, deployId) {
-	let handle = setTimeout(reject, expireTime);
-
-	logger.debug('registerTxEvent with deployId %s ', deployId);
-	
-	eh.registerBlockEvent((block) => {
-		txEventListener(eh, resolve, reject, handle, deployId, block);
-	});
-}
-
-
 function sendJoinProposal(chain, admin, mspid, eventhubs) {
 	//FIXME: temporary fix until mspid is configured into Chain
 	admin.mspImpl._id = mspid;
@@ -131,7 +107,7 @@ function sendJoinProposal(chain, admin, mspid, eventhubs) {
 
 	var eventPromises = [];
 	eventhubs.forEach((eh) => {
-		addTxPromise(eventPromises, eh, tx_id);
+		Listener.addBlockPromise(eventPromises, eh, tx_id);
 	});	
 
 	var sendPromise = chain.joinChannel(request);
@@ -141,28 +117,4 @@ function sendJoinProposal(chain, admin, mspid, eventhubs) {
 	}).catch((err) => {
 		util.throwError(logger, err, 'Failed to join channel and get notifications within the timeout period.');
 	});	
-}
-
-
-function txEventListener(eh, resolve, reject, handle, deployId, block) {
-	logger.debug('get callback of deployId %s ', deployId);
-	
-	clearTimeout(handle);
-
-	// in real-world situations, a peer may have more than one channels so
-	// we must check that this block came from the channel we asked the peer to join
-	if(block.data.data.length === 1) {
-		// Config block must only contain one transaction
-		// set to be able to decode grpc objects
-		var grpc = require('grpc');
-		var commonProto = grpc.load(commonProtoPath).common;
-		var envelope = commonProto.Envelope.decode(block.data.data[0]);
-		var payload = commonProto.Payload.decode(envelope.payload);
-		var channel_header = commonProto.ChannelHeader.decode(payload.header.channel_header);
-
-		if (channel_header.channel_id === util.channel) {
-			logger.debug('The new channel has been successfully joined on peer '+ eh.ep.addr);
-			resolve();
-		}
-	}	
 }

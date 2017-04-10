@@ -240,6 +240,7 @@ function popRandom(list) {
 
 
 // Initialize a new chain for specific org with all peers
+// Used in operation: join channel, install chaincode
 function setupChainByOrg(client, ORGS, org, eventhubs, withEh) {
 	try{
 		var chain = client.newChain(util.channel);
@@ -263,7 +264,8 @@ function setupChainByOrg(client, ORGS, org, eventhubs, withEh) {
 }
 
 
-//Initialize a new chain only orderer (TODO: in future should be orderers)
+// Initialize a new chain only orderer (TODO: in future should be orderers)
+// Used in operation: create channel
 function setupChainWithOnlyOrderer(client, ORGS) {
 	try{
 		var chain = client.newChain(util.channel);
@@ -284,6 +286,7 @@ function setupChainWithOnlyOrderer(client, ORGS) {
 
 // Initialize a new chain for specific org with specific peer,
 // options include if the peer works as primary peer, and if it connectes to eventhubs
+// Used in operation: invoke chaincode, query***
 function setupChainWithPeer(client, ORGS, peerInfo, asPrimary, eventhubs, withEh) {
 	try{
 		var chain = client.newChain(util.channel);
@@ -310,6 +313,7 @@ function setupChainWithPeer(client, ORGS, peerInfo, asPrimary, eventhubs, withEh
 // Initialize a new chain with all peers, with default primary peer.
 // Note it could be used only in case that does not require MSP identity,
 // such as queryPeers. Otherwise wrong identity error occurs.
+// Used in operation: instantiate chaincode, queryPeers
 function setupChainWithAllPeers(client, ORGS, eventhubs) {
 	try{
 		var chain = client.newChain(util.channel);

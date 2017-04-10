@@ -63,7 +63,7 @@ invokeClient.instantiateChaincode()
 
 // TODO：出bug了，两个org的数据不一致？
 //TODO:还需要测试杀掉peer时不挂啊
-//queryClient.isTransactionSucceed('698b8351a668bda42ae5e8b548ad04fed963b3f118f1acc4b0d2c9650d36ba35', sendResponse);
+//queryClient.isTransactionSucceed('1e7ecffe184332ed03c5dddfab134c466ff649f5b5389acaae6c93bb78c6a827', sendResponse);
 //queryClient.queryTransaction('', sendResponse);
 //queryClient.queryTransactionHistory('', sendResponse);
 //queryClient.queryPeers('mychannel', sendResponse);
@@ -71,7 +71,7 @@ invokeClient.instantiateChaincode()
 
 
 /*
-invokeClient.invokeChaincode('uhmmm...we are testing ...')
+invokeClient.invokeChaincode('uhmmm...we are testing 3...')
 .catch((err) => {
 	console.log('Return without executing installing and instantiating');
 	return false;
