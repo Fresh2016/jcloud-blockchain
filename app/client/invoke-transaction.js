@@ -110,22 +110,6 @@ function finishCommit(response, logger, tx_id) {
 }
 
 
-function instantiateChaincode() {
-	logger.info('\n\n***** Hyperledger fabric client: instantiate chaincode *****');
-	
-	var orgs = util.getOrgs(ORGS);
-	logger.info('There are %s organizations: %s. Going to instantiate chaincode one by one.', orgs.length, orgs);
-
-//	return exe.executeTheNext(orgs, instantiateChaincodeByOrg, 'Instantiate Chaincode')
-	return instantiateChaincodeByOrg('org1')
-	.catch((err) => {
-		logger.error('Failed to instantiate chaincode with error: ' + err.stack ? err.stack : err);
-		// Failure back and accept further err processing
-		return new Promise((resolve, reject) => reject(err));
-	});
-};
-
-
 function generateInvokeRequest(fcn, nonce, tx_id, traceInfo) {
 	var request = {
 			chainId: util.channel,
@@ -144,46 +128,50 @@ function generateInvokeRequest(fcn, nonce, tx_id, traceInfo) {
 	return request;
 }
 
+/*
+ * for instantiate chaincode org by org, but now we do it in one instantiation
+function instantiateChaincode() {
+	logger.info('\n\n***** Hyperledger fabric client: instantiate chaincode *****');
+	
+	var orgs = util.getOrgs(ORGS);
+	logger.info('There are %s organizations: %s. Going to instantiate chaincode one by one.', orgs.length, orgs);
 
-function instantiateChaincodeByOrg(org) {
+//	return exe.executeTheNext(orgs, instantiateChaincodeByOrg, 'Instantiate Chaincode')
+	return instantiateChaincodeByOrg('org1')
+	.catch((err) => {
+		logger.error('Failed to instantiate chaincode with error: ' + err.stack ? err.stack : err);
+		// Failure back and accept further err processing
+		return new Promise((resolve, reject) => reject(err));
+	});
+};
+
+
+ */
+
+
+function instantiateChaincode() {
+	logger.info('\n\n***** Hyperledger fabric client: instantiate chaincode *****');
+
 	// Client and chain should be claimed here
 	var client = new hfc();
 	var eventhubs = [];
-	var chain = null;
-//	var chain = setup.setupChainByOrg(client, ORGS, org, eventhubs, true);
-//	var chain = setup.setupChainWithAllPeers(client, ORGS, eventhubs);
+	var chain = setup.setupChainWithAllPeers(client, ORGS, eventhubs);
 	var tx_id = { value : null };
+
+	// this is a transaction, will just use org1's identity to
+	// submit the request
+	var org = defaultOrg;
 
 	var options = { 
 			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
 		};
 
-/*	
 	return hfc.newDefaultKeyValueStore(options)
 	.then((keyValueStore) => {
 		client.setStateStore(keyValueStore);
 		return Submitter.getSubmitter(client, org, logger);
 
 	}).then((admin) => {
-*/
-	return setup.getAlivePeer(ORGS, org)
-	.then((peerInfo) => {
-		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
-		return setup.setupChainWithPeer(client, ORGS, peerInfo, true, null, false);
-
-	}).then((readyChain) => {
-		logger.debug('Successfully setup chain %s', readyChain.getName());
-		chain = readyChain;
-		var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
-		return hfc.newDefaultKeyValueStore(options);
-		
-	}).then((keyValueStore) => {
-		client.setStateStore(keyValueStore);
-		return Submitter.getSubmitter(client, org, logger);
-
-	}).then((admin) => {	
 		logger.info('Successfully enrolled user \'admin\'');
 		return sendInstantiateProposal(chain, admin, util.getMspid(ORGS, org), tx_id);
 
