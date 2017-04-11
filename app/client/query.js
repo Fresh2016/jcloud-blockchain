@@ -238,8 +238,6 @@ function parseQueryPeerStatusReponse(responses, channelName) {
 }
 
 
-//function isTransactionSucceed(transactionId, callback) {
-
 function isTransactionSucceed(transactionId) {
 	logger.info('\n\n***** Hyperledger fabric client: query transaction validationCode by transactionId: %s *****', transactionId);
 
@@ -250,7 +248,6 @@ function isTransactionSucceed(transactionId) {
 	// this is a query, will just use org2's identity to
 	// submit the request
 	var org = defaultOrg;
-
 	var options = { 
 			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
 		};	
@@ -293,8 +290,8 @@ function isTransactionSucceed(transactionId) {
 		
 	}).catch((err) => {
 		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
-//		callback(false);
 		return new Promise((resolve, reject) => reject(err));
+		
 	});
 }
 
@@ -430,8 +427,8 @@ function queryPeers(channelName, callback) {
 }
 
 
-function queryTransaction(transactionId, callback) {
-	logger.info('\n\n***** Hyperledger fabric client: query transaction by transactionId: %s *****', transactionId);
+function queryTransaction() {
+	logger.info('\n\n***** Hyperledger fabric client: query transaction *****');
 
 	// client and chain should be claimed here
 	var client = new hfc();
@@ -440,6 +437,11 @@ function queryTransaction(transactionId, callback) {
 	// this is a query, will just use org2's identity to
 	// submit the request
 	var org = defaultOrg;
+	var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
+
+	
 	var block_result = {};
 	var the_user = null;
 	
@@ -451,9 +453,6 @@ function queryTransaction(transactionId, callback) {
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
 		chain = readyChain;
-		var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
 		return hfc.newDefaultKeyValueStore(options);
 		
 	}).then((keyValueStore) => {
@@ -500,16 +499,22 @@ function queryTransaction(transactionId, callback) {
 		
 	}).then((response_payloads) => {
 		logger.debug('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
-
-		callback(Object.assign(parseQuerySupplyChainResponse(response_payloads), block_result));
+		var response = Object.assign(parseQuerySupplyChainResponse(response_payloads), block_result);
+		response.status = 'success';
 		logger.info('END of query transaction.');
+		return new Promise((resolve, reject) => resolve(response));
 
 	}).catch((err) => {
 		logger.error('Failed to send query or parse query response due to error: ' + err.stack ? err.stack : err);
-		callback(parseQuerySupplyChainResponse(null));
 		logger.info('END of query transaction.');
+		return new Promise((resolve, reject) => reject(err));
+		
 	});
 }
+
+
+
+
 
 
 
