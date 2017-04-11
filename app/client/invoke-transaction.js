@@ -65,7 +65,11 @@ function commitTransaction(chain, proposalResponses, proposal, header, eventhubs
 	return Promise.all([sendPromise].concat(eventPromises))
 	.then((results) => {
 		return processCommitResponse(results, tx_id);
+	}).then((results) => {
+		return Listener.disconnectEventhub(eventhubs);
 	}).catch((err) => {
+		// Assure Eventhub will be disconnected when expired
+		Listener.disconnectEventhub(eventhubs);
 		util.throwError(logger, err, 'Failed to commit and get notifications within the timeout period.');
 	});
 }
@@ -110,17 +114,14 @@ function instantiateChaincode() {
 	var orgs = util.getOrgs(ORGS);
 	logger.info('There are %s organizations: %s. Going to instantiate chaincode one by one.', orgs.length, orgs);
 
-//	return exe.executeTheNext(orgs, instantiateChaincodeByOrg, 'Instantiate Chaincode')
-	return instantiateChaincodeByOrg('org1')
+	return exe.executeTheNext(orgs, instantiateChaincodeByOrg, 'Instantiate Chaincode')
 	.catch((err) => {
 		logger.error('Failed to instantiate chaincode with error: ' + err.stack ? err.stack : err);
 		// Failure back and accept further err processing
 		return new Promise((resolve, reject) => reject(err));
 	});
 };
-
-
- */
+*/
 
 
 function instantiateChaincode() {
