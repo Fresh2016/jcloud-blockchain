@@ -26,6 +26,7 @@ var commonProtoPath = './node_modules/fabric-client/lib/protos/common/common.pro
 
 
 module.exports.addPromise = addPromise;
+module.exports.disconnectEventhub = disconnectEventhub;
 
 
 function addPromise(eventPromises, type, eh, deployId) {
@@ -40,8 +41,11 @@ function addPromise(eventPromises, type, eh, deployId) {
 
 
 function blockEventListener(eh, resolve, reject, handle, deployId, block) {
-	logger.debug('get callback of deployId %s ', deployId);
+	logger.debug('Event listener got callback of tx id %s with block', deployId);
+	logger.debug('Clearning timeout setting and unregister event');
 	clearTimeout(handle);
+	eh.unregisterBlockEvent();
+	
 	if (checkChannelInBlockEvent(block)){
 		logger.debug('The new channel has been successfully joined on peer '+ eh.ep.addr);
 		resolve();
@@ -70,16 +74,16 @@ function checkChannelInBlockEvent(block) {
 }
 
 
-function disconnectEventhub(eventhub, reject) {
-	// Disconnect the event hub
-	return function() {
-			if (eventhub && eventhub.isconnected()) {
-				logger.debug('Disconnecting the event hub');
-				eventhub.disconnect();
-			}
-		reject();
-		//cb.apply(arguments);
-	};
+function disconnectEventhub(eventhubs) {
+	for(var key in eventhubs) {
+		var eventhub = eventhubs[key];
+		// Disconnect the event hub
+		if (eventhub && eventhub.isconnected()) {
+			logger.info('Disconnecting the event hub');
+			eventhub.disconnect();
+		}
+	}
+	return true;
 }
 
 
@@ -98,9 +102,7 @@ function disconnectEventhub(eventhub, reject) {
 //})(t, eventhubs, t.end);
 
 function registerEvent(eh, type, resolve, reject, expireTime, deployId) {
-//	let handle = setTimeout(reject, expireTime);
-	// Assure Eventhub will be disconnected when expired
-	let handle = setTimeout(disconnectEventhub(eh, reject), expireTime);
+	let handle = setTimeout(reject, expireTime);
 
 	logger.debug('Register %s event with deployId %s ', type, deployId);
 	
@@ -121,6 +123,7 @@ function txEventListener(eh, resolve, reject, handle, deployId, tx, code) {
 	} else {
 		logger.error('Event listener for %s got wrong callback of tx id %s', deployId, tx);
 	}
+	logger.debug('Clearning timeout setting and unregister event');
 	clearTimeout(handle);
 
 	//TODO：目前这里会导致程序异常退出

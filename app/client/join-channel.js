@@ -114,7 +114,11 @@ function sendJoinProposal(chain, admin, mspid, eventhubs) {
 	return Promise.all([sendPromise].concat(eventPromises))
 	.then((results) => {
 		return finishJoinByOrg(results);
+	}).then((results) => {
+		return Listener.disconnectEventhub(eventhubs);
 	}).catch((err) => {
+		// Assure Eventhub will be disconnected when expired
+		Listener.disconnectEventhub(eventhubs);
 		util.throwError(logger, err, 'Failed to join channel and get notifications within the timeout period.');
 	});	
 }
