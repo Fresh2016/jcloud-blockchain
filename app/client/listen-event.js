@@ -42,7 +42,7 @@ function addPromise(eventPromises, type, eh, deployId) {
 function blockEventListener(eh, resolve, reject, handle, deployId, block) {
 	logger.debug('get callback of deployId %s ', deployId);
 	clearTimeout(handle);
-	if (checkChannelInBlockEvent(eh, block)){
+	if (checkChannelInBlockEvent(block)){
 		logger.debug('The new channel has been successfully joined on peer '+ eh.ep.addr);
 		resolve();
 	} else {
@@ -50,7 +50,7 @@ function blockEventListener(eh, resolve, reject, handle, deployId, block) {
 	}
 }
 
-function checkChannelInBlockEvent(eh, block) {
+function checkChannelInBlockEvent(block) {
 	// in real-world situations, a peer may have more than one channels so
 	// we must check that this block came from the channel we asked the peer to join
 	if(block.data.data.length === 1) {
@@ -69,22 +69,38 @@ function checkChannelInBlockEvent(eh, block) {
 	}	
 }
 
-//function disconnectEventhub(context, ehs, f) {
-//	// Disconnect the event hub
+
+function disconnectEventhub(eventhub, reject) {
+	// Disconnect the event hub
+	return function() {
+			if (eventhub && eventhub.isconnected()) {
+				logger.debug('Disconnecting the event hub');
+				eventhub.disconnect();
+			}
+		reject();
+		//cb.apply(arguments);
+	};
+}
+
+
+//t.end = ((context, ehs, f) => {
 //	return function() {
 //		for(var key in ehs) {
 //			var eventhub = ehs[key];
 //			if (eventhub && eventhub.isconnected()) {
-//				logger.debug('Disconnecting the event hub');
+//				logger.info('Disconnecting the event hub');
 //				eventhub.disconnect();
 //			}
 //		}
+//
 //		f.apply(context, arguments);
 //	};
-//}
+//})(t, eventhubs, t.end);
 
 function registerEvent(eh, type, resolve, reject, expireTime, deployId) {
-	let handle = setTimeout(reject, expireTime);
+//	let handle = setTimeout(reject, expireTime);
+	// Assure Eventhub will be disconnected when expired
+	let handle = setTimeout(disconnectEventhub(eh, reject), expireTime);
 
 	logger.debug('Register %s event with deployId %s ', type, deployId);
 	
