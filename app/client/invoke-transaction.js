@@ -106,8 +106,9 @@ function generateInvokeRequest(fcn, nonce, tx_id, traceInfo) {
 	return request;
 }
 
+
 /*
- * for instantiate chaincode org by org, but now we do it in one instantiation
+//for instantiate chaincode org by org, but now we do it in one instantiation
 function instantiateChaincode() {
 	logger.info('\n\n***** Hyperledger fabric client: instantiate chaincode *****');
 	

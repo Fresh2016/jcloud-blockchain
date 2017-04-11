@@ -73,7 +73,7 @@ function installChaincodeByOrg(org) {
 	}).then((results) => {
 		var response = {
 				status : 'failed'
-		}
+		};
 		if (util.checkProposalResponses(results, 'Install chaincode', logger)) {
 			response.status = 'success';
 		}

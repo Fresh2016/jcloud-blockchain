@@ -62,7 +62,7 @@ function decodeTransaction(transactionId, processed_transaction, commonProtoPath
 		var channel_header = commonProto.ChannelHeader.decode(payload.header.channel_header);
 		logger.debug('Chain queryTransaction - transaction ID :: %s', channel_header.tx_id);
 		logger.debug('Chain queryTransaction - tranaction validationCode:: %s ', processed_transaction.validationCode);
-		if (transactionId == channel_header.tx_id && 0 == processed_transaction.validationCode) {
+		if (transactionId === channel_header.tx_id && 0 === processed_transaction.validationCode) {
 			return true;
 		} else {
 			return false;
@@ -238,7 +238,9 @@ function parseQueryPeerStatusReponse(responses, channelName) {
 }
 
 
-function isTransactionSucceed(transactionId, callback) {
+//function isTransactionSucceed(transactionId, callback) {
+
+function isTransactionSucceed(transactionId) {
 	logger.info('\n\n***** Hyperledger fabric client: query transaction validationCode by transactionId: %s *****', transactionId);
 
 	// client and chain should be claimed here
@@ -248,6 +250,10 @@ function isTransactionSucceed(transactionId, callback) {
 	// this is a query, will just use org2's identity to
 	// submit the request
 	var org = defaultOrg;
+
+	var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};	
 	
 	return setup.getAlivePeer(ORGS, org)
 	.then((peerInfo) => {
@@ -257,9 +263,6 @@ function isTransactionSucceed(transactionId, callback) {
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
 		chain = readyChain;
-		var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
 		return hfc.newDefaultKeyValueStore(options);
 		
 	}).then((keyValueStore) => {
@@ -276,12 +279,22 @@ function isTransactionSucceed(transactionId, callback) {
 		return queryTransactionByTxId(chain, transactionId);
 		
 	}).then((processed_transaction) => {
-		callback(decodeTransaction(transactionId, processed_transaction, commonProtoPath, transProtoPath));
-		logger.info('END of query transaction status.');
-
+		var response = {
+				status : 'failed'
+		};
+		var succeeded_decode = decodeTransaction(transactionId, processed_transaction, commonProtoPath, transProtoPath);
+		if (succeeded_decode) {		
+			logger.info('END of query transaction status.');
+			response.status = 'success';
+			return new Promise((resolve, reject) => resolve(response));
+		} else {
+			util.throwError(logger, null, 'Failed to query with invalid tx_id.');
+		}
+		
 	}).catch((err) => {
 		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
-		callback(false);
+//		callback(false);
+		return new Promise((resolve, reject) => reject(err));
 	});
 }
 
@@ -568,9 +581,6 @@ function queryTransactionHistory(transactionId, callback) {
 		logger.info('END of query transaction.');
 	});
 }
-
-
-
 
 
 function queryTransactionByTxId(chain, transactionId){

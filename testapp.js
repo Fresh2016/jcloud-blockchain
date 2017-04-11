@@ -5,13 +5,13 @@ invokeClient = require('./app/client/invoke-transaction.js');
 queryClient = require('./app/client/query.js');
 
 /*
- * for clear docker container and images
+//for clear docker container and images
 docker rm -f $(docker ps -a | grep supplychain | awk '{print $1 }')
 docker rmi -f $(docker images | grep supplychain | awk '{print $3 }')
- */
+*/
 
 
-///*
+/*
 createClient.createChannel()
 .then((result) => {
 	console.log('API: create channel result %s', JSON.stringify(result));
@@ -60,10 +60,18 @@ invokeClient.instantiateChaincode()
 */
 
 
-
-// TODO：出bug了，两个org的数据不一致？
+//TODO:eventhub断开
+//TODO:出bug了，两个org的数据不一致？
 //TODO:还需要测试杀掉peer时不挂啊
-//queryClient.isTransactionSucceed('1e7ecffe184332ed03c5dddfab134c466ff649f5b5389acaae6c93bb78c6a827', sendResponse);
+transaction_id = 'e1127348d390a07f335801fa2b2b1752451b7bc36448e05e36f749ba1ce0cf91'
+//queryClient.isTransactionSucceed(transaction_id, sendResponse);
+queryClient.isTransactionSucceed(transaction_id)
+.then((response) => {
+	console.log('isTransactionSucceed response: %s', response.status);
+	console.log('shiying is aaa');
+});
+
+
 //queryClient.queryTransaction('', sendResponse);
 //queryClient.queryTransactionHistory('', sendResponse);
 //queryClient.queryPeers('mychannel', sendResponse);
@@ -88,12 +96,9 @@ function sendResponse(result){
 		}
 	}
 	if (all_good) {
-		console.log('all good');
-	
+		console.log('all good');	
 	}
 	else {
 		console.log('not all good');
 	}
 }
-
-//Test new repo.

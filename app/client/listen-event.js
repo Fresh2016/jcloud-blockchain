@@ -55,6 +55,7 @@ function blockEventListener(eh, resolve, reject, handle, deployId, block) {
 	}
 }
 
+
 function checkChannelInBlockEvent(block) {
 	// in real-world situations, a peer may have more than one channels so
 	// we must check that this block came from the channel we asked the peer to join
@@ -102,6 +103,7 @@ function disconnectEventhub(eventhubs) {
 //	};
 //})(t, eventhubs, t.end);
 
+
 function registerEvent(eh, type, resolve, reject, expireTime, deployId) {
 	let handle = setTimeout(reject, expireTime);
 
@@ -118,6 +120,7 @@ function registerEvent(eh, type, resolve, reject, expireTime, deployId) {
 	}
 }
 
+
 function txEventListener(eh, resolve, reject, handle, deployId, tx, code) {
 	if (deployId === tx) {
 		logger.debug('Event listener for %s now got callback of tx id %s with code %s', deployId, tx, code);
@@ -128,7 +131,7 @@ function txEventListener(eh, resolve, reject, handle, deployId, tx, code) {
 	clearTimeout(handle);
 
 	//TODO：目前这里会导致程序异常退出
-	//eh.unregisterTxEvent(deployId);
+	eh.unregisterTxEvent(deployId);
 
 	if(validateCode(code)){
 		logger.debug('Transaction has been committed on peer '+ eh.ep.addr);
@@ -138,6 +141,7 @@ function txEventListener(eh, resolve, reject, handle, deployId, tx, code) {
 		reject();
 	}
 }
+
 
 function validateCode(code) {
 	return (code === 'VALID');
