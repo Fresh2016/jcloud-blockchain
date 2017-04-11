@@ -250,17 +250,6 @@ function processCommitResponse(responses, tx_id) {
 	}
 }
 
-//
-//function registerTxEvent(eh, resolve, reject, expireTime, deployId) {
-//	let handle = setTimeout(reject, expireTime);
-//
-//	logger.debug('registerTxEvent with deployId %s ', deployId);
-//
-//	eh.registerTxEvent(deployId, (tx, code) => {
-//		txEventListener(eh, resolve, reject, handle, deployId, tx, code);
-//	});
-//}
-//
 
 function sendInstantiateProposal(chain, admin, mspid, tx_id) {
 	admin.mspImpl._id = mspid;
