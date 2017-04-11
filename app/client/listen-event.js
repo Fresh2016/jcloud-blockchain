@@ -50,6 +50,7 @@ function blockEventListener(eh, resolve, reject, handle, deployId, block) {
 		logger.debug('The new channel has been successfully joined on peer '+ eh.ep.addr);
 		resolve();
 	} else {
+		logger.error('channel_id in block event was invalid');
 		reject();
 	}
 }
@@ -129,18 +130,15 @@ function txEventListener(eh, resolve, reject, handle, deployId, tx, code) {
 	//TODO：目前这里会导致程序异常退出
 	//eh.unregisterTxEvent(deployId);
 
-	// validateCode(eh, code);
-	logger.debug('The transaction has been committed on peer '+ eh.ep.addr);
-	resolve();	
+	if(validateCode(code)){
+		logger.debug('Transaction has been committed on peer '+ eh.ep.addr);
+		resolve();	
+	} else {
+		logger.error('Transaction was invalid, response code is %s', code);
+		reject();
+	}
 }
 
-function validateCode(eh, code) {
-	//TODO: 目前这里会返回一个policy不满足的错误码，需要看下证书生成时的设置
-	if (code !== 'VALID') {
-		logger.error('The balance transfer transaction was invalid, code = ' + code);
-		return false;
-	} else {
-		logger.debug('The balance transfer transaction has been committed on peer '+ eh.ep.addr);
-		return true;
-	}
+function validateCode(code) {
+	return (code === 'VALID');
 }
