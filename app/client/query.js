@@ -513,13 +513,9 @@ function queryTransaction() {
 }
 
 
-
-
-
-
-
-function queryTransactionHistory(transactionId, callback) {
-	logger.info('\n\n***** Hyperledger fabric client: query transaction history by transactionId: %s *****', transactionId);
+//function queryTransactionHistory(transactionId, callback) {
+function queryTransactionHistory() {
+	logger.info('\n\n***** Hyperledger fabric client: query transaction history *****');
 
 	// client and chain should be claimed here
 	var client = new hfc();
@@ -528,6 +524,9 @@ function queryTransactionHistory(transactionId, callback) {
 	// this is a query, will just use org2's identity to
 	// submit the request
 	var org = defaultOrg;
+	var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
 	var the_user = null;
 
 	return setup.getAlivePeer(ORGS, org)
@@ -538,9 +537,6 @@ function queryTransactionHistory(transactionId, callback) {
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
 		chain = readyChain;
-		var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
 		return hfc.newDefaultKeyValueStore(options);
 		
 	}).then((keyValueStore) => {
@@ -577,13 +573,15 @@ function queryTransactionHistory(transactionId, callback) {
 		return chain.queryByChaincode(request);
 	}).then((response_payloads) => {
 		logger.debug('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
-		callback(parseQueryHistoryResponse(response_payloads));
-		logger.info('END of query transaction hitory.');
-
+		var response = parseQueryHistoryResponse(response_payloads);
+		response.status = 'success';
+		logger.info('END of query transaction history.');
+		return new Promise((resolve, reject) => resolve(response));
+		
 	}).catch((err) => {
 		logger.error('Failed to send query or parse query response due to error: ' + err.stack ? err.stack : err);
-		callback(parseQueryHistoryResponse(null));
-		logger.info('END of query transaction.');
+		logger.info('END of query transaction history.');
+		return new Promise((resolve, reject) => reject(err));
 	});
 }
 

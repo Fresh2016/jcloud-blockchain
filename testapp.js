@@ -66,12 +66,16 @@ invokeClient.instantiateChaincode()
 transaction_id = 'e1127348d390a07f335801fa2b2b1752451b7bc36448e05e36f749ba1ce0cf91'
 queryClient.isTransactionSucceed(transaction_id)
 .then((response) => {
-	console.log('isTransactionSucceed response: %s\n\n\n', response.status);
+	console.log('isTransactionSucceed response: %j\n\n\n', response);
 	return queryClient.queryTransaction('');
 	
 }).then((response) => {
 	console.log('queryTransaction response: %j\n\n\n', response);	
-	console.log('shiying is aaa');
+	return queryClient.queryTransactionHistory('');
+
+}).then((response) => {
+	console.log('queryTransactionHistory response: %j\n\n\n', response);	
+	console.log('### shiying is aaa ###');
 
 }).catch((err) => {
 	console.log('Return without querying.');
