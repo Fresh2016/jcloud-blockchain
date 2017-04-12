@@ -51,6 +51,17 @@ module.exports.queryTransaction = queryTransaction;
 module.exports.queryTransactionHistory = queryTransactionHistory;
 
 
+function addPeerPromise(peerPromises, chain, thisPeer) {
+	var peerPromise = new Promise((resolve, reject) => {
+		resolve(chain.queryChannels(thisPeer));
+	}).then((response) => {
+		response.peer = thisPeer.getUrl();
+		return response;
+	});	
+	peerPromises.push(peerPromise);
+}
+
+
 function decodeTransaction(transactionId, processed_transaction, commonProtoPath, transProtoPath) {
 	// set to be able to decode grpc objects
 	var grpc = require('grpc');
@@ -89,7 +100,7 @@ function getPeerStatus(response, channelName){
 function isPeerInChannel(response, channelName) {
 	if (null != response.channels) {
 		for (let num in response.channels) {
-			if (channelName == response.channels[num].channel_id) {
+			if (channelName === response.channels[num].channel_id) {
 				logger.debug('Peer %s has joined channel %s', response.peer, 
 						response.channels[num].channel_id);
 				return true;
@@ -296,8 +307,9 @@ function isTransactionSucceed(transactionId) {
 }
 
 
-function queryConfig(channelName, callback) {
-	// TODO: channel name is fixed from config file and should be passed from REST request
+//function queryConfig(channelName, callback) {
+function queryConfig(channelName) {
+// TODO: channel name is fixed from config file and should be passed from REST request
 	// TODO: care only 1 orderer. should be order cluster status when we have
 	logger.info('\n\n***** Hyperledger fabric client: query configuration of channel: %s *****', channelName);
 
@@ -337,35 +349,41 @@ function queryConfig(channelName, callback) {
 
 		//FIXME: temporary fix until mspid is configured into Chain
 		admin.mspImpl._id = util.getMspid(ORGS, org);
-
 		return chain.getChannelConfig();
 		
 	}).then((response_payloads) => {
 		logger.info('Got config envelope from getChannelConfig.');
-//		try {
-			parseQueryChainConfig(response_payloads);
-			ordererStatus.status = 'UP';
-			callback([ordererStatus]);
-//		} catch(err) {
-//			callback([ordererStatus]);
-//		}
-			
+		parseQueryChainConfig(response_payloads);
+		ordererStatus.status = 'UP';
+		logger.info('END of query config(orderer).');
+		return new Promise((resolve, reject) => resolve(ordererStatus));
+
 	}).catch((err) => {
 		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
-		callback([ordererStatus]);
+		logger.info('END of query config(orderer).');
+		return new Promise((resolve, reject) => reject(err));
+
 	});
 }
 
 
-function queryOrderers(channelName, callback) {
+function queryOrderers(channelName) {
 	// TODO: channel name is fixed from config file and should be passed from REST request
 	logger.info('\n\n***** Hyperledger fabric client: query orderer status of channel: %s *****', channelName);
-	
-	return module.exports.queryConfig(channelName, callback);
+	return module.exports.queryConfig(channelName);
 }
 
 
-function queryPeers(channelName, callback) {
+//function queryOrderers(channelName, callback) {
+//	// TODO: channel name is fixed from config file and should be passed from REST request
+//	logger.info('\n\n***** Hyperledger fabric client: query orderer status of channel: %s *****', channelName);
+//	
+//	return module.exports.queryConfig(channelName, callback);
+//}
+
+
+//function queryPeers(channelName, callback) {
+function queryPeers(channelName) {
 	// TODO: channel name is fixed from config file and should be passed from REST request
 	logger.info('\n\n***** Hyperledger fabric client: query peer status of channel: %s *****', channelName);
 
@@ -391,38 +409,25 @@ function queryPeers(channelName, callback) {
 
 		//FIXME: temporary fix until mspid is configured into Chain
 		admin.mspImpl._id = util.getMspid(ORGS, org);
-		
-		var peers = chain.getPeers();
-		async.mapSeries(peers, function(thisPeer, processResults) {
-			chain.queryChannels(thisPeer)
-			.then((response) => {
-				response.peer = thisPeer.getUrl();
-				processResults(null, response);
-			}).catch((err) => {
-				var response = {
-						channels: null,
-						peer: thisPeer.getUrl()
-					}
-				logger.error('Peer %s has no response, thus it is DOWN. ', thisPeer.getUrl());
-				processResults(null, response);
-			});
 
-		}, function(err, responses) {
-			logger.debug('processResults get callback with results %s and err %s.', 
-					JSON.stringify(responses), JSON.stringify(err));
-			var result = parseQueryPeerStatusReponse(responses, channelName);
-			logger.debug('Returning peer status: %s', JSON.stringify(result));
-			callback(result);
-			logger.info('END of query peers.');
-		},
-		(err) => {
-			// No case should be here
-			util.throwError(logger, err.stack ? err.stack : err, 'Unexpected err catched in queryPeers, check it.');
-		});			
-	}).catch((err) => {
-		logger.error('Failed to enroll user or read peer list with error:' + err.stack ? err.stack : err);
-		callback(null);
-		logger.info('END of query peers.');
+		var peerPromises = [];
+		var peers = chain.getPeers();
+		peers.forEach((thisPeer) => {
+			return addPeerPromise(peerPromises, chain, thisPeer)
+		});	
+		return Promise.all(peerPromises)
+			.then((responses) => {
+				result = parseQueryPeerStatusReponse(responses, channelName);
+				logger.debug('Returning peer status: %s', JSON.stringify(result));
+				logger.info('END of query peers.');
+				return new Promise((resolve, reject) => resolve(responses));
+
+			}).catch((err) => {
+				logger.error('Failed to send query or parse query response due to error: ' + err.stack ? err.stack : err);
+				logger.info('END of query peers.');
+				return new Promise((resolve, reject) => reject(err));
+
+			});
 	});
 }
 
@@ -513,7 +518,6 @@ function queryTransaction() {
 }
 
 
-//function queryTransactionHistory(transactionId, callback) {
 function queryTransactionHistory() {
 	logger.info('\n\n***** Hyperledger fabric client: query transaction history *****');
 

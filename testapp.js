@@ -61,8 +61,7 @@ invokeClient.instantiateChaincode()
 
 
 //TODO:eventhub断开
-//TODO:出bug了，两个org的数据不一致？
-//TODO:还需要测试杀掉peer时不挂啊
+///*
 transaction_id = 'e1127348d390a07f335801fa2b2b1752451b7bc36448e05e36f749ba1ce0cf91'
 queryClient.isTransactionSucceed(transaction_id)
 .then((response) => {
@@ -74,19 +73,22 @@ queryClient.isTransactionSucceed(transaction_id)
 	return queryClient.queryTransactionHistory('');
 
 }).then((response) => {
-	console.log('queryTransactionHistory response: %j\n\n\n', response);	
+	console.log('queryTransactionHistory response: %j\n\n\n', response);
+	return queryClient.queryPeers('mychannel');
+
+}).then((response) => {
+	console.log('queryPeers response: %j\n\n\n', response);
+	return queryClient.queryOrderers('mychannel');
+
+}).then((response) => {
+	console.log('queryOrderers response: %j\n\n\n', response);
 	console.log('### shiying is aaa ###');
 
 }).catch((err) => {
 	console.log('Return without querying.');
 	return false;
 });
-
-//queryClient.isTransactionSucceed(transaction_id, sendResponse);
-//queryClient.queryTransaction('', sendResponse);
-//queryClient.queryTransactionHistory('', sendResponse);
-//queryClient.queryPeers('mychannel', sendResponse);
-//queryClient.queryOrderers('mychannel', sendResponse);
+//*/
 
 
 /*
@@ -96,20 +98,3 @@ invokeClient.invokeChaincode('uhmmm...we are testing 3...')
 	return false;
 });
 */
-
-
-function sendResponse(result){
-	console.log('API: query result %s', JSON.stringify(result));
-	var all_good = true;
-	for (let num in result) {
-		if (result[num] == 'FAILED') {
-			all_good = all_good && false;
-		}
-	}
-	if (all_good) {
-		console.log('all good');	
-	}
-	else {
-		console.log('not all good');
-	}
-}
