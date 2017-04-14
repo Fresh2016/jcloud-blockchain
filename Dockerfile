@@ -23,7 +23,7 @@ RUN cd / && \
 ################ Install jcloud-blockchain ################
 # Install jcloud-blockchain
 RUN cd / && \
-    git clone https://github.com/s015348/bc-client /jcloud-blockchain && \
+    git clone http://103.237.5.178:3000/shiying/jcloud-blockchain /jcloud-blockchain && \
     cd /jcloud-blockchain && \
     npm install -g gulp && \
     npm install -g grpc && \
