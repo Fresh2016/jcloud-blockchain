@@ -4,31 +4,31 @@
 	<div class="jumbotron text-left">
 		<div class="form-group">
 			<div class="row">
-				<div class="col-sm-4 col-xs-6"><h2>当前区块号码: </h2> </div>
-				<div class="col-sm-8 col-xs-6">
+				<div class="col-sm-4 col-xs-6">当前区块号码：</div>
+				<div class="col-sm-8 col-xs-8">
 					<span class="label label-success" style="">
 						{{ blockNumber }} 
 					</span>
 				</div>
 			</div>
 			<div class="row">
-				<div class="col-sm-4 col-xs-6"><h2>商品SKU: </h2> </div>
-				<div class="col-sm-8 col-xs-6">
+				<div class="col-sm-4 col-xs-6">商品SKU：</div>
+				<div class="col-sm-8 col-xs-8">
 					<span class="label label-success" style="">
 						{{ sku }} 
 					</span>
 				</div>
 			</div>
 			<div class="row">
-				<div class="col-sm-4 col-xs-6"><h2>交易时间: </h2> </div>
-				<div class="col-sm-8 col-xs-6">
+				<div class="col-sm-4 col-xs-6">交易时间：</div>
+				<div class="col-sm-8 col-xs-8">
 					<span class="label label-success" style="">
 						{{ tradeDate }} 
 					</span>
 				</div>
 			</div>
 			<div class="row">
-				<div class="col-sm-4 col-xs-4"><h2>溯源信息: </h2></div>
+				<div class="col-sm-4 col-xs-6">溯源信息：</div>
 				<div class="col-sm-8 col-xs-8">
 					<span class="label label-info" style="">
 						{{ traceInfo }} 
@@ -36,18 +36,18 @@
 				</div>
 			</div>
 			<div class="row">
-				<div class="col-sm-4 col-xs-4"><h3>当前哈希值: </h3></div>
+				<div class="col-sm-4 col-xs-6">当前哈希值：</div>
 				<div class="col-sm-8 col-xs-8">
 					<p>
-	          			<small> {{ currentBlockHash }} </small>
+	          			<small> {{ currentBlockHash | json }} </small>
 	        		</p>
 				</div>
 			</div>
 			<div class="row">
-				<div class="col-sm-4 col-xs-4"><h3>上一个哈希值: </h3></div>
+				<div class="col-sm-4 col-xs-6">上一个哈希值：</div>
 				<div class="col-sm-8 col-xs-8">
 					<p>
-	          			<small> {{ previousBlockHash }} </small>
+	          			<small> {{ previousBlockHash | json }} </small>
 	        		</p>
 				</div>
 			</div>
