@@ -36,7 +36,8 @@ module.exports = function(app) {
 	// API: query chain latest state
 	app.get('/v1/supplychain', function(req, res) {
 		console.log('API: query chain latest state');
-		queryClient.queryTransaction(req.query.transactionId, function sendResponse(result) {
+		queryClient.queryTransaction(req.query.transactionId)
+		.then((result) => {
 			res.json(result);
 		});
 	});	
@@ -44,7 +45,10 @@ module.exports = function(app) {
 	// API: query orderer list and status
 	app.get('/v1/orderers', function(req, res) {
 		console.log('API: query orderers status');
-		queryClient.queryOrderers(req.query.channel, function sendResponse(result) {
+		queryClient.queryOrderers(req.query.channel)
+		.then((result) => {
+			console.log(result);
+			console.log(hideUrl(result, 'orderer'));
 			res.json(hideUrl(result, 'orderer'));
 		});
 	});	
@@ -52,7 +56,10 @@ module.exports = function(app) {
 	// API: query peer list and status
 	app.get('/v1/peers', function(req, res) {
 		console.log('API: query peers status');
-		queryClient.queryPeers(req.query.channel, function sendResponse(result) {
+		queryClient.queryPeers(req.query.channel)
+		.then((result) => {
+			console.log(result);
+			console.log(hideUrl(result, 'peer'));
 			res.json(hideUrl(result, 'peer'));
 		});
 	});	
@@ -61,7 +68,8 @@ module.exports = function(app) {
 	app.post('/v1/supplychain', function(req, res) {
 		console.log('API: invoke transaction');
 		console.dir(req.body);
-		invokeClient.invokeChaincode(req.body.traceInfo, function sendResponse(result) {
+		invokeClient.invokeChaincode(req.body.traceInfo)
+		.then((result) => {
 			res.json(result);
 		});
 	});	
