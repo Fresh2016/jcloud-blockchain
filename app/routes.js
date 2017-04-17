@@ -46,9 +46,10 @@ module.exports = function(app) {
 		});
 	});	
 
-	// API: query block hight
+	// API: query block hight or information
 	app.get('/v1/supplychain/blocks', function(req, res) {
-		console.log('API: query orderers status');
+		console.log('API: query blocks heights or information');
+		console.dir(req.query);
 		queryClient.queryBlocks(req.query.rpctime, JSON.parse(req.query.params))
 		.then((result) => {
 			console.log(result);
