@@ -66,7 +66,8 @@ function commitTransaction(chain, proposalResponses, proposal, header, eventhubs
 	.then((results) => {
 		return processCommitResponse(results, tx_id);
 	}).then((results) => {
-		return Listener.disconnectEventhub(eventhubs);
+		Listener.disconnectEventhub(eventhubs);
+		return results;
 	}).catch((err) => {
 		// Assure Eventhub will be disconnected when expired
 		Listener.disconnectEventhub(eventhubs);
@@ -79,7 +80,11 @@ function finishCommit(response, logger, tx_id) {
 	if (response.status === 'SUCCESS') {
 		printSuccessHint(tx_id);
 		var result = {
-				TransactionId : tx_id
+				status : 'success',
+				message : {
+					TransactionId : tx_id
+				},
+				id : '2'
 			};
 		return result;			
 	} else {
@@ -171,7 +176,7 @@ function instantiateChaincode() {
 };
 
 
-function invokeChaincode(traceInfo) {
+function invokeChaincode(rpctime, params) {
 	logger.info('\n\n***** Hyperledger fabric client: invoke chaincode *****');
 
 	// client and chain should be claimed here
@@ -183,6 +188,7 @@ function invokeChaincode(traceInfo) {
 	var org = defaultOrg;
 	var tx_id = { value : null };
 	var eventhubs = [];
+	var traceInfo = params.ctorMsg.args[3];
 	
 	return setup.getAlivePeer(ORGS, org)
 	.then((peerInfo) => {

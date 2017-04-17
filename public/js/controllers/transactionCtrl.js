@@ -33,9 +33,20 @@ angular.module('transactionController', [])
 		// POST method, invoke transaction when click transaction button
 		// TODO: pass real data to hfc client
 		$scope.post = function() {
-			console.log('INVOKE New Trade in transaction controller');
 			var request = {
-					traceInfo : $scope.traceInfo
+					rpctime : '2017-04-17 10:00:00',
+					params : {
+						type : 1,
+						chaincode : {
+							name : 'supplychain0',
+							version : 'v0'
+						},
+						ctorMsg : {
+							functionName : 'addNewTrade',
+							args : ['Sku', 'Sku654321', 'TraceInfo', $scope.traceInfo]
+						}
+					},
+					id : 2
 				};
 			Transaction.post(request)
 				.success(function(data) {

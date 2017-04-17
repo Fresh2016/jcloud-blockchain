@@ -36,31 +36,58 @@ module.exports = function(app) {
 	// API: query chain latest state
 	app.get('/v1/supplychain', function(req, res) {
 		console.log('API: query chain latest state');
-		queryClient.queryTransaction(req.query.transactionId)
+		console.dir(req.query);
+		queryClient.queryTransaction(req.query.rpctime, JSON.parse(req.query.params))
 		.then((result) => {
+			res.json(result);
+		}).catch((err) => {
+			var result = generateErrorResponse(err, req.query.id);
 			res.json(result);
 		});
 	});	
 
+	// API: query block hight or information
+	app.get('/v1/supplychain/blocks', function(req, res) {
+		console.log('API: query blocks heights or information');
+		console.dir(req.query);
+		queryClient.queryBlocks(req.query.rpctime, JSON.parse(req.query.params))
+		.then((result) => {
+			console.log(result);
+			res.json(result);
+		}).catch((err) => {
+			var result = generateErrorResponse(err, req.query.id);
+			res.json(result);
+		});
+	});	
+
+
 	// API: query orderer list and status
 	app.get('/v1/orderers', function(req, res) {
 		console.log('API: query orderers status');
+		console.dir(req.query);
 		queryClient.queryOrderers(req.query.channel)
 		.then((result) => {
 			console.log(result);
 			console.log(hideUrl(result, 'orderer'));
 			res.json(hideUrl(result, 'orderer'));
+		}).catch((err) => {
+			var result = generateErrorResponse(err, req.query.id);
+			res.json(result);
 		});
 	});	
 
 	// API: query peer list and status
 	app.get('/v1/peers', function(req, res) {
 		console.log('API: query peers status');
+		console.dir(req.query);
 		queryClient.queryPeers(req.query.channel)
 		.then((result) => {
 			console.log(result);
 			console.log(hideUrl(result, 'peer'));
 			res.json(hideUrl(result, 'peer'));
+		}).catch((err) => {
+			var result = generateErrorResponse(err, req.query.id);
+			res.json(result);
 		});
 	});	
 
@@ -68,13 +95,30 @@ module.exports = function(app) {
 	app.post('/v1/supplychain', function(req, res) {
 		console.log('API: invoke transaction');
 		console.dir(req.body);
-		invokeClient.invokeChaincode(req.body.traceInfo)
+		invokeClient.invokeChaincode(req.body.rpctime, req.body.params)
 		.then((result) => {
+			console.dir(result);
+			res.json(result);
+		}).catch((err) => {
+			var result = generateErrorResponse(err, req.body.id);
 			res.json(result);
 		});
 	});	
 
 };
+
+
+function generateErrorResponse(err, id) {
+	var result = {
+			status : 'failed',
+			message : {
+				Error : err.toString('utf8')
+			},
+			id : id
+		};
+	return result;
+}
+
 
 function hideUrl(result, name) {
 	for (let i in result) {

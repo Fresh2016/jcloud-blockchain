@@ -68,6 +68,8 @@ invokeClient.instantiateChaincode()
 //	console.log('isTransactionSucceed response: %j\n\n\n', response);
 //	return queryClient.queryTransaction('');
 	
+//}).then((response) => {
+
 queryClient.queryTransaction('')
 .then((response) => {
 	console.log('queryTransaction response: %j\n\n\n', response);	
