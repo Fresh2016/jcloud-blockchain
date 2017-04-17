@@ -31,36 +31,94 @@ angular.module('queryController', [])
 		$scope.previousBlockHash = '';
 		$scope.transactionId = '';
 		
+		var params_query_transaction = {
+		        type : '1',
+		        chaincode : {
+		        	name : "supplychain0",
+		        	version : "v0",
+		        },
+		        ctorMsg : {
+		        	functionName : "queryTrade",
+		        	args : ["Sku", "TradeDate", "TraceInfo"]
+		        }
+			};
+		var params_query_blocknum = {};
+		var params_query_blockInfo = {
+				blockNum : 1
+		};
+		
+		var request_query_transaction = {
+		        params : {
+					rpctime : '2017-04-17 10:00:00',
+			        params : params_query_transaction,
+			        id : 2
+				}
+			};
+		var request_query_blocknum = {
+		        params : {
+					rpctime : '2017-04-17 10:00:00',
+			        params : params_query_blocknum,
+			        id : 2
+				}
+			};
+		var request_query_blockInfo = {
+		        params : {
+					rpctime : '2017-04-17 10:00:00',
+			        params : params_query_blockInfo,
+			        id : 2
+				}
+			};
+		
 		// GET method, initial data when loading query page
-		Query.get({
-	        params: {
-	        	transactionId: $scope.transactionId
-	        }			
-		})
+		Query.get_transaction(request_query_transaction)
 		.success(function(data) {
-			bindData($scope, data);
+			bindData1($scope, data);
+		});	
+
+		Query.get_blocks(request_query_blocknum)
+		.success(function(data) {
+			bindData2($scope, data);
+		});	
+
+		Query.get_blocks(request_query_blockInfo)
+		.success(function(data) {
+			bindData3($scope, data);
 		});	
 
 		// QUERY method, refresh data when click query button
 		$scope.query = function() {
-			Query.get({
-		        params: {
-		        	transactionId: $scope.transactionId
-		        }			
-			})
+			Query.get_transaction(request_query_transaction)
 			.success(function(data) {
-				bindData($scope, data);
-			});				
+				bindData1($scope, data);
+			});	
+
+			Query.get_blocks(request_query_blocknum)
+			.success(function(data) {
+				bindData2($scope, data);
+			});	
+
+			Query.get_blocks(request_query_blockInfo)
+			.success(function(data) {
+				bindData3($scope, data);
+			});			
 		};	
 
-		function bindData($scope, data) {
-			$scope.blockNumber = data.blockNumber;
-			$scope.sku = data.sku;
-			$scope.tradeDate = data.tradeDate;
-			$scope.traceInfo = data.traceInfo;
-			$scope.currentBlockHash = data.currentBlockHash;
-			$scope.previousBlockHash = data.previousBlockHash;
-			$scope.transactionId = data.transactionId;
+		function bindData1($scope, data) {
+			var payloads = data.message.Payloads;
+			$scope.sku = payloads.Sku;
+			$scope.tradeDate = payloads.TradeDate;
+			$scope.traceInfo = payloads.TraceInfo;
+		}
+		
+		function bindData2($scope, data) {
+			var payloads = data.message.Payloads;
+			$scope.blockNumber = payloads.low;
+		}
+		
+		function bindData3($scope, data) {
+			var payloads = data.message.Payloads;
+			$scope.currentBlockHash = payloads.data_hash.buffer.data.slice(0,20) + '...';
+			$scope.previousBlockHash = payloads.previous_hash.buffer.data.slice(0,20) + '...';
 		}
 		
 	}]);
