@@ -131,7 +131,7 @@ function txEventListener(eh, resolve, reject, handle, deployId, tx, code) {
 	clearTimeout(handle);
 
 	//TODO：目前这里会导致程序异常退出
-	eh.unregisterTxEvent(deployId);
+	//eh.unregisterTxEvent(deployId);
 
 	if(validateCode(code)){
 		logger.debug('Transaction has been committed on peer '+ eh.ep.addr);

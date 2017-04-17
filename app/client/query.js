@@ -44,6 +44,7 @@ var defaultOrg = 'org2';
 
 
 module.exports.isTransactionSucceed = isTransactionSucceed;
+module.exports.queryBlocks = queryBlocks;
 module.exports.queryConfig = queryConfig;
 module.exports.queryPeers = queryPeers;
 module.exports.queryOrderers = queryOrderers;
@@ -181,27 +182,17 @@ function parseQueryChainConfig(config_envelope) {
 }
 
 
-function parseQuerySupplyChainResponse(response_payloads) {
+function parseQuerySupplyChainResponse(response_payloads, args) {
 	// Default response is all empty
-	var result = {
-			blockNumber : '',
-			sku : '',
-			tradeDate : '',
-			traceInfo : '',
-			previousBlockHash : '',
-			currentBlockHash : '',
-			transactionId : '',
-			counter : ''
-		};
+	var result = {};
 	
 	if (response_payloads) {
-		for(let i = 0; i < response_payloads.length; i++) {
+		for (let i = 0; i < response_payloads.length; i++) {
 			logger.debug('Query results [' + i + ']: ' + response_payloads[i]);
 			var res_list = response_payloads[i].toString('utf8').split(',');
-			result.sku = res_list[0];
-			result.tradeDate = res_list[1];
-			result.traceInfo = res_list[2];
-			result.counter = res_list[3];
+			for (let key = 0; key < args.length; key ++) {
+				result[args[key]] = res_list[key];				
+			}
 			return result;
 		}
 	} else {
@@ -301,6 +292,98 @@ function isTransactionSucceed(transactionId) {
 		
 	}).catch((err) => {
 		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
+		return new Promise((resolve, reject) => reject(err));
+		
+	});
+}
+
+
+function queryBlocks(rpctime, params) {
+	logger.info('\n\n***** Hyperledger fabric client: query transaction *****');
+
+	// client and chain should be claimed here
+	var client = new hfc();
+	var chain = null;
+
+	// this is a query, will just use org2's identity to
+	// submit the request
+	var org = defaultOrg;
+	var blockNum = params.blockNum;
+	
+	var options = { 
+			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
+		};
+
+	
+	var block_result = {};
+	var the_user = null;
+	
+	return setup.getAlivePeer(ORGS, org)
+	.then((peerInfo) => {
+		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
+		return setup.setupChainWithPeer(client, ORGS, peerInfo, true, null, false);
+
+	}).then((readyChain) => {
+		logger.debug('Successfully setup chain %s', readyChain.getName());
+		chain = readyChain;
+		return hfc.newDefaultKeyValueStore(options);
+		
+	}).then((keyValueStore) => {
+		client.setStateStore(keyValueStore);
+		return Submitter.getSubmitter(client, org, logger);
+
+	}).then((admin) => {	
+		logger.debug('Successfully enrolled user \'admin\'');
+		the_user = admin;
+
+		//FIXME: temporary fix until mspid is configured into Chain
+		admin.mspImpl._id = util.getMspid(ORGS, org);
+		
+		// use default primary peer
+		if (null == params || 0 == Object.keys(params).length) {
+			logger.debug('Querying block heights');
+			return chain.queryInfo();
+		} else {
+			logger.debug('Querying block info');
+			return chain.queryBlock(blockNum);
+		}
+		
+	}).then((blockchainInfo) => {
+		if (null == params || 0 == Object.keys(params).length) {
+//			logger.debug('Chain queryInfo() returned block height = ' + blockchainInfo.height.low);
+//			logger.debug('Chain queryInfo() returned block previousBlockHash = ' + blockchainInfo.previousBlockHash);
+//			logger.debug('Chain queryInfo() returned block currentBlockHash = ' + blockchainInfo.currentBlockHash);
+//			var block_hash = blockchainInfo.currentBlockHash;
+//			block_result.blockNumber = blockchainInfo.height.low;
+//			block_result.previousBlockHash = blockchainInfo.previousBlockHash;
+//			block_result.currentBlockHash = blockchainInfo.currentBlockHash;
+			return blockchainInfo.height;
+		} else {
+//			logger.debug('Chain queryInfo() returned block number = ' + blockchainInfo.header.number.low);
+//			logger.debug('Chain queryInfo() returned block previousBlockHash = ' + blockchainInfo.header.previous_hash);
+//			logger.debug('Chain queryInfo() returned block currentBlockHash = ' + blockchainInfo.header.data_hash);
+//			block_result.blockNumber = blockchainInfo.header.number;
+//			block_result.previousBlockHash = blockchainInfo.header.previous_hash;
+//			block_result.currentBlockHash = blockchainInfo.header.data_hash;
+			return blockchainInfo.header;
+		}
+
+	}).then((response_payloads) => {
+		logger.debug('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
+//		var response = Object.assign(parseQuerySupplyChainResponse(response_payloads), block_result);
+		var response = {
+				status : 'success',
+				message : {
+					Payloads : response_payloads
+				},
+				id : '2'
+			};
+		logger.info('END of query transaction.');
+		return new Promise((resolve, reject) => resolve(response));
+
+	}).catch((err) => {
+		logger.error('Failed to send query or parse query response due to error: ' + err.stack ? err.stack : err);
+		logger.info('END of query transaction.');
 		return new Promise((resolve, reject) => reject(err));
 		
 	});
@@ -434,7 +517,7 @@ function queryPeers(channelName) {
 }
 
 
-function queryTransaction() {
+function queryTransaction(rpctime, params) {
 	logger.info('\n\n***** Hyperledger fabric client: query transaction *****');
 
 	// client and chain should be claimed here
@@ -444,6 +527,9 @@ function queryTransaction() {
 	// this is a query, will just use org2's identity to
 	// submit the request
 	var org = defaultOrg;
+	var fcn = params.ctorMsg.functionName;
+	var args = params.ctorMsg.args;
+
 	var options = { 
 			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
 		};
@@ -497,8 +583,8 @@ function queryTransaction() {
 			chainId: util.channel,
 			txId: tx_id,
 			nonce: nonce,
-			fcn: 'queryTrade',
-			args: ["Sku", "TradeDate", "TraceInfo"]
+			fcn: fcn,
+			args: args
 		};
 		logger.debug('Sending query request: %s', JSON.stringify(request));
 		
@@ -506,8 +592,14 @@ function queryTransaction() {
 		
 	}).then((response_payloads) => {
 		logger.debug('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
-		var response = Object.assign(parseQuerySupplyChainResponse(response_payloads), block_result);
-		response.status = 'success';
+//		var response = Object.assign(parseQuerySupplyChainResponse(response_payloads), block_result);
+		var response = {
+				status : 'success',
+				message : {
+					Payloads : parseQuerySupplyChainResponse(response_payloads, args)
+				},
+				id : '2'
+			};
 		logger.info('END of query transaction.');
 		return new Promise((resolve, reject) => resolve(response));
 
