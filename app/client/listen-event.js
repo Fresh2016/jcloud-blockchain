@@ -77,31 +77,17 @@ function checkChannelInBlockEvent(block) {
 
 
 function disconnectEventhub(eventhubs) {
-	for(var key in eventhubs) {
-		var eventhub = eventhubs[key];
-		// Disconnect the event hub
-		if (eventhub && eventhub.isconnected()) {
-			logger.info('Disconnecting the event hub');
-			eventhub.disconnect();
-		}
-	}
+	// TODO: disable disconnectEventhub so that server.js doesn't quit after invoking
+//	for(var key in eventhubs) {
+//		var eventhub = eventhubs[key];
+//		// Disconnect the event hub
+//		if (eventhub && eventhub.isconnected()) {
+//			logger.info('Disconnecting the event hub');
+//			eventhub.disconnect();
+//		}
+//	}
 	return true;
 }
-
-
-//t.end = ((context, ehs, f) => {
-//	return function() {
-//		for(var key in ehs) {
-//			var eventhub = ehs[key];
-//			if (eventhub && eventhub.isconnected()) {
-//				logger.info('Disconnecting the event hub');
-//				eventhub.disconnect();
-//			}
-//		}
-//
-//		f.apply(context, arguments);
-//	};
-//})(t, eventhubs, t.end);
 
 
 function registerEvent(eh, type, resolve, reject, expireTime, deployId) {
