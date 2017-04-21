@@ -5,21 +5,6 @@ invokeClient = require('../client/invoke-transaction.js');
 queryClient = require('../client/query.js');
 
 
-exports.create =function(){
-  queryChannel('mychannel')
-    .then((result) => {
-          if(!result){
-              createChannel()
-                  .catch((err) => {
-                      console.log('.........');
-                      return false;
-                  });
-          }else{
-              console.log('已经被创建');
-          }
-
-    })
-}
 
 
 
@@ -38,12 +23,12 @@ function createChannel(){
 }
 
 
-exports.queryChannel = queryChannel();
-function queryChannel(str){
-    return   queryClient.queryPeers(str)
+
+function queryChannel(channelName){
+    return   queryClient.queryPeers(channelName)
         .then((response) => {
             console.log('queryPeers response: %j\n\n\n', response);
-            return queryClient.queryOrderers(str);
+            return queryClient.queryOrderers(channelName);
 
         }).then((response) => {
             console.log('queryOrderers response: %j\n\n\n', response);
@@ -56,3 +41,21 @@ function queryChannel(str){
         });
 }
 
+
+
+exports.create =function(channelName){
+    queryChannel(channelName)
+        .then((result) => {
+            if(!result){
+                createChannel()
+                    .catch((err) => {
+                        console.log('.........');
+                        return  new Promise((resolve, reject) => resolve(false));
+                    });
+            }else{
+                console.log('已经被创建');
+                return  new Promise((resolve, reject) => resolve(true));
+            }
+
+        })
+}
