@@ -110,8 +110,7 @@ module.exports = function(app) {
 		console.dir(req.body);
 		manageClient.create('mychannel')
 			.then((result) => {
-				//console.dir(result);
-				console.log('******************************'+result);
+				console.dir(result);
 				res.json(result);
 			}).catch((err) => {
 				var result = generateErrorResponse(err, req.body.id);
