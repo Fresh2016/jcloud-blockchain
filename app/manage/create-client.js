@@ -44,17 +44,24 @@ function queryChannel(channelName){
 
 
 exports.create =function(channelName){
-    queryChannel(channelName)
+    return queryChannel(channelName)
         .then((result) => {
             if(!result){
-                createChannel()
-                    .catch((err) => {
-                        console.log('.........');
-                        return  new Promise((resolve, reject) => resolve(false));
+                return   createChannel()
+                    .then((result) => {
+                        console.log('******************************'+result);
+                        if(result){
+                            return  new Promise((resolve, reject) => resolve("创建成功"));
+                        }else{
+                            return  new Promise((resolve, reject) => resolve("创建失败"));
+                        }
+
+                    }).catch((err) => {
+                        return  new Promise((resolve, reject) => resolve("创建失败"));
                     });
             }else{
                 console.log('已经被创建');
-                return  new Promise((resolve, reject) => resolve(true));
+                return  new Promise((resolve, reject) => resolve("已经被创建"));
             }
 
         })
