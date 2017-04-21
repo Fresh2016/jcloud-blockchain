@@ -17,7 +17,7 @@ function createChannel(){
              //console.log('shiying is aaaa.');
              return  new Promise((resolve, reject) => resolve(true));
         }).catch((err) => {
-            console.log('Return without executing joining');
+             console.log('Return without executing joining');
              return  new Promise((resolve, reject) => resolve(false));
         });
 }
@@ -49,20 +49,21 @@ exports.create =function(channelName){
             if(!result){
                 return   createChannel()
                     .then((result) => {
-                        console.log('******************************'+result);
                         if(result){
-                            return  new Promise((resolve, reject) => resolve("创建成功"));
+                            return  new Promise((resolve, reject) => resolve("Create success"));
                         }else{
-                            return  new Promise((resolve, reject) => resolve("创建失败"));
+                            return  new Promise((resolve, reject) => resolve("Create failed"));
                         }
 
                     }).catch((err) => {
-                        return  new Promise((resolve, reject) => resolve("创建失败"));
+                        return  new Promise((resolve, reject) => resolve("Create failed"));
                     });
             }else{
-                console.log('已经被创建');
-                return  new Promise((resolve, reject) => resolve("已经被创建"));
+                console.log('Already exist');
+                return  new Promise((resolve, reject) => resolve("Already exist"));
             }
 
-        })
+        }).catch((err) => {
+            return  new Promise((resolve, reject) => resolve("Create failed"));
+        });
 }
