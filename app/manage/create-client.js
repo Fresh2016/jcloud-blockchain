@@ -56,7 +56,9 @@ function instantiateChaincode(){
 }
 
 
-
+/**
+ * create, join, install, instantiate
+ */
 function createChannelManage(){
     createClient.createChannel()
         .then((result) => {
@@ -81,7 +83,11 @@ function createChannelManage(){
 }
 
 
-
+/**
+ * 查询 Channel
+ * @param channelName
+ * @returns {Promise.<T>|*|Observable}
+ */
 function queryChannel(channelName){
     return   queryClient.queryPeers(channelName)
         .then((response) => {
@@ -108,14 +114,12 @@ exports.create =function(channelName){
                 return   createChannelManage()
                     .then((result) => {
                         if(result){
-                            console.log('**********************************');
                             return  new Promise((resolve, reject) => resolve("Create success"));
                         }else{
                             return  new Promise((resolve, reject) => resolve("Create failed"));
                         }
 
                     }).catch((err) => {
-                        console.log('%%%%%%%%%%%%%%%%%%%%%%%%%');
                         return  new Promise((resolve, reject) => resolve("Create failed"));
                     });
             }else{
