@@ -27,9 +27,9 @@ var hfc = require('fabric-client');
 // Channel and chaincode settings
 // TODO: should be managed by manager and stored in DB
 module.exports.txFilePath = './app/config/mychannel.tx';
-module.exports.chaincodePath = 'github.com/supplychain';
+module.exports.chaincodePath = 'github.com/sourceproduct';
 module.exports.channel = 'mychannel';
-module.exports.chaincodeId = 'supplychain0';
+module.exports.chaincodeId = 'sourceproduct0';
 module.exports.chaincodeVersion = 'v0';
 
 // Read config.json information

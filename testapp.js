@@ -34,7 +34,7 @@ joinClient.joinChannel()
 */
 
 
-/*
+///*
 //TODO：出bug了，两个org的数据不一致？
 installClient.installChaincode()
 .then(() => {
@@ -61,7 +61,7 @@ invokeClient.instantiateChaincode()
 
 
 //TODO:eventhub断开
-///*
+/*
 //transaction_id = 'e1127348d390a07f335801fa2b2b1752451b7bc36448e05e36f749ba1ce0cf91'
 //queryClient.isTransactionSucceed(transaction_id)
 //.then((response) => {
