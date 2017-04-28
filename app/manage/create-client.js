@@ -5,20 +5,78 @@ invokeClient = require('../client/invoke-transaction.js');
 queryClient = require('../client/query.js');
 
 
-
-
+/**
+ * 创建Channel
+ * @returns {Promise.<T>|*|Observable}
+ */
 
 function createChannel(){
     return  createClient.createChannel()
         .then((result) => {
-            console.log('API: create channel result %s', JSON.stringify(result));
-            return joinClient.joinChannel();
-        }).then((result) => {
-             //console.log('shiying is aaaa.');
              return  new Promise((resolve, reject) => resolve(true));
         }).catch((err) => {
-             console.log('Return without executing joining');
-             return  new Promise((resolve, reject) => resolve(false));
+            err.errName="createChannelError";
+            return new Promise((resolve, reject) => reject(err));
+        });
+}
+/**
+ *  join Channel
+ * @returns {Promise.<T>|*|Observable}
+ */
+function joinChannel(){
+    return  joinClient.joinChannel()
+        .catch((err) => {
+            err.errName="joinChannelError";
+            return new Promise((resolve, reject) => reject(err));
+        });
+}
+
+/**
+ * installChaincode
+ * @returns {Promise.<T>|*|Observable}
+ */
+function installChaincode(){
+    return  installClient.installChaincode()
+        .catch((err) => {
+            err.errName="installChaincodeError";
+            return new Promise((resolve, reject) => reject(err));
+        });
+}
+
+/**
+ *  instantiateChaincode
+ * @returns {Promise.<T>|*|Observable}
+ */
+function instantiateChaincode(){
+    return  invokeClient.instantiateChaincode()
+        .catch((err) => {
+            err.errName="installChaincodeError";
+            return new Promise((resolve, reject) => reject(err));
+        });
+}
+
+
+
+function createChannelManage(){
+    createClient.createChannel()
+        .then((result) => {
+            console.log('API: create channel result %s', JSON.stringify(result));
+            return joinChannel();
+        }) .then((result) => {
+            console.log('API: join channel result %s', JSON.stringify(result));
+            return installChaincode();
+
+        }) .then((result) => {
+            console.log('API: install channel result %s', JSON.stringify(result));
+            return instantiateChaincode();
+
+        }).then((result) => {
+            console.log('API: instantiate channel result %s', JSON.stringify(result));
+
+            return  new Promise((resolve, reject) => resolve(true));
+        }).catch((err) => {
+            console.log('createChannelManage channel result %s', JSON.stringify(err));
+            return  new Promise((resolve, reject) => resolve(false));
         });
 }
 
@@ -47,15 +105,17 @@ exports.create =function(channelName){
     return queryChannel(channelName)
         .then((result) => {
             if(!result){
-                return   createChannel()
+                return   createChannelManage()
                     .then((result) => {
                         if(result){
+                            console.log('**********************************');
                             return  new Promise((resolve, reject) => resolve("Create success"));
                         }else{
                             return  new Promise((resolve, reject) => resolve("Create failed"));
                         }
 
                     }).catch((err) => {
+                        console.log('%%%%%%%%%%%%%%%%%%%%%%%%%');
                         return  new Promise((resolve, reject) => resolve("Create failed"));
                     });
             }else{
