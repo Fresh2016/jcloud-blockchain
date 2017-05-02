@@ -1,0 +1,20 @@
+GET /v1/supplychain?rpctime=2017-04-17 10:00:00&amp;params={"type":1,"chaincode":{"name":"supplychain0","version":"v0"},"ctorMsg":{"functionName":"queryTrade","args":["Sku", "TradeDate", "TraceInfo"]}}&amp;id=2 HTTP/1.1
+Host: localhost:8081
+Cache-Control: no-cache
+Postman-Token: 0d9738a5-5751-6a63-7276-ee69b1f729e8
+
+
+
+rpctime=2017-04-17 10:00:00
+params={
+"type":1,
+"chaincode":{
+	"name":"supplychain0",
+	"version":"v0"
+	},
+"ctorMsg":{
+	"functionName":"queryTrade",
+	"args":["Sku", "TradeDate", "TraceInfo"]
+	}
+}
+id=2
