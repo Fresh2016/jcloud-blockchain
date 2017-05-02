@@ -22,6 +22,7 @@ var Peer = require('fabric-client/lib/Peer.js');
 var Orderer = require('fabric-client/lib/Orderer.js');
 var EventHub = require('fabric-client/lib/EventHub.js');
 var Submitter = require('./get-submitter.js');
+var exe = require('./execute-recursively.js');
 var setup = require('./setup.js');
 var util = require('./util.js');
 
@@ -42,6 +43,9 @@ var transProtoPath = './node_modules/fabric-client/lib/protos/peer/transaction.p
 // should work properly
 var defaultOrg = 'org2';
 
+// Query peers is executed org by org, thus params and result should be claimed here
+var queriedChannelName = null;
+var queryPeerResult = null;
 
 module.exports.isTransactionSucceed = isTransactionSucceed;
 module.exports.queryBlocks = queryBlocks;
@@ -52,15 +56,24 @@ module.exports.queryTransaction = queryTransaction;
 module.exports.queryTransactionHistory = queryTransactionHistory;
 
 
-//function addPeerPromise(peerPromises, chain, thisPeer) {
-//	var peerPromise = new Promise((resolve, reject) => {
-//		resolve(chain.queryChannels(thisPeer));
-//	}).then((response) => {
-//		response.peer = thisPeer.getUrl();
-//		return response;
-//	});	
-//	peerPromises.push(peerPromise);
-//}
+function addDefaultPeerStatus(queryPeerResult, peerInfo) {
+	var peerStatus = {
+			name: peerInfo.requests,
+			status: 'DOWN'
+		};
+	queryPeerResult.push(peerStatus);
+}
+
+
+function addPeerPromise(peerPromises, client, thisPeer) {
+	var peerPromise = new Promise((resolve, reject) => {
+		resolve(client.queryChannels(thisPeer));
+	}).then((response) => {
+		response.peer = thisPeer.getUrl();
+		return response;
+	});	
+	peerPromises.push(peerPromise);
+}
 
 
 function decodeTransaction(transactionId, processed_transaction, commonProtoPath, transProtoPath) {
@@ -86,20 +99,51 @@ function decodeTransaction(transactionId, processed_transaction, commonProtoPath
 }
 
 
-function getPeerStatus(response, channelName){
-	var peerStatus = {
-			name: response.peer,
-			status: 'DOWN'
-		}
-	if (isPeerInChannel(response, channelName)){
-		peerStatus.status = 'UP';
+function encapsulateQueryResponse(response_payloads) {
+	var response = {
+			status : 'success',
+			message : {
+				//TODO: Need to check responses
+				Payloads : response_payloads
+				//Payloads : parseQuerySupplyChainResponse(response_payloads, args)
+			},
+			id : '2'
+		};
+	return response;
+}
+
+
+function generateProposalRequest(fcn, args, nonce, tx_id) {
+	var request = {
+			chainId: util.channel,
+			chaincodeId: util.chaincodeId,
+			chaincodeVersion: util.chaincodeVersion,
+			fcn: fcn,
+			args: args,
+			txId: tx_id,
+			nonce: nonce,
+	};
+	
+	return request;
+}
+
+
+function initialPeerStatus() {
+	var queryPeerResult = [];
+	var peers = setup.getPeerAll(ORGS);
+	try{
+		peers.forEach((peerInfo) => {
+			addDefaultPeerStatus(queryPeerResult, peerInfo);
+		});
+		return queryPeerResult;
+	} catch(err) {
+		logger.error('Failed to initialize PeerStatus due to error: %s', err);
 	}
-	return peerStatus;
 }
 
 
 function isPeerInChannel(response, channelName) {
-	if (null != response.channels) {
+	try{
 		for (let num in response.channels) {
 			if (channelName === response.channels[num].channel_id) {
 				logger.debug('Peer %s has joined channel %s', response.peer, 
@@ -107,16 +151,66 @@ function isPeerInChannel(response, channelName) {
 				return true;
 			}
 		}
+	} catch(err) {
+		logger.error('Failed to check responses of queryChannels due to error: %s', err);
 	}
 	return false;
 }
 
 
+function isTransactionSucceed(transactionId) {
+	logger.info('\n\n***** Hyperledger fabric client: query transaction validationCode by transactionId: %s *****', transactionId);
+
+	// client and chain should be claimed here
+	var client = new hfc();
+	var chain = null;
+
+	// this is a query, will just use org2's identity to
+	// submit the request
+	var org = defaultOrg;
+	
+	return setup.getAlivePeer(ORGS, org)
+	.then((peerInfo) => {
+		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
+		return setup.setupChainWithPeer(client, ORGS, peerInfo, true, null, false);
+
+	}).then((readyChain) => {
+		logger.debug('Successfully setup chain %s', readyChain.getName());
+		chain = readyChain;
+		return Submitter.getSubmitter(client, org, logger);
+
+	}).then((admin) => {		
+		logger.info('Successfully enrolled user \'admin\'');
+
+		// use default primary peer
+		return queryTransactionByTxId(chain, transactionId);
+		
+	}).then((processed_transaction) => {
+		var response = {
+				status : 'failed'
+		};
+		var succeeded_decode = decodeTransaction(transactionId, processed_transaction, commonProtoPath, transProtoPath);
+		if (succeeded_decode) {		
+			logger.info('END of query transaction status.');
+			response.status = 'success';
+			return new Promise((resolve, reject) => resolve(response));
+		} else {
+			util.throwError(logger, null, 'Failed to query with invalid tx_id.');
+		}
+		
+	}).catch((err) => {
+		logger.error('Failed to query with error: %s', err);
+		return new Promise((resolve, reject) => reject(err));
+		
+	});
+}
+
+
 function parseQueryChainConfig(config_envelope) {
 	try {
-		let channel = config_envelope.config.channel;
+		let channel = config_envelope.config.channel_group;
 		logger.debug('queryConfig -  Channel version :: %s', channel.version);
-		logger.debug('queryConfig -  Channel groups name and originalName:: %s, ', 
+		logger.debug('queryConfig -  Channel groups name and originalName:: %s', 
 				channel.groups.field.name, channel.groups.field.originalName);
 
 		let app_map = channel.groups.map.Application;
@@ -226,75 +320,17 @@ function parseQueryHistoryResponse(response_payloads) {
 function parseQueryPeerStatusReponse(responses, channelName) {
 	// Only when peer responses with channels including desired channelName,
 	// its status is returned as UP. Other cases are DOWN.
-	var result = [];
-	if (responses) {
-		for (let i in responses) {
-			let response = responses[i];
-			if (null != response) {
-				var peerStatus = getPeerStatus(response, channelName);
-			}
-			result.push(peerStatus);
-		}
-	}
-	return result;
-}
-
-
-function isTransactionSucceed(transactionId) {
-	logger.info('\n\n***** Hyperledger fabric client: query transaction validationCode by transactionId: %s *****', transactionId);
-
-	// client and chain should be claimed here
-	var client = new hfc();
-	var chain = null;
-
-	// this is a query, will just use org2's identity to
-	// submit the request
-	var org = defaultOrg;
-	var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};	
+	var result = queryPeerResult;
 	
-	return setup.getAlivePeer(ORGS, org)
-	.then((peerInfo) => {
-		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
-		return setup.setupChainWithPeer(client, ORGS, peerInfo, true, null, false);
+	try{
+		responses.forEach((response) => {
+			queryPeerResult = updatePeerStatus(queryPeerResult, response, channelName);
+		});
+	} catch(err) {
+		logger.error('Failed to parse query response due to error:  %s', err);
+	}
 
-	}).then((readyChain) => {
-		logger.debug('Successfully setup chain %s', readyChain.getName());
-		chain = readyChain;
-		return hfc.newDefaultKeyValueStore(options);
-		
-	}).then((keyValueStore) => {
-		client.setStateStore(keyValueStore);
-		return Submitter.getSubmitter(client, org, logger);
-
-	}).then((admin) => {		
-		logger.debug('Successfully enrolled user \'admin\'');
-
-		//FIXME: temporary fix until mspid is configured into Chain
-		admin.mspImpl._id = util.getMspid(ORGS, org);
-
-		// use default primary peer
-		return queryTransactionByTxId(chain, transactionId);
-		
-	}).then((processed_transaction) => {
-		var response = {
-				status : 'failed'
-		};
-		var succeeded_decode = decodeTransaction(transactionId, processed_transaction, commonProtoPath, transProtoPath);
-		if (succeeded_decode) {		
-			logger.info('END of query transaction status.');
-			response.status = 'success';
-			return new Promise((resolve, reject) => resolve(response));
-		} else {
-			util.throwError(logger, null, 'Failed to query with invalid tx_id.');
-		}
-		
-	}).catch((err) => {
-		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
-		return new Promise((resolve, reject) => reject(err));
-		
-	});
+	return result;
 }
 
 
@@ -335,9 +371,6 @@ function queryBlocks(rpctime, params) {
 	}).then((admin) => {	
 		logger.debug('Successfully enrolled user \'admin\'');
 		the_user = admin;
-
-		//FIXME: temporary fix until mspid is configured into Chain
-		admin.mspImpl._id = util.getMspid(ORGS, org);
 		
 		// use default primary peer
 		if (null == params || 0 == Object.keys(params).length) {
@@ -351,20 +384,22 @@ function queryBlocks(rpctime, params) {
 	}).then((blockchainInfo) => {
 		if (null == params || 0 == Object.keys(params).length) {
 //			logger.debug('Chain queryInfo() returned block height = ' + blockchainInfo.height.low);
-//			logger.debug('Chain queryInfo() returned block previousBlockHash = ' + blockchainInfo.previousBlockHash);
-//			logger.debug('Chain queryInfo() returned block currentBlockHash = ' + blockchainInfo.currentBlockHash);
+//			logger.debug('Chain queryInfo() returned block previousBlockHash = ' + blockchainInfo.previousBlockHash.toString('base64'));
+//			logger.debug('Chain queryInfo() returned block currentBlockHash = ' + blockchainInfo.currentBlockHash.toString('base64'));
 //			var block_hash = blockchainInfo.currentBlockHash;
 //			block_result.blockNumber = blockchainInfo.height.low;
-//			block_result.previousBlockHash = blockchainInfo.previousBlockHash;
-//			block_result.currentBlockHash = blockchainInfo.currentBlockHash;
+//			block_result.previousBlockHash = blockchainInfo.previousBlockHash.toString('base64');
+//			block_result.currentBlockHash = blockchainInfo.currentBlockHash.toString('base64');
 			return blockchainInfo.height;
 		} else {
 //			logger.debug('Chain queryInfo() returned block number = ' + blockchainInfo.header.number.low);
-//			logger.debug('Chain queryInfo() returned block previousBlockHash = ' + blockchainInfo.header.previous_hash);
-//			logger.debug('Chain queryInfo() returned block currentBlockHash = ' + blockchainInfo.header.data_hash);
+//			logger.debug('Chain queryInfo() returned block previousBlockHash = ' + blockchainInfo.header.previous_hash.toString('base64'));
+//			logger.debug('Chain queryInfo() returned block currentBlockHash = ' + blockchainInfo.header.data_hash.toString('base64'));
 //			block_result.blockNumber = blockchainInfo.header.number;
-//			block_result.previousBlockHash = blockchainInfo.header.previous_hash;
-//			block_result.currentBlockHash = blockchainInfo.header.data_hash;
+//			block_result.previousBlockHash = blockchainInfo.header.previous_hash.toString('base64');
+//			block_result.currentBlockHash = blockchainInfo.header.data_hash.toString('base64');
+			blockchainInfo.header.previous_hash = blockchainInfo.header.previous_hash.toString('base64');
+			blockchainInfo.header.data_hash = blockchainInfo.header.data_hash.toString('base64');
 			return blockchainInfo.header;
 		}
 
@@ -417,20 +452,10 @@ function queryConfig(channelName) {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
 		chain = readyChain;
 		ordererStatus.name = chain.getOrderers()[0].getUrl();
-		var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
-		return hfc.newDefaultKeyValueStore(options);
-		
-	}).then((keyValueStore) => {
-		client.setStateStore(keyValueStore);
 		return Submitter.getSubmitter(client, org, logger);
 
 	}).then((admin) => {		
-		logger.debug('Successfully enrolled user \'admin\'');
-
-		//FIXME: temporary fix until mspid is configured into Chain
-		admin.mspImpl._id = util.getMspid(ORGS, org);
+		logger.info('Successfully enrolled user \'admin\'');
 		return chain.getChannelConfig();
 		
 	}).then((response_payloads) => {
@@ -441,7 +466,7 @@ function queryConfig(channelName) {
 		return new Promise((resolve, reject) => resolve([ordererStatus]));
 
 	}).catch((err) => {
-		logger.error('Failed to query with error:' + err.stack ? err.stack : err);
+		logger.error('Failed to query with error: %s', err);
 		logger.info('END of query config(orderer).');
 		return new Promise((resolve, reject) => reject(err));
 
@@ -460,59 +485,56 @@ function queryPeers(channelName) {
 	// TODO: channel name is fixed from config file and should be passed from REST request
 	logger.info('\n\n***** Hyperledger fabric client: query peer status of channel: %s *****', channelName);
 
+	var orgs = util.getOrgs(ORGS);
+	logger.info('There are %s organizations: %s. Going to query peers one by one.', orgs.length, orgs);
+	queriedChannelName = channelName;
+	queryPeerResult = initialPeerStatus();
+
+	return exe.executeTheNext(orgs, queryPeersByOrg, 'Query Peers')
+	.catch((err) => {
+		logger.error('Failed to query peers with error:  %s', err);
+		// Failure back and accept further err processing
+		return new Promise((resolve, reject) => reject(err));
+	});
+};
+
+
+// As different org holds different certs, only peers in the same org can be queried in once operation
+function queryPeersByOrg(org) {
+	// TODO: channel name is fixed from config file and should be passed from REST request
+	logger.info('Calling peers in organization "%s" to query the peers', org);
+
 	// client and chain should be claimed here
 	var client = new hfc();
 	var eventhubs = [];
-	var chain = setup.setupChainWithAllPeers(client, ORGS, eventhubs);
+	var chain = setup.setupChainByOrg(client, ORGS, org, eventhubs, true);
 
-	// this is a transaction, will just use org1's identity to
-	// submit the request
-	var org = defaultOrg;
-	var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
+	return Submitter.getSubmitter(client, org, logger)
+	.then((admin) => {	
+		logger.info('Successfully enrolled user \'admin\'');
 
-	return hfc.newDefaultKeyValueStore(options)
-	.then((keyValueStore) => {
-		client.setStateStore(keyValueStore);
-		return Submitter.getSubmitter(client, org, logger);
-
-	}).then((admin) => {	
-		logger.debug('Successfully enrolled user \'admin\'');
-
-		//FIXME: temporary fix until mspid is configured into Chain
-		admin.mspImpl._id = util.getMspid(ORGS, org);
-
-//		var peerPromises = [];
-//		var peers = chain.getPeers();
-//		peers.forEach((thisPeer) => {
-//			return addPeerPromise(peerPromises, chain, thisPeer)
-//		});	
-//		return Promise.all(peerPromises)
-
+		var peerPromises = [];
 		var peers = chain.getPeers();
-		return Promise.all(peers.map((thisPeer) => {
-			let peerPromise = new Promise((resolve, reject) => {
-				resolve(chain.queryChannels(thisPeer));
-			}).then((response) => {
-				Object.assign(response, { peer: thisPeer.getUrl() });
-//				response.peer = thisPeer.getUrl();
-				return response;
-			});	
-			return peerPromise;
-		}))
+		peers.forEach((thisPeer) => {
+			return addPeerPromise(peerPromises, client, thisPeer)
+		});	
+
+		return Promise.all(peerPromises)
 			.then((responses) => {
-				result = parseQueryPeerStatusReponse(responses, channelName);
+				result = parseQueryPeerStatusReponse(responses, queriedChannelName);
 				logger.debug('Returning peer status: %s', JSON.stringify(result));
-				logger.info('END of query peers.');
 				return new Promise((resolve, reject) => resolve(result));
 
 			}).catch((err) => {
-				logger.error('Failed to send query or parse query response due to error: ' + err.stack ? err.stack : err);
-				logger.info('END of query peers.');
+//				logger.error('Failed to send query or parse query response due to error:  %s', err);
 				return new Promise((resolve, reject) => reject(err));
 
 			});
+	}).catch((err) => {
+		logger.error('Failed to send query or parse query response due to error:  %s', err);
+		logger.info('END of query transaction.');
+		return new Promise((resolve, reject) => reject(err));
+		
 	});
 }
 
@@ -530,10 +552,6 @@ function queryTransaction(rpctime, params) {
 	var fcn = params.ctorMsg.functionName;
 	var args = params.ctorMsg.args;
 
-	var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
-
 	
 	var block_result = {};
 	var the_user = null;
@@ -546,18 +564,11 @@ function queryTransaction(rpctime, params) {
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
 		chain = readyChain;
-		return hfc.newDefaultKeyValueStore(options);
-		
-	}).then((keyValueStore) => {
-		client.setStateStore(keyValueStore);
 		return Submitter.getSubmitter(client, org, logger);
 
 	}).then((admin) => {	
-		logger.debug('Successfully enrolled user \'admin\'');
+		logger.info('Successfully enrolled user \'admin\'');
 		the_user = admin;
-
-		//FIXME: temporary fix until mspid is configured into Chain
-		admin.mspImpl._id = util.getMspid(ORGS, org);
 		
 		// use default primary peer
 		return chain.queryInfo();
@@ -573,38 +584,24 @@ function queryTransaction(rpctime, params) {
 
 	}).then(() => {
 		nonce = ClientUtils.getNonce()
-		var tx_id = chain.buildTransactionID(nonce, the_user);
-
-		// send query
-		// for supplychain
-		var request = {
-			chaincodeId : util.chaincodeId,
-			chaincodeVersion : util.chaincodeVersion,
-			chainId: util.channel,
-			txId: tx_id,
-			nonce: nonce,
-			fcn: fcn,
-			args: args
-		};
+		var tx_id = hfc.buildTransactionID(nonce, the_user);
+		var request = generateProposalRequest(fcn, args, nonce, tx_id);
 		logger.debug('Sending query request: %s', JSON.stringify(request));
 		
 		return chain.queryByChaincode(request);
 		
 	}).then((response_payloads) => {
 		logger.debug('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
-//		var response = Object.assign(parseQuerySupplyChainResponse(response_payloads), block_result);
-		var response = {
-				status : 'success',
-				message : {
-					Payloads : parseQuerySupplyChainResponse(response_payloads, args)
-				},
-				id : '2'
-			};
-		logger.info('END of query transaction.');
-		return new Promise((resolve, reject) => resolve(response));
+		if (null == response_payloads || response_payloads.toString('utf8', 0, 10).indexOf('Error') === 0) {
+			util.throwError(logger, null, response_payloads.toString('utf8', 0, 10));
+		} else {
+			var response = encapsulateQueryResponse(response_payloads);
+			logger.info('END of query transaction.');
+			return new Promise((resolve, reject) => resolve(response));
+		}
 
 	}).catch((err) => {
-		logger.error('Failed to send query or parse query response due to error: ' + err.stack ? err.stack : err);
+		logger.error('Failed to send query or parse query response due to error: %s', err);
 		logger.info('END of query transaction.');
 		return new Promise((resolve, reject) => reject(err));
 		
@@ -612,7 +609,7 @@ function queryTransaction(rpctime, params) {
 }
 
 
-function queryTransactionHistory() {
+function queryTransactionHistory(rpctime, params) {
 	logger.info('\n\n***** Hyperledger fabric client: query transaction history *****');
 
 	// client and chain should be claimed here
@@ -622,9 +619,9 @@ function queryTransactionHistory() {
 	// this is a query, will just use org2's identity to
 	// submit the request
 	var org = defaultOrg;
-	var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
+	var fcn = params.ctorMsg.functionName;
+	var args = params.ctorMsg.args;
+
 	var the_user = null;
 
 	return setup.getAlivePeer(ORGS, org)
@@ -635,49 +632,32 @@ function queryTransactionHistory() {
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
 		chain = readyChain;
-		return hfc.newDefaultKeyValueStore(options);
-		
-	}).then((keyValueStore) => {
-		client.setStateStore(keyValueStore);
 		return Submitter.getSubmitter(client, org, logger);
 
 	}).then((admin) => {		
-		logger.debug('Successfully enrolled user \'admin\'');
+		logger.info('Successfully enrolled user \'admin\'');
 		the_user = admin;
-
-		//FIXME: temporary fix until mspid is configured into Chain
-		admin.mspImpl._id = util.getMspid(ORGS, org);
 		
 		// use default primary peer
 		return chain.queryInfo();
 		
 	}).then(() => {
 		nonce = ClientUtils.getNonce()
-		var tx_id = chain.buildTransactionID(nonce, the_user);
-
-		// send query
-		// for supplychain
-		var request = {
-			chaincodeId : util.chaincodeId,
-			chaincodeVersion : util.chaincodeVersion,
-			chainId: util.channel,
-			txId: tx_id,
-			nonce: nonce,
-			fcn: 'getTradeHistory',
-			args: ["TransactionId", "TraceInfo"]
-		};
+		var tx_id = hfc.buildTransactionID(nonce, the_user);
+		var request = generateProposalRequest(fcn, args, nonce, tx_id);
 		logger.debug('Sending query request: %s', JSON.stringify(request));
 		
 		return chain.queryByChaincode(request);
 	}).then((response_payloads) => {
 		logger.debug('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
-		var response = parseQueryHistoryResponse(response_payloads);
-		response.status = 'success';
+//		var response = parseQueryHistoryResponse(response_payloads);
+//		response.status = 'success';
+		var response = encapsulateQueryResponse(response_payloads);
 		logger.info('END of query transaction history.');
 		return new Promise((resolve, reject) => resolve(response));
 		
 	}).catch((err) => {
-		logger.error('Failed to send query or parse query response due to error: ' + err.stack ? err.stack : err);
+		logger.error('Failed to send query or parse query response due to error:  %s', err);
 		logger.info('END of query transaction history.');
 		return new Promise((resolve, reject) => reject(err));
 	});
@@ -685,12 +665,22 @@ function queryTransactionHistory() {
 
 
 function queryTransactionByTxId(chain, transactionId){
-	//TODO: a default id is set for initial value during loading query page
 	if (!transactionId) {
-		util.throwError(logger, new Error('Transaction ID not found'), '');
+		util.throwError(logger, new Error('Transaction ID not found'), 'Failed to query transaction by Tx ID.');
 	} else {
 		logger.info('Got transactionId %s', transactionId);
 		// send query
-		return chain.queryTransaction(transactionId); //assumes the end-to-end has run first
+		return chain.queryTransaction(transactionId);
 	}
+}
+
+
+function updatePeerStatus(queryPeerResult, response, channelName) {
+	queryPeerResult.forEach((peerStatus) => {
+		console.log('checking peer in channel: %s', isPeerInChannel(response, channelName));
+		if (peerStatus.name === response.peer && isPeerInChannel(response, channelName)) {
+			peerStatus.status = 'UP';
+		}
+	});
+	return queryPeerResult;
 }
