@@ -28,8 +28,12 @@ package main
 
 import (
 	"errors"
+<<<<<<< HEAD
         "bytes"
 	"fmt"
+=======
+ 	"fmt"
+>>>>>>> refs/heads/maxipeng
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 )
 

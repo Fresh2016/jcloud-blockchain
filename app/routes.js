@@ -24,7 +24,7 @@
 //installClient = require('./client/install-chaincode.js');
 invokeClient = require('./client/invoke-transaction.js');
 queryClient = require('./client/query.js');
-
+manageClient = require('./manage/create-client.js');
 module.exports = function(app) {
 
 	console.log('Inside routes.js');
@@ -103,8 +103,20 @@ module.exports = function(app) {
 			var result = generateErrorResponse(err, req.body.id);
 			res.json(result);
 		});
-	});	
+	});
 
+	app.all('/v1/create', function(req, res) {
+		console.log('API: create');
+		console.dir(req.body);
+		manageClient.create('mychannel')
+			.then((result) => {
+				console.dir(result);
+				res.json(result);
+			}).catch((err) => {
+				//var result = generateErrorResponse(err, req.body.id);
+				res.json(err);
+			});
+	});
 };
 
 

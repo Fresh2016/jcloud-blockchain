@@ -1055,6 +1055,7 @@ func GetSkuAuthenticationRecordListByTraceCode(stub shim.ChaincodeStubInterface,
 	for i = 0; rs.HasNext(); i++ {
 
 		// We can process whichever return value is of interest
+<<<<<<< HEAD
 		_, value, err := rs.Next()
 		if err != nil {
 			return shim.Success(nil)
@@ -1171,6 +1172,125 @@ func GetSkuTransactionListByTraceCode(stub shim.ChaincodeStubInterface, args []s
 			return shim.Success(nil)
 		}
 		bid, err := JSONtoSkuTransactionObj(value)
+=======
+		myKeyVal, err := rs.Next()
+		if err != nil {
+			return shim.Success(nil)
+		}
+		bid, err := JSONtoSkuAuthenticationTraceRecordObj(myKeyVal.Value)
+		if err != nil {
+			error_str := fmt.Sprintf("GetSkuAuthenticationRecordListByTraceCode() operation failed - Unmarshall Error. %s", err)
+			fmt.Println(error_str)
+			return shim.Error(error_str)
+		}
+		fmt.Println("GetList() : my Value : ", bid)
+		tlist = append(tlist, bid)
+	}
+
+	jsonRows, err := json.Marshal(tlist)
+	if err != nil {
+		error_str := fmt.Sprintf("GetSkuAuthenticationRecordListByTraceCode() operation failed - Unmarshall Error. %s", err)
+		fmt.Println(error_str)
+		return shim.Error(error_str)
+	}
+
+	fmt.Println("List of SkuAuthenticationTraceRecordObj Requested : ", jsonRows)
+	return shim.Success(jsonRows)
+
+}
+
+//////////////////////////////////////////////////////////
+// Converts an User Object to a JSON String
+//////////////////////////////////////////////////////////
+func JSONtoSkuTraceRecordObj(areq []byte) (SkuTraceRecordObj, error) {
+
+	ar := SkuTraceRecordObj{}
+	err := json.Unmarshal(areq, &ar)
+	if err != nil {
+		fmt.Println("SkuTraceRecordObj error: ", err)
+		return ar, err
+	}
+	return ar, err
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+// Get List of SKU trace record for an TraceCode
+// in the block-chain --
+// peer chaincode query -l golang -n test_trace -c '{"Function": "qGetSkuTraceRecordListByTraceCode", "Args": ["1111"]}' -o orderer0:7050
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+func GetSkuTraceRecordListByTraceCode(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
+	rs, err := GetList(stub, "SkuTraceRecordObj", args)
+	if err != nil {
+		error_str := fmt.Sprintf("GetSkuTraceRecordListByTraceCode operation failed. Error marshaling JSON: %s", err)
+		return shim.Error(error_str)
+	}
+
+	defer rs.Close()
+
+	// Iterate through result set
+	var i int
+	var tlist []SkuTraceRecordObj // Define a list
+	for i = 0; rs.HasNext(); i++ {
+
+		// We can process whichever return value is of interest
+		myKeyVal, err := rs.Next()
+		if err != nil {
+			return shim.Success(nil)
+		}
+		bid, err := JSONtoSkuTraceRecordObj(myKeyVal.Value)
+		if err != nil {
+			error_str := fmt.Sprintf("GetSkuTraceRecordListByTraceCode() operation failed - Unmarshall Error. %s", err)
+			fmt.Println(error_str)
+			return shim.Error(error_str)
+		}
+		fmt.Println("GetSkuTraceRecordListByTraceCode() : my Value : ", bid)
+		tlist = append(tlist, bid)
+	}
+
+	jsonRows, err := json.Marshal(tlist)
+	if err != nil {
+		error_str := fmt.Sprintf("GetSkuTraceRecordListByTraceCode() operation failed - Unmarshall Error. %s", err)
+		fmt.Println(error_str)
+		return shim.Error(error_str)
+	}
+
+	fmt.Println("List of SkuTraceRecordObj Requested : ", jsonRows)
+	return shim.Success(jsonRows)
+
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+// Get List of SKU trade record for an TraceCode
+// in the block-chain --
+// peer chaincode query -l golang -n test_trace -c '{"Function": "qGetSkuTransactionListByTraceCode", "Args": ["1111"]}' -o orderer0:7050
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+func GetSkuTransactionListByTraceCode(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
+	rs, err := GetList(stub, "SkuTransactionObj", args)
+	if err != nil {
+		error_str := fmt.Sprintf("GetSkuTransactionListByTraceCode operation failed. Error marshaling JSON: %s", err)
+		return shim.Error(error_str)
+	}
+
+	defer rs.Close()
+
+	// Iterate through result set
+	var i int
+	var tlist []SkuTransactionObj // Define a list
+	for i = 0; rs.HasNext(); i++ {
+
+		// We can process whichever return value is of interest
+		myKeyVal, err := rs.Next()
+		if err != nil {
+			return shim.Success(nil)
+		}
+		bid, err := JSONtoSkuTransactionObj(myKeyVal.Value)
+>>>>>>> refs/heads/maxipeng
 		if err != nil {
 			error_str := fmt.Sprintf("GetSkuTransactionListByTraceCode() operation failed - Unmarshall Error. %s", err)
 			fmt.Println(error_str)

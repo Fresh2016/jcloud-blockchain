@@ -18,7 +18,7 @@ var express  = require('express');
 var app      = express();
 var bodyParser = require('body-parser');
 var methodOverride = require('method-override');
-
+var manageClient = require('./app/manage/create-client.js');
 /*
  * Server configuration
  */
@@ -36,13 +36,17 @@ app.use(bodyParser.json({ type: 'application/vnd.api+json' }));
 app.use(methodOverride('X-HTTP-Method-Override'));
 
 
+
 /*
  * Routes
  */
 require('./app/routes.js')(app);
+
+
 
 /*
  * Server starts listen
  */
 app.listen(port);
 console.log("App listening on port " + port);
+manageClient.initCreate();
