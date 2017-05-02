@@ -113,8 +113,8 @@ module.exports = function(app) {
 				console.dir(result);
 				res.json(result);
 			}).catch((err) => {
-				var result = generateErrorResponse(err, req.body.id);
-				res.json(result);
+				//var result = generateErrorResponse(err, req.body.id);
+				res.json(err);
 			});
 	});
 };
