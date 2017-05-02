@@ -15,7 +15,7 @@ var params_invoke_transaction = {
 				version : 'v0'
 			},
 			ctorMsg : {
-				functionName : 'addNewTrade',
+				functionName : 'iPostSkuTransaction',
 				args : ['Sku', 'Sku654321', 'TraceInfo', 'uhmmm...we are testing v1 v1 v1...']
 			}
 		},
@@ -25,12 +25,12 @@ var params_invoke_transaction = {
 var params_query_transaction = {
         type : '1',
         chaincode : {
-        	name : "supplychain0",
-        	version : "v0",
+        	name : 'supplychain0',
+        	version : 'v0',
         },
         ctorMsg : {
-        	functionName : "queryTrade",
-        	args : ["Sku", "TradeDate", "TraceInfo"]
+        	functionName : 'qGetSkuTransactionListByTraceCode',
+        	args : ['1111']
         }
 	};
 var params_query_blocknum = {};
@@ -168,18 +168,18 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: queryTransaction result %s', JSON.stringify(result));
 		if (isToDo('query', opr_num_list)) {
-			return queryClient.queryTransactionHistory('');
+			return queryClient.queryTransactionHistory(request_query_transaction.params.rpctime, request_query_transaction.params.params);
 		} else {
 			return 'Skipped'
 		}
 
-	}).then((result) => {
-		console.log('TESTAPP: queryTransactionHistory result %s', JSON.stringify(result));
-		if (isToDo('query', opr_num_list)) {
-			return queryClient.isTransactionSucceed(response[0].TransactionId);
-		} else {
-			return 'Skipped'
-		}
+//	}).then((result) => {
+//		console.log('TESTAPP: queryTransactionHistory result %s', JSON.stringify(result));
+//		if (isToDo('query', opr_num_list)) {
+//			return queryClient.isTransactionSucceed(response[0].TransactionId);
+//		} else {
+//			return 'Skipped'
+//		}
 
 	}).then((result) => {
 		console.log('TESTAPP: isTransactionSucceed result %s', JSON.stringify(result));

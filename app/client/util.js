@@ -27,9 +27,9 @@ var hfc = require('fabric-client');
 // Channel and chaincode settings
 // TODO: should be managed by manager and stored in DB
 module.exports.txFilePath = './app/config/mychannel.tx';
-module.exports.chaincodePath = 'github.com/supplychain';
+module.exports.chaincodePath = 'github.com/trace';
 module.exports.channel = 'mychannel';
-module.exports.chaincodeId = 'supplychain0';
+module.exports.chaincodeId = 'trace1';
 module.exports.chaincodeVersion = 'v0';
 
 // Read config.json information
@@ -40,6 +40,7 @@ module.exports.ORGS = hfc.getConfigSetting('test-network');
 // Function exports:
 module.exports.cleanupDir = cleanupDir;
 module.exports.checkProposalResponses = checkProposalResponses;
+module.exports.getCaRoots = getCaRoots;
 module.exports.getKeyOfJson = getKeyOfJson;
 module.exports.getMspid = getMspid;
 module.exports.getOrgs = getOrgs;
@@ -64,31 +65,68 @@ function cleanupDir(keyValStorePath) {
 
 //Check status code of all responses to 
 //ensure get valid response from all peers
-function checkProposalResponses(results, proposal_type, logger) {
+function checkProposalResponses(chain, results, proposal_type, logger) {
 	var all_good = true;
 
-	if (null != results && 3 <= results.length) {
+	try {
 		var proposalResponses = results[0];
-		for(var i in proposalResponses) {
-			let one_good = false;
-			if (proposalResponses && proposalResponses[0].response && proposalResponses[0].response.status === 200) {
-				one_good = true;
-				logger.debug(proposal_type + ' proposal was good');
-			} else {
-				logger.error(proposal_type + ' proposal was bad');
-			}
-			all_good = all_good & one_good;
-		}
-	} else {
+		proposalResponses.forEach((proposalResponse) => {
+			all_good = all_good & checkResponse(chain, proposalResponse, proposal_type, logger);
+		});
+
+		all_good = compareProposalResponseResults(chain, proposalResponses, all_good, proposal_type, logger);
+
+	} catch(err) {
 		all_good = false;
 	}
-	
-	if (all_good) {
-		logger.debug('Successfully sent %s Proposal and received ProposalResponse: Status - %s', proposal_type, proposalResponses[0].response.status);
-	} else {
-		logger.error('Failed to send Proposal or receive valid ProposalResponse from peers.');
+
+	logger.debug('%s proposal responses are all same or not: %s', proposal_type, Boolean(all_good));
+	return all_good;
+}
+
+
+//Verify if proposal response is valid. 
+//Skip verifying but only checking response status,
+//in case of install and input chain is empty 
+function checkResponse(chain, proposalResponse, proposal_type, logger) {
+	var one_good = false;
+
+	try {
+		if (proposalResponse.response && proposalResponse.response.status === 200) {
+			if (null != chain) {
+				one_good = chain.verifyProposalResponse(proposalResponse);
+			} else {
+				one_good = true;
+			}
+		}
+	} catch(err) {
+		one_good = false;
 	}
-	
+
+	logger.debug('%s proposal was verified as: %s', proposal_type, Boolean(one_good));
+	return one_good;
+}
+
+
+//Check all the read/write sets to see if the same, verify that each peer
+//got the same results on the proposal. 
+//Skip checking if chain is empty in case of install
+function compareProposalResponseResults(chain, proposalResponses, all_good, proposal_type, logger) {
+	try {
+		if (all_good && null != chain) {
+			// TODO: wait until SDK fix its bug
+			logger.info('Skip compare proposal response results as there are bugs in SDK');
+			//all_good = chain.compareProposalResponseResults(proposalResponses);
+		}
+		if (all_good) {
+			logger.debug('Successfully sent %s Proposal and received ProposalResponse: Status - %s', proposal_type, proposalResponses[0].response.status);
+		} else {
+			logger.error('Failed to send Proposal or receive valid ProposalResponse from peers.');
+		}
+	} catch(err) {
+		all_good = false;
+	}
+
 	return all_good;
 }
 
@@ -111,12 +149,6 @@ function deleteFolderRecursive(path) {
 }
 
 
-function getUniqueVersion(prefix) {
-	if (!prefix) prefix = 'v';
-	return prefix + Date.now();
-};
-
-
 //Check if directory or file exists
 //uses entire / absolute path from root
 function existsSync(absolutePath /*string*/) {
@@ -131,6 +163,21 @@ function existsSync(absolutePath /*string*/) {
 		return false;
 	}
 };
+
+
+// Read CA root pem files
+function getCaRoots(nodeInfo) {
+//	var caRootsPath = ORGS.orderer.tls_cacerts;
+	
+	var caRootsPath = getCaRootsPath(nodeInfo);
+	let data = readFileSync(caRootsPath);
+	return Buffer.from(data).toString();
+}
+
+
+function getCaRootsPath(nodeInfo) {
+	return nodeInfo.tls_cacerts;//nodeInfo.['tls_cacerts']
+}
 
 
 //Return all keys matches keyword, not strictly
@@ -165,6 +212,12 @@ function getOrgNameByOrg(ORGS, org) {
 }
 
 
+function getUniqueVersion(prefix) {
+	if (!prefix) prefix = 'v';
+	return prefix + Date.now();
+};
+
+
 //Return all values matches keyword, not strictly
 function getValueOfJson(jsonObj, keyword) {
 	var list = [];
@@ -189,6 +242,12 @@ function readFile(path) {
 				resolve(data);
 		});
 	});
+}
+
+
+//Read file
+function readFileSync(path) {
+	return fs.readFileSync(path);
 }
 
 
