@@ -247,13 +247,24 @@ func getUUID() (string) {
 
 
 // Format historic values into string of JSON array
-func formatHistoricValue(buffer bytes.Buffer, resultsIterator shim.StateQueryIteratorInterface, nameOfTxId string, queriedKey string) bytes.Buffer {
+// func formatHistoricValue(buffer bytes.Buffer, resultsIterator shim.StateQueryIteratorInterface, nameOfTxId string, queriedKey string) bytes.Buffer {
+func formatHistoricValue(buffer bytes.Buffer, resultsIterator shim.HistoryQueryIteratorInterface, nameOfTxId string, queriedKey string) bytes.Buffer {
 	// Start of an array
 	buffer.WriteString("[")
 
 	bArrayMemberAlreadyWritten := false
 	for resultsIterator.HasNext() {
-		txID, historicValue, err := resultsIterator.Next()
+	    // refer: "historyleveldb_test.go"
+		kmod, err := resultsIterator.Next()
+		if kmod == nil {
+			break
+		}
+		
+		txID := kmod.TxID
+		retrievedValue := kmod.Value
+		retrievedTimestamp := kmod.Timestamp
+		retrievedIsDelete := kmod.IsDelete
+
 		if err != nil {
 			logger.Error("ERROR: error in reading resultsIterator, write nothing to buffer and returning... ") //error
 			return buffer
@@ -274,8 +285,23 @@ func formatHistoricValue(buffer bytes.Buffer, resultsIterator shim.StateQueryIte
 		buffer.WriteString(queriedKey)
 		buffer.WriteString("\":")
 		buffer.WriteString("\"")
-		buffer.WriteString(string(historicValue))
+		buffer.WriteString(string(retrievedValue))
 		buffer.WriteString("\"")
+
+		buffer.WriteString(",\"")
+		buffer.WriteString("Timestamp")
+		buffer.WriteString("\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(retrievedTimestamp.String())
+		buffer.WriteString("\"")
+
+		buffer.WriteString(",\"")
+		buffer.WriteString("IsDelete")
+		buffer.WriteString("\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(strconv.FormatBool(retrievedIsDelete))
+		buffer.WriteString("\"")
+
 		buffer.WriteString("}")
 		bArrayMemberAlreadyWritten = true
 	}
