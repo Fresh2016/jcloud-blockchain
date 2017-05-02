@@ -5,7 +5,7 @@ invokeClient = require('../client/invoke-transaction.js');
 queryClient = require('../client/query.js');
 
 var ClientUtils = require('fabric-client/lib/utils.js');
-var logger = ClientUtils.getLogger('join-channel');
+var logger = ClientUtils.getLogger('create-manage');
 
 /**
  * create Channel
@@ -15,7 +15,7 @@ var logger = ClientUtils.getLogger('join-channel');
 function createChannel(channelName){
     return  queryClient.queryOrderers(channelName)
         .then((result) => {
-            console.log('createChannel: Already create');
+            logger.debug('createChannel: Already create');
              //if(result[0]['status'] == 'UP'){
                  return  new Promise((resolve, reject) => resolve("Already create"));
              //}else{
@@ -37,7 +37,7 @@ function joinChannel(channelName){
     return   queryClient.queryPeers(channelName)
         .then((result) => {
             //if(result[0]['status'] == 'UP'){
-            console.log('createChannel: Already join');
+            logger.debug('createChannel: Already join');
             return  new Promise((resolve, reject) => resolve("Already join"));
             //}else{
             //    var err ={msg:"status not is up"}
@@ -58,7 +58,7 @@ function installChaincode(){
     return  installClient.installChaincode()
         .catch((err) => {
             err.errName="installChaincodeError";
-            console.log(' install failed %s',JSON.stringify(err));
+            logger.debug(' install failed %s',JSON.stringify(err));
             //如果失败报错，也继续执行下一个方法instantiate
             return new Promise((resolve, reject) => resolve(err));
         });
@@ -72,7 +72,7 @@ function instantiateChaincode(){
     return  invokeClient.instantiateChaincode()
         .catch((err) => {
             err.errName="installChaincodeError";
-            console.log('instantiate failed %s',JSON.stringify(err));
+            logger.debug('instantiate failed %s',JSON.stringify(err));
             return new Promise((resolve, reject) => reject(err));
         });
 }
@@ -88,20 +88,20 @@ function instantiateChaincode(){
 exports.create =function(channelName){
   return   createChannel(channelName)
         .then((response) => {
-            console.log('createChannel: %j\n\n\n', response);
+            logger.debug('createChannel: %j\n\n\n', response);
             return joinChannel(channelName);
 
         }).then((response) => {
-            console.log('joinChannel: %j\n\n\n', response);
+            logger.debug('joinChannel: %j\n\n\n', response);
             return  installChaincode();
         }).then((response) => {
-          console.log('installChaincode: %j\n\n\n', response);
+          logger.debug('installChaincode: %j\n\n\n', response);
           return  instantiateChaincode();
         }).then((response) => {
-          console.log('instantiateChaincode: %j\n\n\n', response);
+          logger.debug('instantiateChaincode: %j\n\n\n', response);
           return  new Promise((resolve, reject) => resolve("Create success"));
         }).catch((err) => {
-            console.log('Create failed %s',JSON.stringify(err));
+            logger.debug('Create failed %s',JSON.stringify(err));
             return  new Promise((resolve, reject) => reject("Create failed"));
         });
 }
