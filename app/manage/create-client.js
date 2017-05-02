@@ -4,32 +4,48 @@ installClient = require('../client/install-chaincode.js');
 invokeClient = require('../client/invoke-transaction.js');
 queryClient = require('../client/query.js');
 
+var ClientUtils = require('fabric-client/lib/utils.js');
+var logger = ClientUtils.getLogger('join-channel');
 
 /**
  * 创建Channel
  * @returns {Promise.<T>|*|Observable}
  */
 
-function createChannel(){
-    return  createClient.createChannel()
+function createChannel(channelName){
+    return  queryClient.queryOrderers(channelName)
         .then((result) => {
-             return  new Promise((resolve, reject) => resolve(true));
+             //if(result[0]['status'] == 'UP'){
+                 return  new Promise((resolve, reject) => resolve(true));
+             //}else{
+             //    var err ={msg:"status not is up"}
+             //    util.throwError(logger, err, channelName+'status not is up');
+             //}
+
         }).catch((err) => {
-            err.errName="createChannelError";
-            return new Promise((resolve, reject) => reject(err));
+             return createClient.createChannel();
         });
 }
 /**
  *  join Channel
  * @returns {Promise.<T>|*|Observable}
  */
-function joinChannel(){
-    return  joinClient.joinChannel()
-        .catch((err) => {
-            err.errName="joinChannelError";
-            return new Promise((resolve, reject) => reject(err));
+
+function joinChannel(channelName){
+    return   queryClient.queryPeers(channelName)
+        .then((result) => {
+            //if(result[0]['status'] == 'UP'){
+            return  new Promise((resolve, reject) => resolve(true));
+            //}else{
+            //    var err ={msg:"status not is up"}
+            //    util.throwError(logger, err, channelName+'status not is up');
+            //}
+
+        }).catch((err) => {
+            return  joinClient.joinChannel();
         });
 }
+
 
 /**
  * installChaincode
@@ -56,77 +72,26 @@ function instantiateChaincode(){
 }
 
 
-/**
- * create, join, install, instantiate
- */
-function createChannelManage(){
-    createClient.createChannel()
-        .then((result) => {
-            console.log('API: create channel result %s', JSON.stringify(result));
-            return joinChannel();
-        }) .then((result) => {
-            console.log('API: join channel result %s', JSON.stringify(result));
-            return installChaincode();
-
-        }) .then((result) => {
-            console.log('API: install channel result %s', JSON.stringify(result));
-            return instantiateChaincode();
-
-        }).then((result) => {
-            console.log('API: instantiate channel result %s', JSON.stringify(result));
-
-            return  new Promise((resolve, reject) => resolve(true));
-        }).catch((err) => {
-            console.log('createChannelManage channel result %s', JSON.stringify(err));
-            return  new Promise((resolve, reject) => resolve(false));
-        });
-}
 
 
-/**
- * 查询 Channel
- * @param channelName
- * @returns {Promise.<T>|*|Observable}
- */
-function queryChannel(channelName){
-    return   queryClient.queryPeers(channelName)
-        .then((response) => {
-            console.log('queryPeers response: %j\n\n\n', response);
-            return queryClient.queryOrderers(channelName);
-
-        }).then((response) => {
-            console.log('queryOrderers response: %j\n\n\n', response);
-            //console.log('### shiying is aaa ###');
-            return  new Promise((resolve, reject) => resolve(true));
-
-        }).catch((err) => {
-            console.log('Return without querying.');
-            return  new Promise((resolve, reject) => resolve(false));
-        });
-}
 
 
 
 exports.create =function(channelName){
-    return queryChannel(channelName)
-        .then((result) => {
-            if(!result){
-                return   createChannelManage()
-                    .then((result) => {
-                        if(result){
-                            return  new Promise((resolve, reject) => resolve("Create success"));
-                        }else{
-                            return  new Promise((resolve, reject) => resolve("Create failed"));
-                        }
+  return   createChannel(channelName)
+        .then((response) => {
+            console.log('createChannel: %j\n\n\n', response);
+            return joinChannel(channelName);
 
-                    }).catch((err) => {
-                        return  new Promise((resolve, reject) => resolve("Create failed"));
-                    });
-            }else{
-                console.log('Already exist');
-                return  new Promise((resolve, reject) => resolve("Already exist"));
-            }
-
+        }).then((response) => {
+            console.log('joinChannel: %j\n\n\n', response);
+            return  installChaincode();
+        }).then((response) => {
+          console.log('installChaincode: %j\n\n\n', response);
+          return  instantiateChaincode();
+        }).then((response) => {
+          console.log('qinstantiateChaincode: %j\n\n\n', response);
+          return  new Promise((resolve, reject) => resolve("Create success"));
         }).catch((err) => {
             return  new Promise((resolve, reject) => resolve("Create failed"));
         });
