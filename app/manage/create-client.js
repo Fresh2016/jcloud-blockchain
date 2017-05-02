@@ -15,9 +15,9 @@ var logger = ClientUtils.getLogger('join-channel');
 function createChannel(channelName){
     return  queryClient.queryOrderers(channelName)
         .then((result) => {
-            console.log('createChannel: 已经被创建');
+            console.log('createChannel: Already create');
              //if(result[0]['status'] == 'UP'){
-                 return  new Promise((resolve, reject) => resolve("已经被创建"));
+                 return  new Promise((resolve, reject) => resolve("Already create"));
              //}else{
              //    var err ={msg:"status not is up"}
              //    util.throwError(logger, err, channelName+'status not is up');
@@ -27,7 +27,7 @@ function createChannel(channelName){
              return createClient.createChannel();
         });
 }
-exports.createChannel =createChannel;
+//exports.createChannel =createChannel;
 /**
  *  join Channel
  * @returns {Promise.<T>|*|Observable}
@@ -37,8 +37,8 @@ function joinChannel(channelName){
     return   queryClient.queryPeers(channelName)
         .then((result) => {
             //if(result[0]['status'] == 'UP'){
-            console.log('createChannel: 已经被join');
-            return  new Promise((resolve, reject) => resolve("已经被join"));
+            console.log('createChannel: Already join');
+            return  new Promise((resolve, reject) => resolve("Already join"));
             //}else{
             //    var err ={msg:"status not is up"}
             //    util.throwError(logger, err, channelName+'status not is up');
@@ -48,7 +48,7 @@ function joinChannel(channelName){
             return  joinClient.joinChannel();
         });
 }
-exports.joinChannel =joinChannel;
+//exports.joinChannel =joinChannel;
 
 /**
  * installChaincode
@@ -58,12 +58,12 @@ function installChaincode(){
     return  installClient.installChaincode()
         .catch((err) => {
             err.errName="installChaincodeError";
-            console.log('installChaincode: install失败 %s',JSON.stringify(err));
+            console.log(' install failed %s',JSON.stringify(err));
             //如果失败报错，也继续执行下一个方法instantiate
             return new Promise((resolve, reject) => resolve(err));
         });
 }
-exports.installChaincode =installChaincode;
+//exports.installChaincode =installChaincode;
 /**
  *  instantiateChaincode
  * @returns {Promise.<T>|*|Observable}
@@ -72,11 +72,11 @@ function instantiateChaincode(){
     return  invokeClient.instantiateChaincode()
         .catch((err) => {
             err.errName="installChaincodeError";
-            console.log('instantiateChaincode: instantiate失败 %s',JSON.stringify(err));
+            console.log('instantiate failed %s',JSON.stringify(err));
             return new Promise((resolve, reject) => reject(err));
         });
 }
-exports.instantiateChaincode =instantiateChaincode;
+//exports.instantiateChaincode =instantiateChaincode;
 
 
 
