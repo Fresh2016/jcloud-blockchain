@@ -8,7 +8,7 @@ var ClientUtils = require('fabric-client/lib/utils.js');
 var logger = ClientUtils.getLogger('join-channel');
 
 /**
- * 创建Channel
+ * create Channel
  * @returns {Promise.<T>|*|Observable}
  */
 
@@ -79,9 +79,11 @@ function instantiateChaincode(){
 //exports.instantiateChaincode =instantiateChaincode;
 
 
-
-
-
+/**
+ * create mangage
+ * @param channelName
+ * @returns {Promise.<T>|*}
+ */
 
 exports.create =function(channelName){
   return   createChannel(channelName)
