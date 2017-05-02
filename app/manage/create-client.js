@@ -85,7 +85,7 @@ function instantiateChaincode(){
  * @returns {Promise.<T>|*}
  */
 
-exports.create =function(channelName){
+function create(channelName){
   return   createChannel(channelName)
         .then((response) => {
             logger.debug('createChannel: %j\n\n\n', response);
@@ -103,5 +103,21 @@ exports.create =function(channelName){
         }).catch((err) => {
             logger.debug('Create failed %s',JSON.stringify(err));
             return  new Promise((resolve, reject) => reject("Create failed"));
+        });
+}
+exports.create =create;
+
+/**
+ * init
+ * @param channelName
+ */
+exports.initCreate =function(){
+    return  create('mychannel')
+        .then((result) => {
+            logger.debug('init success %s',JSON.stringify(result));
+            return true;
+        }).catch((err) => {
+              logger.debug('init failed %s',JSON.stringify(err));
+            return false;
         });
 }

@@ -45,7 +45,20 @@ var mage = require('./app/manage/create-client.js');
 //
 //mage.installChaincode();
 //mage.instantiateChaincode();
+/**
+ * init
+ * @param channelName
+ */
+initCreate();
+function initCreate(){
+    mage.create('mychannel')
+        .then((result) => {
 
+           console.log(JSON.stringify(result))
+        }).catch((err) => {
+            console.log(JSON.stringify(err))
+        });
+}
 //
 //var params_invoke_transaction = {
 //    rpctime : '2017-04-17 10:00:00',
