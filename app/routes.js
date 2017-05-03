@@ -67,8 +67,7 @@ module.exports = function(app) {
 	app.get('/v1/:channelname?/orderers', function(req, res) {
 		console.log('API: query orderers status');
 		console.dir(req.query);
-		req.query.params['channelName'] = req.params.channelname;
-		queryClient.queryOrderers(req.query.channel)
+		queryClient.queryOrderers(req.params.channelname)
 		.then((result) => {
 			console.log(result);
 			console.log(hideUrl(result, 'orderer'));
@@ -83,8 +82,7 @@ module.exports = function(app) {
 	app.get('/v1/:channelname?/peers', function(req, res) {
 		console.log('API: query peers status');
 		console.dir(req.query);
-		req.query.params['channelName'] = req.params.channelname;
-		queryClient.queryPeers(req.query.channel)
+		queryClient.queryPeers(req.params.channelname)
 		.then((result) => {
 			console.log(result);
 			console.log(hideUrl(result, 'peer'));

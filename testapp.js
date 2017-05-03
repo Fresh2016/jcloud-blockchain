@@ -10,14 +10,14 @@ var params_invoke_transaction = {
 		rpctime : '2017-04-17 10:00:00',
 		params : {
 			type : 1,
-			channelName:"supplychain",
+			channelName : "mychannel",
 			chaincode : {
 				name : 'supplychain0',
 				version : 'v0'
 			},
 			ctorMsg : {
-				functionName : 'iPostSkuTransaction',
-				args : ['Sku', 'Sku654321', 'TraceInfo', 'uhmmm...we are testing v1 v1 v1...']
+				functionName : 'iPostSkuBaseInfo',
+				args : ["skuId123", "vendortest", "traceCode123456", "hashabcd", "name123", "num123", "ext123", "sign123", "time123"]
 			}
 		},
 		id : 2
@@ -25,7 +25,7 @@ var params_invoke_transaction = {
 
 var params_query_transaction = {
         type : '1',
-	    channelName:"supplychain",
+	    channelName : "mychannel",
         chaincode : {
         	name : 'supplychain0',
         	version : 'v0',
@@ -35,14 +35,16 @@ var params_query_transaction = {
         	args : ['1111']
         }
 	};
-var params_query_blocknum = {};
+var params_query_blocknum = {
+	    channelName : "mychannel"		
+};
 var params_query_blockInfo = {
+	    channelName : "mychannel",
 		blockNum : 1
 };
 
 var request_query_transaction = {
         params : {
-			channelName:"supplychain",
 			rpctime : '2017-04-17 10:00:00',
 	        params : params_query_transaction,
 	        id : 2
@@ -50,7 +52,6 @@ var request_query_transaction = {
 	};
 var request_query_blocknum = {
         params : {
-			channelName:"supplychain",
 			rpctime : '2017-04-17 10:00:00',
 	        params : params_query_blocknum,
 	        id : 2
@@ -58,7 +59,6 @@ var request_query_blocknum = {
 	};
 var request_query_blockInfo = {
         params : {
-			channelName:"supplychain",
 			rpctime : '2017-04-17 10:00:00',
 	        params : params_query_blockInfo,
 	        id : 2

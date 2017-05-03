@@ -172,7 +172,7 @@ function isTransactionSucceed(transactionId) {
 	return setup.getAlivePeer(ORGS, org)
 	.then((peerInfo) => {
 		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
-		return setup.setupChainWithPeer(client, ORGS, peerInfo, true, null, false);
+		return setup.setupChainWithPeer(client, channel, ORGS, peerInfo, true, null, false);
 
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
@@ -335,7 +335,7 @@ function parseQueryPeerStatusReponse(responses, channelName) {
 
 
 function queryBlocks(rpctime, params) {
-	logger.info('\n\n***** Hyperledger fabric client: query transaction *****');
+	logger.info('\n\n***** Hyperledger fabric client: query blocks *****');
 
 	// client and chain should be claimed here
 	var client = new hfc();
@@ -344,6 +344,7 @@ function queryBlocks(rpctime, params) {
 	// this is a query, will just use org2's identity to
 	// submit the request
 	var org = defaultOrg;
+	var channel = params.channelName;
 	var blockNum = params.blockNum;
 	
 	var options = { 
@@ -357,7 +358,7 @@ function queryBlocks(rpctime, params) {
 	return setup.getAlivePeer(ORGS, org)
 	.then((peerInfo) => {
 		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
-		return setup.setupChainWithPeer(client, ORGS, peerInfo, true, null, false);
+		return setup.setupChainWithPeer(client, channel, ORGS, peerInfo, true, null, false);
 
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
@@ -373,7 +374,7 @@ function queryBlocks(rpctime, params) {
 		the_user = admin;
 		
 		// use default primary peer
-		if (null == params || 0 == Object.keys(params).length) {
+		if (null == blockNum) {
 			logger.debug('Querying block heights');
 			return chain.queryInfo();
 		} else {
@@ -382,7 +383,7 @@ function queryBlocks(rpctime, params) {
 		}
 		
 	}).then((blockchainInfo) => {
-		if (null == params || 0 == Object.keys(params).length) {
+		if (null == blockNum) {
 //			logger.debug('Chain queryInfo() returned block height = ' + blockchainInfo.height.low);
 //			logger.debug('Chain queryInfo() returned block previousBlockHash = ' + blockchainInfo.previousBlockHash.toString('base64'));
 //			logger.debug('Chain queryInfo() returned block currentBlockHash = ' + blockchainInfo.currentBlockHash.toString('base64'));
@@ -446,7 +447,7 @@ function queryConfig(channelName) {
 	.then((peerInfo) => {
 		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
 		//TODO: maybe it's not needed to add any peer, to be tested
-		return setup.setupChainWithPeer(client, ORGS, peerInfo, true, null, false);
+		return setup.setupChainWithPeer(client, channelName, ORGS, peerInfo, true, null, false);
 
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
@@ -507,7 +508,8 @@ function queryPeersByOrg(org) {
 	// client and chain should be claimed here
 	var client = new hfc();
 	var eventhubs = [];
-	var chain = setup.setupChainByOrg(client, ORGS, org, eventhubs, true);
+
+	var chain = setup.setupChainByOrg(client, queriedChannelName, ORGS, org, eventhubs, true);
 
 	return Submitter.getSubmitter(client, org, logger)
 	.then((admin) => {	
@@ -549,9 +551,9 @@ function queryTransaction(rpctime, params) {
 	// this is a query, will just use org2's identity to
 	// submit the request
 	var org = defaultOrg;
+	var channel = params.channelName;
 	var fcn = params.ctorMsg.functionName;
 	var args = params.ctorMsg.args;
-
 	
 	var block_result = {};
 	var the_user = null;
@@ -559,7 +561,7 @@ function queryTransaction(rpctime, params) {
 	return setup.getAlivePeer(ORGS, org)
 	.then((peerInfo) => {
 		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
-		return setup.setupChainWithPeer(client, ORGS, peerInfo, true, null, false);
+		return setup.setupChainWithPeer(client, channel, ORGS, peerInfo, true, null, false);
 
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
@@ -591,7 +593,7 @@ function queryTransaction(rpctime, params) {
 		return chain.queryByChaincode(request);
 		
 	}).then((response_payloads) => {
-		logger.debug('Chain queryByChaincode() ----returned response_payloads: %j', response_payloads[0].toString('base64'));
+		logger.debug('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
 		if (null == response_payloads || response_payloads.toString('utf8', 0, 10).indexOf('Error') === 0) {
 			util.throwError(logger, null, response_payloads.toString('utf8', 0, 10));
 		} else {
@@ -619,6 +621,7 @@ function queryTransactionHistory(rpctime, params) {
 	// this is a query, will just use org2's identity to
 	// submit the request
 	var org = defaultOrg;
+	var channel = params.channelName;
 	var fcn = params.ctorMsg.functionName;
 	var args = params.ctorMsg.args;
 
@@ -627,7 +630,7 @@ function queryTransactionHistory(rpctime, params) {
 	return setup.getAlivePeer(ORGS, org)
 	.then((peerInfo) => {
 		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
-		return setup.setupChainWithPeer(client, ORGS, peerInfo, true, null, false);
+		return setup.setupChainWithPeer(client, channel, ORGS, peerInfo, true, null, false);
 
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
@@ -677,7 +680,7 @@ function queryTransactionByTxId(chain, transactionId){
 
 function updatePeerStatus(queryPeerResult, response, channelName) {
 	queryPeerResult.forEach((peerStatus) => {
-		console.log('checking peer in channel: %s', isPeerInChannel(response, channelName));
+//		logger.debug('Checking peer in channel: %s', isPeerInChannel(response, channelName));
 		if (peerStatus.name === response.peer && isPeerInChannel(response, channelName)) {
 			peerStatus.status = 'UP';
 		}
