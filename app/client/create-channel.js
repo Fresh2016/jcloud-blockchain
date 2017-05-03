@@ -22,6 +22,7 @@ var Submitter = require('./get-submitter.js');
 var setup = require('./setup.js');
 var util = require('./util.js');
 
+ClientUtils.setConfigSetting('hfc-logging', '{"debug": "console"}');
 var logger = ClientUtils.getLogger('create-channel');
 var ORGS = util.ORGS;
 
@@ -36,65 +37,83 @@ function createChannel() {
 
 	// client and chain should be claimed here
 	var client = new hfc();
-	var chain = setup.setupChainWithOnlyOrderer(client, ORGS);
+	var orderer = setup.newOrderer(client, ORGS.orderer);
 
 	// this is a transaction, will just use org1's identity to
 	// submit the request
 	var org = defaultOrg;
-	var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
 
-	return hfc.newDefaultKeyValueStore(options)
-	.then((keyValueStore) => {
-		client.setStateStore(keyValueStore);
-		return Submitter.getSubmitter(client, org, logger);
+	return Submitter.getSubmitter(client, org, logger)
+	.then((admin) => {
 
-	}).then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
-
-		//FIXME: temporary fix until mspid is configured into Chain
-		admin.mspImpl._id = util.getMspid(ORGS, org);
 
 		// read in the envelope to send to the orderer
 		return util.readFile(util.txFilePath);
 		
 	}).then((txFileData) => {
 		var request = {
-			envelope : txFileData
+			envelope : txFileData,
+			name : util.channel,
+			orderer : orderer
 		};
-		logger.debug('Successfully read envelop file and sending creation request: ' + 
-				request.envelope.toString('utf8', 0, 100) + '\n ......');
+		printRequest(logger, request);
 
 		// send to orderer
-		return chain.createChannel(request);
+		return client.createChannel(request);
 
-	}).then((response) => {
+	}).then((chain) => {
 		// Check response status and return a new promise if success
-		return finishCreation(response, defaultSleepTime);
+		return finishCreation(chain, orderer, defaultSleepTime);
 
 	}).catch((err) => {
-		logger.error('Failed to create the channel with error: ' + err.stack ? err.stack : err);
+		logger.error('Failed to create the channel with error:  %s', err);
 		// Failure back and accept further err processing
 		return new Promise((resolve, reject) => reject(err));
 	});
 };
 
 
-function finishCreation(response, sleepTime) {
-	if (response && response.status === 'SUCCESS') {
-		logger.debug('Successfully sent Request and received Response: Status - %s', response.status);
+function checkOrderer(chain, orderer){
+	try {
+		var test_orderer = chain.getOrderers()[0];
+		if(test_orderer === orderer) {
+			logger.debug('Created channel has correct orderer as requested.');
+			return true;
+		}
+	} catch(err) {
+		util.throwError(logger, err, 'Incorrect orderer in created chain with err:');
+	}
+}
+
+
+function finishCreation(chain, orderer, sleepTime) {
+	try {
+		logger.debug('Successfully sent Request and received Response: chainname - %s', chain.getName());
 		logger.debug('Going to sleep %d sec for waiting creation done.', sleepTime/1000.0);
+
+		if(!checkOrderer(chain, orderer)) {
+			util.throwError(logger, null, 'Failed to create the channel. ');
+		}
 
 		return sleep(sleepTime)
 		.then(() => {
 			logger.debug('Successfully waited to make sure new channel was created.');
 			logger.info('END of create channel.');
-			return response;
+			return chain.getName();
 		});
-	} else {
-		util.throwError(logger, null, 'Failed to create the channel: ');
+	} catch(err) {
+		util.throwError(logger, err, 'Failed to create the channel with err:');
 	}
+}
+
+
+function printRequest(logger, request) {
+	logger.debug('Successfully read envelop file and sending creation request: \n' + 
+			request.name + request.envelope.toString('utf8', 0, 100) + 
+			'\n ......\n\n' +
+			request.orderer.toString('utf8', 0, 100) + 
+			'\n ......\n\n');
 }
 
 

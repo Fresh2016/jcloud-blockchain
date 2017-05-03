@@ -43,7 +43,7 @@ function installChaincode() {
 
 	return exe.executeTheNext(orgs, installChaincodeByOrg, 'Install Chaincode')
 	.catch((err) => {
-		logger.error('Failed to install chaincode with error: ' + err.stack ? err.stack : err);
+		logger.error('Failed to install chaincode with error:  %s', err);
 		// Failure back and accept further err processing
 		return new Promise((resolve, reject) => reject(err));
 	});
@@ -57,30 +57,23 @@ function installChaincodeByOrg(org) {
 	var client = new hfc();
 	var chain = setup.setupChainByOrg(client, ORGS, org, null, false);//TODO:, eventhubs, true
 
-	var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
-
-	return hfc.newDefaultKeyValueStore(options)
-	.then((keyValueStore) => {
-		client.setStateStore(keyValueStore);
-		return Submitter.getSubmitter(client, org, logger);
-
-	}).then((admin) => {
+	return Submitter.getSubmitter(client, org, logger)
+	.then((admin) => {	
 		logger.info('Successfully enrolled user \'admin\'');
-		return sendInstallProposal(chain, admin, util.getMspid(ORGS, org));
+		chain.initialize();
+		return sendInstallProposal(client, chain, admin);
 
 	}).then((results) => {
 		var response = {
 				status : 'failed'
 		};
-		if (util.checkProposalResponses(results, 'Install chaincode', logger)) {
+		if (util.checkProposalResponses(null, results, 'Install chaincode', logger)) {
 			response.status = 'success';
 		}
 		return response;
 
 	}).catch((err) => {
-		logger.error('Failed to install chaincode with error: ' + err.stack ? err.stack : err);
+		logger.error('Failed to install chaincode with error:  %s', err);
 		// Failure back and accept further err processing
 		return new Promise((resolve, reject) => reject(err));
 	});
@@ -88,11 +81,9 @@ function installChaincodeByOrg(org) {
 }
 
 
-function sendInstallProposal(chain, admin, mspid) {
-	admin.mspImpl._id = mspid;
-
+function sendInstallProposal(client, chain, admin) {
 	var nonce = ClientUtils.getNonce()
-	var tx_id = chain.buildTransactionID(nonce, admin);
+	var tx_id = hfc.buildTransactionID(nonce, admin);
 	var targets = chain.getPeers();
 
 	var request = {
@@ -104,6 +95,6 @@ function sendInstallProposal(chain, admin, mspid) {
 		nonce: nonce
 	};
 
-	return chain.sendInstallProposal(request);	
+	return client.installChaincode(request);	
 }
 

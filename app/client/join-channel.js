@@ -53,7 +53,7 @@ function joinChannel() {
 
 	return exe.executeTheNext(orgs, joinChannelByOrg, 'Join Channel')
 	.catch((err) => {
-		logger.error('Failed to join channel with error: ' + err.stack ? err.stack : err);
+		logger.error('Failed to join channel with error:  %s', err);
 		// Failure back and accept further err processing
 		return new Promise((resolve, reject) => reject(err));
 	});
@@ -69,33 +69,22 @@ function joinChannelByOrg(org) {
 	var eventhubs = [];
 	var chain = setup.setupChainByOrg(client, ORGS, org, eventhubs, true);
 
-	var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
-
-	return hfc.newDefaultKeyValueStore(options)
-	.then((keyValueStore) => {
-		client.setStateStore(keyValueStore);
-		return Submitter.getSubmitter(client, org, logger);
-
-	}).then((admin) => {
+	return Submitter.getSubmitter(client, org, logger)
+	.then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
-		return sendJoinProposal(chain, admin, util.getMspid(ORGS, org), eventhubs);
-
+		return sendJoinProposal(chain, admin, eventhubs);
+ 
 	}).catch((err) => {
-		logger.error('Failed to join channel with error: ' + err.stack ? err.stack : err);
+		logger.error('Failed to join channel with error:  %s', err);
 		// Failure back and accept further err processing
 		return new Promise((resolve, reject) => reject(err));
 	});
 }
 
 
-function sendJoinProposal(chain, admin, mspid, eventhubs) {
-	//FIXME: temporary fix until mspid is configured into Chain
-	admin.mspImpl._id = mspid;
-
+function sendJoinProposal(chain, admin, eventhubs) {
 	var nonce = ClientUtils.getNonce()
-	var tx_id = chain.buildTransactionID(nonce, admin);
+	var tx_id = hfc.buildTransactionID(nonce, admin);
 	var targets = chain.getPeers();
 
 	var request = {

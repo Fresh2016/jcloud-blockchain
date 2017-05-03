@@ -25,7 +25,9 @@ var Listener = require('./listen-event.js');
 var exe = require('./execute-recursively.js');
 var setup = require('./setup.js');
 var util = require('./util.js');
+var Policy = require('./endorsement-policy.js');
 
+ClientUtils.setConfigSetting('request-timeout', 300000);
 var logger = ClientUtils.getLogger('invoke-chaincode');
 var ORGS = util.ORGS;
 
@@ -39,19 +41,14 @@ var defaultOrg = 'org1';
 
 module.exports.instantiateChaincode = instantiateChaincode;
 module.exports.invokeChaincode = invokeChaincode;
+module.exports.upgradeChaincode = upgradeChaincode;
 
 
-function commitTransaction(chain, proposalResponses, proposal, header, eventhubs, tx_id) {
-	var request = {
-		proposalResponses: proposalResponses,
-		proposal: proposal,
-		header: header
-	};
-	logger.debug('Commit request is %s ', JSON.stringify(request));
-
+function commitTransaction(chain, endorsement, eventhubs, tx_id) {
 	// Set the transaction listener and set a timeout of 30sec
 	// if the transaction did not get committed within the timeout period,
 	// fail the test
+	var request = generateCommitRequest(endorsement);
 	var deployId = tx_id.toString();
 
 	var eventPromises = [];
@@ -93,17 +90,42 @@ function finishCommit(response, logger, tx_id) {
 }
 
 
-function generateInvokeRequest(fcn, nonce, tx_id, traceInfo) {
+function generateCommitRequest(endorsement) {
+	var proposalResponses = endorsement[0];
+	var proposal = endorsement[1];
+	var header   = endorsement[2];
+	logger.debug('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', 
+			proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature);
+
+	var request = {
+		proposalResponses: proposalResponses,
+		proposal: proposal,
+		header: header
+	};
+	logger.debug('Commit request is %s ', JSON.stringify(request));
+
+	return request;
+}
+
+
+function generateProposalRequest(fcn, args, nonce, tx_id) {
+	logger.info('generateProposalRequest funtionName: %s',fcn);
+
 	var request = {
 			chainId: util.channel,
 			chaincodeId: util.chaincodeId,
 			chaincodeVersion: util.chaincodeVersion,
 			fcn: fcn,
-			args: ["Sku", "Sku654321", "TraceInfo", traceInfo],
+			args: args,
 			txId: tx_id,
-			nonce: nonce
-		};
-	
+			nonce: nonce,
+			
+			// Added in v1.0. 
+			// TODO: should be programmable.
+			'endorsement-policy': Policy.ONE_OF_TWO_ORG_MEMBER
+	};
+	logger.info('generateProposalRequest request: %s',request);
+
 	if ('init' == fcn) {
 		request.chaincodePath = util.chaincodePath;
 	}
@@ -122,7 +144,7 @@ function instantiateChaincode() {
 
 	return exe.executeTheNext(orgs, instantiateChaincodeByOrg, 'Instantiate Chaincode')
 	.catch((err) => {
-		logger.error('Failed to instantiate chaincode with error: ' + err.stack ? err.stack : err);
+		logger.error('Failed to instantiate chaincode with error:  %s', err);
 		// Failure back and accept further err processing
 		return new Promise((resolve, reject) => reject(err));
 	});
@@ -142,34 +164,27 @@ function instantiateChaincode() {
 	// this is a transaction, will just use org1's identity to
 	// submit the request
 	var org = defaultOrg;
-
-	var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
-
-	return hfc.newDefaultKeyValueStore(options)
-	.then((keyValueStore) => {
-		client.setStateStore(keyValueStore);
-		return Submitter.getSubmitter(client, org, logger);
-
-	}).then((admin) => {
+	var enrolled_admin = null;
+	var functionArgs = [];
+	
+	return Submitter.getSubmitter(client, org, logger)
+	.then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
-		return sendInstantiateProposal(chain, admin, util.getMspid(ORGS, org), tx_id);
+		enrolled_admin = admin;
+		return chain.initialize();
+
+	}).then((nothing) => {
+		logger.info('Successfully initialized chain');
+		return sendInstantiateProposal(chain, enrolled_admin, tx_id, functionArgs, false);
 
 	}).then((results) => {
-		if (util.checkProposalResponses(results, 'Instantiate transaction', logger)) {
-			var proposalResponses = results[0];
-			var proposal = results[1];
-			var header   = results[2];
-			logger.debug('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', 
-					proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature);
-
-			return commitTransaction(chain, proposalResponses, proposal, header, eventhubs, tx_id.value);
+		if (util.checkProposalResponses(chain, results, 'Instantiate transaction', logger)) {
+			return commitTransaction(chain, results, eventhubs, tx_id.value);
 		} else {
 			util.throwError(logger, null, 'Bad proposal responses. ');
 		}
 	}).catch((err) => {
-		logger.error('Failed to instantiate chaincode with error: ' + err.stack ? err.stack : err);
+		logger.error('Failed to instantiate chaincode with error:  %s', err);
 		// Failure back and accept further err processing
 		return new Promise((resolve, reject) => reject(err));
 	});
@@ -188,7 +203,11 @@ function invokeChaincode(rpctime, params) {
 	var org = defaultOrg;
 	var tx_id = { value : null };
 	var eventhubs = [];
-	var traceInfo = params.ctorMsg.args[3];
+	var enrolled_admin = null;
+	var funtionName = params.ctorMsg.functionName;
+	var functionArgs = params.ctorMsg.args;
+	logger.info('invokeChaincode params: %s',params);
+	logger.info('funtionName: %s',funtionName);
 	
 	return setup.getAlivePeer(ORGS, org)
 	.then((peerInfo) => {
@@ -198,33 +217,26 @@ function invokeChaincode(rpctime, params) {
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
 		chain = readyChain;
-		var options = { 
-			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
-		};
-		return hfc.newDefaultKeyValueStore(options);
-		
-	}).then((keyValueStore) => {
-		client.setStateStore(keyValueStore);
 		return Submitter.getSubmitter(client, org, logger);
 
 	}).then((admin) => {
-		logger.debug('Successfully enrolled user \'admin\'');
-		return sendTransactionProposal(chain, admin, util.getMspid(ORGS, org), traceInfo, tx_id);
+		logger.info('Successfully enrolled user \'admin\'');
+		enrolled_admin = admin;
+		return chain.initialize();
+
+	}).then((nothing) => {
+		logger.info('Successfully initialized chain');
+		return sendTransactionProposal(chain, enrolled_admin, tx_id, funtionName, functionArgs);
 
 	}).then((results) => {
-		if (util.checkProposalResponses(results, 'Invoke transaction', logger)) {
-			var proposalResponses = results[0];
-			var proposal = results[1];
-			var header   = results[2];
-			logger.debug('Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s", metadata - "%s", endorsement signature: %s', 
-					proposalResponses[0].response.status, proposalResponses[0].response.message, proposalResponses[0].response.payload, proposalResponses[0].endorsement.signature);
-
-			return commitTransaction(chain, proposalResponses, proposal, header, eventhubs, tx_id.value);
+		if (util.checkProposalResponses(chain, results, 'Invoke transaction', logger)) {
+			return commitTransaction(chain, results, eventhubs, tx_id.value);
 		} else {
 			util.throwError(logger, null, 'Bad proposal responses. ');
 		}
+		
 	}).catch((err) => {
-		logger.error('Failed to invoke transaction with error: ' + err.stack ? err.stack : err);
+		logger.error('Failed to invoke transaction with error:  %s', err);
 		// Failure back and accept further err processing
 		return new Promise((resolve, reject) => reject(err));
 	});
@@ -259,27 +271,69 @@ function processCommitResponse(responses, tx_id) {
 }
 
 
-function sendInstantiateProposal(chain, admin, mspid, tx_id) {
-	admin.mspImpl._id = mspid;
-
+function sendInstantiateProposal(chain, admin, tx_id, functionArgs, isUpgrade) {
 	var nonce = ClientUtils.getNonce();
-	tx_id.value = chain.buildTransactionID(nonce, admin);
+	tx_id.value = hfc.buildTransactionID(nonce, admin);
 
-	var request = generateInvokeRequest('init', nonce, tx_id.value, "this is genesis block");
+	var request = generateProposalRequest('init', functionArgs, nonce, tx_id.value);
 	logger.debug('Sending instantiate proposal "%s"', JSON.stringify(request));
 
-	return chain.sendInstantiateProposal(request);
+	if(!isUpgrade) {
+		return chain.sendInstantiateProposal(request);
+	}
+	else {
+		return chain.sendUpgradeProposal(request);
+	}
 }
 
 
-function sendTransactionProposal(chain, admin, mspid, traceInfo, tx_id) {
-	admin.mspImpl._id = mspid;
+function sendTransactionProposal(chain, admin, tx_id, funtionName, functionArgs) {
+	logger.info('sendTransactionProposal funtionName: %s',funtionName);
 
 	var nonce = ClientUtils.getNonce();
-	tx_id.value = chain.buildTransactionID(nonce, admin);
+	tx_id.value = hfc.buildTransactionID(nonce, admin);
 
-	var request = generateInvokeRequest('addNewTrade', nonce, tx_id.value, traceInfo);
+	var request = generateProposalRequest(funtionName, functionArgs, nonce, tx_id.value);
 	logger.debug('Sending invoke transaction proposal "%s"', JSON.stringify(request));
 
 	return chain.sendTransactionProposal(request);
 }
+
+
+function upgradeChaincode() {
+	logger.info('\n\n***** Hyperledger fabric client: upgrade chaincode *****');
+
+	// Client and chain should be claimed here
+	var client = new hfc();
+	var eventhubs = [];
+	var chain = setup.setupChainWithAllPeers(client, ORGS, eventhubs);
+	var tx_id = { value : null };
+
+	// this is a transaction, will just use org1's identity to
+	// submit the request
+	var org = defaultOrg;
+	var enrolled_admin = null;
+	var functionArgs = [];
+	
+	return Submitter.getSubmitter(client, org, logger)
+	.then((admin) => {
+		logger.info('Successfully enrolled user \'admin\'');
+		enrolled_admin = admin;
+		return chain.initialize();
+
+	}).then((nothing) => {
+		logger.info('Successfully initialized chain');
+		return sendInstantiateProposal(chain, enrolled_admin, tx_id, functionArgs, true);
+
+	}).then((results) => {
+		if (util.checkProposalResponses(chain, results, 'Upgrade transaction', logger)) {
+			return commitTransaction(chain, results, eventhubs, tx_id.value);
+		} else {
+			util.throwError(logger, null, 'Bad proposal responses. ');
+		}
+	}).catch((err) => {
+		logger.error('Failed to upgrade chaincode with error:  %s', err);
+		// Failure back and accept further err processing
+		return new Promise((resolve, reject) => reject(err));
+	});
+};

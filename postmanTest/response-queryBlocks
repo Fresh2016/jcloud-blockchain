@@ -1,0 +1,67 @@
+{
+  "status": "success",
+  "message": {
+    "Payloads": {
+      "low": 26,
+      "high": 0,
+      "unsigned": true
+    }
+  },
+  "id": "2"
+}
+
+
+{
+  "status": "failed",
+  "message": {
+    "Error": "Error: Failed in getting any alive peer, returning nothing.ReferenceError: reject is not defined"
+  },
+  "id": "2"
+}
+
+
+{
+  "status": "success",
+  "message": {
+    "Payloads": {
+      "number": {
+        "low": 3,
+        "high": 0,
+        "unsigned": true
+      },
+      "previous_hash": {
+        "buffer": {
+          "type": "Buffer",
+          "data": [
+            10,
+            26,
+ 			...
+            168
+          ]
+        },
+        "offset": 4,
+        "markedOffset": -1,
+        "limit": 36,
+        "littleEndian": true,
+        "noAssert": false
+      },
+      "data_hash": {
+        "buffer": {
+          "type": "Buffer",
+          "data": [
+            10,
+            26,
+ 			...
+            168
+          ]
+        },
+        "offset": 38,
+        "markedOffset": -1,
+        "limit": 70,
+        "littleEndian": true,
+        "noAssert": false
+      }
+    }
+  },
+  "id": "2"
+}

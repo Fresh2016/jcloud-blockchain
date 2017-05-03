@@ -1,0 +1,21 @@
+POST /v1/supplychain HTTP/1.1
+Host: localhost:8081
+Content-Type: application/json
+Cache-Control: no-cache
+Postman-Token: 83a5b8bb-8994-3caa-4a68-658342ff11ea
+
+{
+"rpctime": "2017-04-17 10:00:00",
+"params": {
+"type": 1,
+"chaincode":{
+"name":"supplychain0",
+"version":"v0"
+},
+"ctorMsg": {
+"function":"addNewTrade",
+"args":["Sku", "Sku654321", "TraceInfo", "Test trace info from postman"]
+}
+},
+"id": "2"
+}

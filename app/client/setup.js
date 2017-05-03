@@ -27,6 +27,8 @@ var logger = ClientUtils.getLogger('setup-chain');
 
 // Export functions
 module.exports.getAlivePeer = getAlivePeer;
+module.exports.getPeerAll = getPeerAll;
+module.exports.newOrderer = newOrderer;
 module.exports.setupChainByOrg = setupChainByOrg;
 module.exports.setupChainWithOnlyOrderer = setupChainWithOnlyOrderer;
 module.exports.setupChainWithPeer = setupChainWithPeer;
@@ -34,48 +36,89 @@ module.exports.setupChainWithAllPeers = setupChainWithAllPeers;
 
 
 //Set up the chain with orderer
-function addOrderer(chain, ORGS) {
-	chain.addOrderer(new Orderer(ORGS.orderer));
-}
-
-
-//Set up the chain with peer
-function addPeer(chain, ORGS, peerInfo, asPrimary) {
-	var url = peerInfo['requests'];
-	let peer = new Peer(url);
-	chain.addPeer(peer);
-	if (asPrimary) {
-		chain.setPrimaryPeer(peer);
+function addOrderer(client, chain, ORGS) {
+	try {
+		chain.addOrderer(newOrderer(client, ORGS.orderer));
+	} catch(err) {
+		logger.error('Orderer of network %j is unrecognized, skip adding it to the chain.', ORGS);
 	}
 }
 
 
+// Set up the chain with peer
+// Check peer connectivity then add alive one to the chain
+function addPeer(client, chain, ORGS, peerInfo, asPrimary) {
+	var url = null;
+	var peer = null;
+
+	try {
+		url = peerInfo['requests'];
+		peer = newPeer(client, ORGS, peerInfo);
+	} catch(err) {
+		logger.warn('Peer %j is unrecognized, skip adding it to the chain.', peerInfo);
+	}
+
+	isPortAlive(getIpFromEndpoint(url), getPortFromEndpoint(url))
+	.then((res) => {
+		chain.addPeer(peer);
+		if (asPrimary) {
+			chain.setPrimaryPeer(peer);
+		}
+
+	}).catch((err) => {
+		logger.warn('Peer %s is unreachable, skip adding it to the chain.', url);
+	});
+
+}
+
+
 //Set up the chain with all peers
-function addPeerAll(chain, ORGS) {
+function addPeerAll(client, chain, ORGS) {
 	var peerList = getPeerAll(ORGS);
 	for (let i in peerList) {
-		addPeer(chain, ORGS, peerList[i], false);
+		addPeer(client, chain, ORGS, peerList[i], false);
 	}
 }
 
 
 //Set up the chain with peers in org
-function addPeerByOrg(chain, ORGS, org) {
+function addPeerByOrg(client, chain, ORGS, org) {
 	var peerList = getPeerByOrg(ORGS, org);
 	for (let i in peerList) {
-		addPeer(chain, ORGS, peerList[i], false);
+		addPeer(client, chain, ORGS, peerList[i], false);
 	}
 }
 
 
-//Set up the chain with eventhub
+// Check peer connectivity then connect alive one with eventhub
 function connectEventHub(eventhubs, peerInfo) {
-	var eventsUrl = peerInfo['events'];
-	let eh = new EventHub();
+	var eh = new EventHub();
+	var eventsUrl = null;
+	var peerUrl = null;
+	var caroots = null;
+	var eventsPem = {};
 
-	eh.setPeerAddr(eventsUrl);
-	eh.connect();
-	eventhubs.push(eh);
+	try {
+		eventsUrl = peerInfo['events'];
+		peerUrl = peerInfo['requests'];
+		caroots = util.getCaRoots(peerInfo);
+		eventsPem = {
+				pem: caroots,
+				'ssl-target-name-override': peerInfo['server-hostname']
+			};
+	} catch(err) {
+		logger.warn('Peer %j is unrecognized, skip connecting it to eventHub.', peerInfo);
+	}
+
+	isPortAlive(getIpFromEndpoint(peerUrl), getPortFromEndpoint(peerUrl))
+	.then((res) => {
+		eh.setPeerAddr(eventsUrl, eventsPem);
+		eh.connect();
+		eventhubs.push(eh);
+
+	}).catch((err) => {
+		logger.warn('Peer %s is unreachable, skip connecting it to eventHub.', peerUrl);
+	});
 }
 
 
@@ -97,9 +140,8 @@ function connectEventHubByOrg(eventhubs, ORGS, org) {
 }
 
 
+// Looking for alive peer recursively and returning its url
 function checkTheNext(peerList) {
-	// Looking for alive peer recursively and returning its url
-	
 	// Take one from the list each time, also removing it
 	var peer = popRandom(peerList);
 	try {
@@ -119,7 +161,6 @@ function checkTheNext(peerList) {
 			return checkTheNext(peerList);
 		} else {
 			util.throwError(logger, err, 'Failed in getting any alive peer, returning nothing.');
-			return null;
 		}
 	});
 }
@@ -218,9 +259,35 @@ function isPortAlive(host, port) {
 		}).on("error", function() {
 			reject();
 		});
-	}).catch((err) => {
-		reject();
-	});	
+	});
+}
+
+
+//Set up the client with orderer
+function newOrderer(client, ordererInfo) {
+	var caroots = util.getCaRoots(ordererInfo);
+
+	return client.newOrderer(
+			ordererInfo.url,
+			{
+				'pem': caroots,
+				'ssl-target-name-override': ordererInfo['server-hostname']
+			}
+		);
+}
+
+
+//Set up the client with peer
+function newPeer(client, ORGS, peerInfo) {
+	var caroots = util.getCaRoots(peerInfo);
+	
+	return client.newPeer(
+			peerInfo.requests,
+			{
+				pem: caroots,
+				'ssl-target-name-override': peerInfo['server-hostname']
+			}
+		);
 }
 
 
@@ -245,8 +312,8 @@ function setupChainByOrg(client, ORGS, org, eventhubs, withEh) {
 	try{
 		var chain = client.newChain(util.channel);
 
-		addOrderer(chain, ORGS);
-		addPeerByOrg(chain, ORGS, org);
+		addOrderer(client, chain, ORGS);
+		addPeerByOrg(client, chain, ORGS, org);
 
 		if (withEh) {
 			connectEventHubByOrg(eventhubs, ORGS, org);
@@ -270,7 +337,7 @@ function setupChainWithOnlyOrderer(client, ORGS) {
 	try{
 		var chain = client.newChain(util.channel);
 
-		addOrderer(chain, ORGS);
+		addOrderer(client, chain, ORGS);
 
 		// Remove expired keys before enroll user
 		cleanupKeyValueStore(ORGS);
@@ -291,8 +358,8 @@ function setupChainWithPeer(client, ORGS, peerInfo, asPrimary, eventhubs, withEh
 	try{
 		var chain = client.newChain(util.channel);
 
-		addOrderer(chain, ORGS);
-		addPeer(chain, ORGS, peerInfo, asPrimary);
+		addOrderer(client, chain, ORGS);
+		addPeer(client, chain, ORGS, peerInfo, asPrimary);
 		
 		if (withEh) {
 			connectEventHub(eventhubs, peerInfo);
@@ -318,8 +385,8 @@ function setupChainWithAllPeers(client, ORGS, eventhubs) {
 	try{
 		var chain = client.newChain(util.channel);
 
-		addOrderer(chain, ORGS);
-		addPeerAll(chain, ORGS);
+		addOrderer(client, chain, ORGS);
+		addPeerAll(client, chain, ORGS);
 
 		connectEventHubAll(eventhubs, ORGS);
 		
