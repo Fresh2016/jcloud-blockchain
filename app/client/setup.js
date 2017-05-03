@@ -253,11 +253,19 @@ function getRandom(n,m){
 function isPortAlive(host, port) {
 	logger.debug('Checking connectivity of %s:%s', host, port);
 	return new Promise((resolve, reject) => {
-		net.createConnection(port, host)
-		.on("connect", function() {
-			resolve(); 
+
+		socket = net.createConnection(port, host);
+		
+		socket.on("connect", function() {
+			socket.destroy();
+			resolve();
 		}).on("error", function() {
+			socket.destroy();
 			reject();
+		}).on("end", function() {
+			logger.debug('Connectivity inspector disconnected from %s:%s', host, port);
+		}).on("close", function() {
+			logger.debug('Connectivity inspector disconnected from %s:%s', host, port);
 		});
 	});
 }
