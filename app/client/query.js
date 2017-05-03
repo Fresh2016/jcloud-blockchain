@@ -113,15 +113,15 @@ function encapsulateQueryResponse(response_payloads) {
 }
 
 
-function generateProposalRequest(fcn, args, nonce, tx_id) {
+function generateProposalRequest(params, nonce, tx_id) {
 	var request = {
-			chainId: util.channel,
-			chaincodeId: util.chaincodeId,
-			chaincodeVersion: util.chaincodeVersion,
-			fcn: fcn,
-			args: args,
-			txId: tx_id,
-			nonce: nonce,
+			chainId : params.channelName,
+			chaincodeId : params.chaincode.name,
+			chaincodeVersion : params.chaincode.version,
+			fcn : params.ctorMsg.functionName,
+			args : params.ctorMsg.args,
+			txId : tx_id,
+			nonce : nonce
 	};
 	
 	return request;
@@ -552,8 +552,6 @@ function queryTransaction(rpctime, params) {
 	// submit the request
 	var org = defaultOrg;
 	var channel = params.channelName;
-	var fcn = params.ctorMsg.functionName;
-	var args = params.ctorMsg.args;
 	
 	var block_result = {};
 	var the_user = null;
@@ -587,7 +585,7 @@ function queryTransaction(rpctime, params) {
 	}).then(() => {
 		nonce = ClientUtils.getNonce()
 		var tx_id = hfc.buildTransactionID(nonce, the_user);
-		var request = generateProposalRequest(fcn, args, nonce, tx_id);
+		var request = generateProposalRequest(params, nonce, tx_id);
 		logger.debug('Sending query request: %s', JSON.stringify(request));
 		
 		return chain.queryByChaincode(request);
@@ -622,8 +620,6 @@ function queryTransactionHistory(rpctime, params) {
 	// submit the request
 	var org = defaultOrg;
 	var channel = params.channelName;
-	var fcn = params.ctorMsg.functionName;
-	var args = params.ctorMsg.args;
 
 	var the_user = null;
 
@@ -647,7 +643,7 @@ function queryTransactionHistory(rpctime, params) {
 	}).then(() => {
 		nonce = ClientUtils.getNonce()
 		var tx_id = hfc.buildTransactionID(nonce, the_user);
-		var request = generateProposalRequest(fcn, args, nonce, tx_id);
+		var request = generateProposalRequest(params, nonce, tx_id);
 		logger.debug('Sending query request: %s', JSON.stringify(request));
 		
 		return chain.queryByChaincode(request);

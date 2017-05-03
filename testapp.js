@@ -5,14 +5,27 @@ invokeClient = require('./app/client/invoke-transaction.js');
 queryClient = require('./app/client/query.js');
 
 
-
+var params_instantiate_transaction = {
+		rpctime : '2017-04-17 10:00:00',
+		params : {
+			type : 1,
+			channelName : "mychannel",
+			chaincode : {
+				name : 'trace1',
+				version : 'v0'
+			}
+		},
+		id : 2
+	};
+var params_upgrade_transaction = JSON.parse(JSON.stringify(params_instantiate_transaction));
+params_upgrade_transaction.params.chaincode.version = 'v1';
 var params_invoke_transaction = {
 		rpctime : '2017-04-17 10:00:00',
 		params : {
 			type : 1,
 			channelName : "mychannel",
 			chaincode : {
-				name : 'supplychain0',
+				name : 'trace1',
 				version : 'v0'
 			},
 			ctorMsg : {
@@ -24,10 +37,10 @@ var params_invoke_transaction = {
 	};
 
 var params_query_transaction = {
-        type : '1',
+        type : 1,
 	    channelName : "mychannel",
         chaincode : {
-        	name : 'supplychain0',
+        	name : 'trace1',
         	version : 'v0',
         },
         ctorMsg : {
@@ -140,7 +153,7 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: install chaincode result %s', JSON.stringify(result));
 		if (isToDo('instantiate', opr_num_list)) {
-			return invokeClient.instantiateChaincode();
+			return invokeClient.instantiateChaincode(params_instantiate_transaction.rpctime, params_instantiate_transaction.params);
 		} else {
 			return 'Skipped'
 		}
@@ -148,7 +161,7 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: instantiate chaincode result %s', JSON.stringify(result));
 		if (isToDo('upgrade', opr_num_list)) {
-			return invokeClient.upgradeChaincode();
+			return invokeClient.upgradeChaincode(params_upgrade_transaction.rpctime, params_upgrade_transaction.params);
 		} else {
 			return 'Skipped'
 		}

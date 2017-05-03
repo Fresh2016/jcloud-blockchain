@@ -108,22 +108,22 @@ function generateCommitRequest(endorsement) {
 }
 
 
-function generateProposalRequest(fcn, args, nonce, tx_id) {
+function generateProposalRequest(params, nonce, tx_id) {
 	var request = {
-			chainId: util.channel,
-			chaincodeId: util.chaincodeId,
-			chaincodeVersion: util.chaincodeVersion,
-			fcn: fcn,
-			args: args,
-			txId: tx_id,
-			nonce: nonce,
+			chainId : params.channelName,
+			chaincodeId : params.chaincode.name,
+			chaincodeVersion : params.chaincode.version,
+			fcn : params.ctorMsg.functionName,
+			args : params.ctorMsg.args,
+			txId : tx_id,
+			nonce : nonce,
 			
 			// Added in v1.0. 
 			// TODO: should be programmable.
 			'endorsement-policy': Policy.ONE_OF_TWO_ORG_MEMBER
 	};
 
-	if ('init' == fcn) {
+	if ('init' == request.fcn) {
 		request.chaincodePath = util.chaincodePath;
 	}
 	
@@ -149,20 +149,21 @@ function instantiateChaincode() {
 */
 
 
-function instantiateChaincode() {
+function instantiateChaincode(rpctime, params) {
 	logger.info('\n\n***** Hyperledger fabric client: instantiate chaincode *****');
 
 	// Client and chain should be claimed here
 	var client = new hfc();
 	var eventhubs = [];
-	var chain = setup.setupChainWithAllPeers(client, ORGS, eventhubs);
 	var tx_id = { value : null };
 
 	// this is a transaction, will just use org1's identity to
 	// submit the request
 	var org = defaultOrg;
 	var enrolled_admin = null;
-	var functionArgs = [];
+	var channel = params.channelName;
+
+	var chain = setup.setupChainWithAllPeers(client, channel, ORGS, eventhubs);
 	
 	return Submitter.getSubmitter(client, org, logger)
 	.then((admin) => {
@@ -172,7 +173,7 @@ function instantiateChaincode() {
 
 	}).then((nothing) => {
 		logger.info('Successfully initialized chain');
-		return sendInstantiateProposal(chain, enrolled_admin, tx_id, functionArgs, false);
+		return sendInstantiateProposal(chain, enrolled_admin, params, false, tx_id);
 
 	}).then((results) => {
 		if (util.checkProposalResponses(chain, results, 'Instantiate transaction', logger)) {
@@ -201,14 +202,12 @@ function invokeChaincode(rpctime, params) {
 	var tx_id = { value : null };
 	var eventhubs = [];
 	var enrolled_admin = null;
-	var funtionName = params.ctorMsg.functionName;
-	var functionArgs = params.ctorMsg.args;
-//	var traceInfo = params.ctorMsg.args[3];
+	var channel = params.channelName;
 	
 	return setup.getAlivePeer(ORGS, org)
 	.then((peerInfo) => {
 		logger.debug('Successfully get alive peer %s', JSON.stringify(peerInfo));
-		return setup.setupChainWithPeer(client, ORGS, peerInfo, true, eventhubs, true);
+		return setup.setupChainWithPeer(client, channel, ORGS, peerInfo, true, eventhubs, true);
 
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
@@ -222,7 +221,7 @@ function invokeChaincode(rpctime, params) {
 
 	}).then((nothing) => {
 		logger.info('Successfully initialized chain');
-		return sendTransactionProposal(chain, enrolled_admin, tx_id, funtionName, functionArgs);
+		return sendTransactionProposal(chain, enrolled_admin, params, tx_id);
 
 	}).then((results) => {
 		if (util.checkProposalResponses(chain, results, 'Invoke transaction', logger)) {
@@ -267,11 +266,12 @@ function processCommitResponse(responses, tx_id) {
 }
 
 
-function sendInstantiateProposal(chain, admin, tx_id, functionArgs, isUpgrade) {
+function sendInstantiateProposal(chain, admin, params, isUpgrade, tx_id) {
 	var nonce = ClientUtils.getNonce();
 	tx_id.value = hfc.buildTransactionID(nonce, admin);
+	params.functionName = 'init';
 
-	var request = generateProposalRequest('init', functionArgs, nonce, tx_id.value);
+	var request = generateProposalRequest(params, nonce, tx_id.value);
 	logger.debug('Sending instantiate proposal "%s"', JSON.stringify(request));
 
 	if(!isUpgrade) {
@@ -283,32 +283,33 @@ function sendInstantiateProposal(chain, admin, tx_id, functionArgs, isUpgrade) {
 }
 
 
-function sendTransactionProposal(chain, admin, tx_id, funtionName, functionArgs) {
+function sendTransactionProposal(chain, admin, params, tx_id) {
 	var nonce = ClientUtils.getNonce();
 	tx_id.value = hfc.buildTransactionID(nonce, admin);
 
-	var request = generateProposalRequest(funtionName, functionArgs, nonce, tx_id.value);
+	var request = generateProposalRequest(params, nonce, tx_id.value);
 	logger.debug('Sending invoke transaction proposal "%s"', JSON.stringify(request));
 
 	return chain.sendTransactionProposal(request);
 }
 
 
-function upgradeChaincode() {
+function upgradeChaincode(rpctime, params) {
 	logger.info('\n\n***** Hyperledger fabric client: upgrade chaincode *****');
 
 	// Client and chain should be claimed here
 	var client = new hfc();
 	var eventhubs = [];
-	var chain = setup.setupChainWithAllPeers(client, ORGS, eventhubs);
 	var tx_id = { value : null };
 
 	// this is a transaction, will just use org1's identity to
 	// submit the request
 	var org = defaultOrg;
 	var enrolled_admin = null;
-	var functionArgs = [];
-	
+	var channel = params.channelName;
+
+	var chain = setup.setupChainWithAllPeers(client, channel, ORGS, eventhubs);
+
 	return Submitter.getSubmitter(client, org, logger)
 	.then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
@@ -317,7 +318,7 @@ function upgradeChaincode() {
 
 	}).then((nothing) => {
 		logger.info('Successfully initialized chain');
-		return sendInstantiateProposal(chain, enrolled_admin, tx_id, functionArgs, true);
+		return sendInstantiateProposal(chain, enrolled_admin, params, true, tx_id);
 
 	}).then((results) => {
 		if (util.checkProposalResponses(chain, results, 'Upgrade transaction', logger)) {
