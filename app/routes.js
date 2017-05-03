@@ -34,9 +34,10 @@ module.exports = function(app) {
 	this.traceInfo = 'init value in routes.js';
 	
 	// API: query chain latest state
-	app.get('/v1/supplychain', function(req, res) {
+	app.get('/v1/:channelname?', function(req, res) {
 		console.log('API: query chain latest state');
 		console.dir(req.query);
+		req.query.params['channelName'] = req.params.channelname;
 		queryClient.queryTransaction(req.query.rpctime, JSON.parse(req.query.params))
 		.then((result) => {
 			res.json(result);
@@ -47,9 +48,10 @@ module.exports = function(app) {
 	});	
 
 	// API: query block hight or information
-	app.get('/v1/supplychain/blocks', function(req, res) {
+	app.get('/v1/:channelname?/blocks', function(req, res) {
 		console.log('API: query blocks heights or information');
 		console.dir(req.query);
+		req.query.params['channelName'] = req.params.channelname;
 		queryClient.queryBlocks(req.query.rpctime, JSON.parse(req.query.params))
 		.then((result) => {
 			console.log(result);
@@ -105,18 +107,19 @@ module.exports = function(app) {
 		});
 	});
 
-	app.all('/v1/create', function(req, res) {
-		console.log('API: create');
-		console.dir(req.body);
-		manageClient.create('mychannel')
-			.then((result) => {
-				console.dir(result);
-				res.json(result);
-			}).catch((err) => {
-				//var result = generateErrorResponse(err, req.body.id);
-				res.json(err);
-			});
-	});
+	//app.all('/v1/createChannel', function(req, res) {
+	//	console.log('API: create');
+	//	console.dir(req.body);
+	//	manageClient.create('mychannel')
+	//		.then((result) => {
+	//			console.dir(result);
+	//			res.json(result);
+	//		}).catch((err) => {
+	//			//var result = generateErrorResponse(err, req.body.id);
+	//			res.json(err);
+	//		});
+	//});
+
 };
 
 
