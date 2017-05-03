@@ -10,6 +10,7 @@ var params_invoke_transaction = {
 		rpctime : '2017-04-17 10:00:00',
 		params : {
 			type : 1,
+			channelName:"supplychain",
 			chaincode : {
 				name : 'supplychain0',
 				version : 'v0'
@@ -24,6 +25,7 @@ var params_invoke_transaction = {
 
 var params_query_transaction = {
         type : '1',
+	    channelName:"supplychain",
         chaincode : {
         	name : 'supplychain0',
         	version : 'v0',
@@ -40,6 +42,7 @@ var params_query_blockInfo = {
 
 var request_query_transaction = {
         params : {
+			channelName:"supplychain",
 			rpctime : '2017-04-17 10:00:00',
 	        params : params_query_transaction,
 	        id : 2
@@ -47,6 +50,7 @@ var request_query_transaction = {
 	};
 var request_query_blocknum = {
         params : {
+			channelName:"supplychain",
 			rpctime : '2017-04-17 10:00:00',
 	        params : params_query_blocknum,
 	        id : 2
@@ -54,6 +58,7 @@ var request_query_blocknum = {
 	};
 var request_query_blockInfo = {
         params : {
+			channelName:"supplychain",
 			rpctime : '2017-04-17 10:00:00',
 	        params : params_query_blockInfo,
 	        id : 2
