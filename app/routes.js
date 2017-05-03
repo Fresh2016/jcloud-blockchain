@@ -64,7 +64,7 @@ module.exports = function(app) {
 
 
 	// API: query orderer list and status
-	app.get('/v1/orderers', function(req, res) {
+	app.get('/v1/supplychain/orderers', function(req, res) {
 		console.log('API: query orderers status');
 		console.dir(req.query);
 		queryClient.queryOrderers(req.query.channel)
@@ -79,7 +79,7 @@ module.exports = function(app) {
 	});	
 
 	// API: query peer list and status
-	app.get('/v1/peers', function(req, res) {
+	app.get('/v1/supplychain/peers', function(req, res) {
 		console.log('API: query peers status');
 		console.dir(req.query);
 		queryClient.queryPeers(req.query.channel)

@@ -591,7 +591,7 @@ function queryTransaction(rpctime, params) {
 		return chain.queryByChaincode(request);
 		
 	}).then((response_payloads) => {
-		logger.debug('Chain queryByChaincode() returned response_payloads: ' + response_payloads);
+		logger.debug('Chain queryByChaincode() ----returned response_payloads: %j', response_payloads[0].toString('base64'));
 		if (null == response_payloads || response_payloads.toString('utf8', 0, 10).indexOf('Error') === 0) {
 			util.throwError(logger, null, response_payloads.toString('utf8', 0, 10));
 		} else {

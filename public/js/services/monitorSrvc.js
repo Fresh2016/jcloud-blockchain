@@ -25,10 +25,10 @@ angular.module('monitorService', [])
 	.factory('Monitor', ['$http',function($http) {
 		return {
 			getOrderers : function(data) {
-				return $http.get('/v1/orderers', data);
+				return $http.get('/v1/supplychain/orderers', data);
 			},
 			getPeers : function(data) {
-				return $http.get('/v1/peers', data);
+				return $http.get('/v1/supplychain/peers', data);
 			}
 		}
 	}]);
