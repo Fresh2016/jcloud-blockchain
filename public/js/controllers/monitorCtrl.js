@@ -23,7 +23,7 @@ angular.module('monitorController', [])
 		
 		console.log('Inside monitorController');
 
-		var channel = 'mychannel';
+
 		
 		$scope.peerList = '';
 		$scope.peer0 = '';
@@ -34,7 +34,6 @@ angular.module('monitorController', [])
 		// GET Peers method, initial data when loading monitoring page
 		Monitor.getOrderers({
 	        params: {
-	        	channel: channel
 	        }
 		})
 		.success(function(data) {
@@ -44,7 +43,6 @@ angular.module('monitorController', [])
 		// GET Orderers method, initial data when loading monitoring page
 		Monitor.getPeers({
 	        params: {
-	        	channel: channel
 	        }
 		})
 		.success(function(data) {
