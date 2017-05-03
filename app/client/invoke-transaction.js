@@ -109,8 +109,6 @@ function generateCommitRequest(endorsement) {
 
 
 function generateProposalRequest(fcn, args, nonce, tx_id) {
-	logger.info('generateProposalRequest funtionName: %s',fcn);
-
 	var request = {
 			chainId: util.channel,
 			chaincodeId: util.chaincodeId,
@@ -124,7 +122,6 @@ function generateProposalRequest(fcn, args, nonce, tx_id) {
 			// TODO: should be programmable.
 			'endorsement-policy': Policy.ONE_OF_TWO_ORG_MEMBER
 	};
-	logger.info('generateProposalRequest request: %s',request);
 
 	if ('init' == fcn) {
 		request.chaincodePath = util.chaincodePath;
@@ -206,8 +203,7 @@ function invokeChaincode(rpctime, params) {
 	var enrolled_admin = null;
 	var funtionName = params.ctorMsg.functionName;
 	var functionArgs = params.ctorMsg.args;
-	logger.info('invokeChaincode params: %s',params);
-	logger.info('funtionName: %s',funtionName);
+//	var traceInfo = params.ctorMsg.args[3];
 	
 	return setup.getAlivePeer(ORGS, org)
 	.then((peerInfo) => {
@@ -288,8 +284,6 @@ function sendInstantiateProposal(chain, admin, tx_id, functionArgs, isUpgrade) {
 
 
 function sendTransactionProposal(chain, admin, tx_id, funtionName, functionArgs) {
-	logger.info('sendTransactionProposal funtionName: %s',funtionName);
-
 	var nonce = ClientUtils.getNonce();
 	tx_id.value = hfc.buildTransactionID(nonce, admin);
 
