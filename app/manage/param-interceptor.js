@@ -19,10 +19,7 @@ exports.filterParams =function(req,res){
             setChaincodePath(req,res);
             setTxFileData(req,res);
         }
-    }else{
-        req.params ={};
     }
-
 }
 /**
  * 校验是否存在channelName
@@ -67,18 +64,18 @@ function setChaincodePath(req,res){
 function setNetwork(req,res){
     try{
         var  peerList =config[req.query.params['channelName']]['chanCode'][req.query.params.chaincode.name].peerList;
-        req.params.network = {};
-        req.params.network.orderer = hfc.getConfigSetting('orderer');
+        req.query.params.network = {};
+        req.query.params.network.orderer = hfc.getConfigSetting('orderer');
         for(var i =0;i<peerList.length;i++){
            var peer =  hfc.getConfigSetting(peerList[i]);
-            if(req.params.network[peer.assign]){
-                req.params.network[peer.assign]["num"] = req.params.network[peer.assign]["num"] +1;
+            if(req.query.params.network[peer.assign]){
+                req.query.params.network[peer.assign]["num"] = req.query.params.network[peer.assign]["num"] +1;
                 var peerNum = "peer" +req.params.network[peer.assign]["num"];
-                req.params.network[peer.assign][peerNum] = peer;
+                req.query.params.network[peer.assign][peerNum] = peer;
             } else{
-                req.params.network[peer.assign] = hfc.getConfigSetting(peer.assign);
-                req.params.network[peer.assign]["peer1"] = peer;
-                req.params.network[peer.assign]["num"] =1;
+                req.query.params.network[peer.assign] = hfc.getConfigSetting(peer.assign);
+                req.query.params.network[peer.assign]["peer1"] = peer;
+                req.query.params.network[peer.assign]["num"] =1;
             }
         }
     }catch(err) {
