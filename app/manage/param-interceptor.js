@@ -10,17 +10,30 @@ var rf=require("fs");
  * @param req
  */
 exports.filterParams =function(req,res){
-        if(req.params&& null!=req.params.channelname && ""!=req.params.channelname){
-            if(req.query.params){
-                req.query.params['channelName'] = req.params.channelname;
-                setNetwork(req,res);
-                setChaincodePath(req,res);
-                setTxFileData(req,res);
-            }else{
-                req.query.params ={}
-                req.query.params['channelName'] = req.params.channelname;
-            }
+    if(null!=req.params){
+        //todo 第二个参数必须是 Channelname ，如果不是，就需要调整
+        var originalUrl = req.originalUrl;
+        var originalList = originalUrl.split("/");
+        var reqChannelname = originalList[2];
+        var channelList = config.list;
+        if(channelList.indexOf(reqChannelname) <0){
+            return   res.json("channelname is not exist")
+        }else{
+            req.params.channelname = reqChannelname;
         }
+
+    }
+    var params = req.query.params || req.body.params;
+    if(null!=params){
+        req.query.params =  JSON.parse(params);
+        req.query.params['channelName'] = req.params.channelname;
+        setNetwork(req,res);
+        setChaincodePath(req,res);
+        setTxFileData(req,res);
+    }else{
+        req.query.params ={}
+        req.query.params['channelName'] = req.params.channelname;
+    }
 }
 /**
  * 校验是否存在channelName
@@ -64,13 +77,13 @@ function setChaincodePath(req,res){
  */
 function setNetwork(req,res){
     try{
-        if(!config[req.query.params['channelName']]){
+        if(null!=config[req.query.params['channelName']]){
             return res.json("channelName is null")
         }
-        if(!config[req.query.params['channelName']]['chainCode']){
+        if(null!=config[req.query.params['channelName']]['chainCode']){
             return res.json("chainCode is null")
         }
-        if(!config[req.query.params['channelName']]['chainCode'][req.query.params.chaincode.name]){
+        if(null!=config[req.query.params['channelName']]['chainCode'][req.query.params.chaincode.name]){
             return res.json("chainCode is null")
         }
         var  peerList =config[req.query.params['channelName']]['chainCode'][req.query.params.chaincode.name].peerList;

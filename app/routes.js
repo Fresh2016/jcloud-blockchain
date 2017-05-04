@@ -36,9 +36,6 @@ module.exports = function(app) {
 
 	//param Interceptor
 	app.use(function(req, res, next) {
-		var params = req.query.params || req.body.params
-		req.query.params =  JSON.parse(params);
-		console.log('——————————————————'+req.params.channelnam);
 		interClient.filterParams(req, res);
 		next();
 	});
@@ -131,7 +128,7 @@ module.exports = function(app) {
 	//			res.json(err);
 	//		});
 	//});
-	//app.all('/v2/test', function(req, res) {
+	//app.all('/v1/:channelname?/test', function(req, res) {
 	//	//interClient.filterParams(req, res)
 	//	//console.dir(req.body);
 	//	console.log('%%%%%%%%%%%%%%%%');
