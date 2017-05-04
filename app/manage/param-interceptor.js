@@ -25,7 +25,10 @@ exports.filterParams =function(req,res){
     }
     var params = req.query.params || req.body.params;
     if(null!=params){
-        req.query.params =  JSON.parse(params);
+        if(typeof(params) !="object"){
+            req.query.params =  JSON.parse(params);
+        }
+
         req.query.params['channelName'] = req.params.channelname;
         setNetwork(req,res);
         setChaincodePath(req,res);
@@ -77,17 +80,19 @@ function setChaincodePath(req,res){
  */
 function setNetwork(req,res){
     try{
-        if(null!=config[req.query.params['channelName']]){
+        if(null==config[req.query.params.channelName]){
+
             return res.json("channelName is null")
         }
-        if(null!=config[req.query.params['channelName']]['chainCode']){
-            return res.json("chainCode is null")
-        }
-        if(null!=config[req.query.params['channelName']]['chainCode'][req.query.params.chaincode.name]){
-            return res.json("chainCode is null")
-        }
-        var  peerList =config[req.query.params['channelName']]['chainCode'][req.query.params.chaincode.name].peerList;
+        if(null==config[req.query.params.channelName]['chainCode']){
 
+            return res.json("chainCode is null")
+        }
+        if(null==config[req.query.params.channelName]['chainCode'][req.query.params.chaincode.name]){
+
+            return res.json("chainCodeName is null")
+        }
+        var  peerList =config[req.query.params.channelName]['chainCode'][req.query.params.chaincode.name].peerList;
         req.query.params.network = {};
         req.query.params.network.orderer = network.orderer;
         for(var i =0;i<peerList.length;i++){
@@ -102,7 +107,6 @@ function setNetwork(req,res){
                 req.query.params.network[peer.assign]["num"] =1;
             }
         }
-
     }catch(err) {
         logger.error('setNetwork error %s',JSON.stringify(err));
     }
@@ -119,3 +123,24 @@ function isEmptyObject(e) {
     return true
 }
 
+//var req = { params: { channelname: 'mychannel' },
+//    query:
+//    { rpctime: '2017-04-17 10:00:00',
+//        params: { type: 1,
+//            channelName: 'mychannel',
+//            chaincode : {
+//            name : 'trace',
+//            version : 'v0'
+//        },
+//            ctorMsg : {
+//                functionName : 'iPostSkuBaseInfo',
+//                args : ["skuId123", "vendortest", "traceCode123456", "hashabcd", "name123", "num123", "ext123", "sign123", "time123"]
+//            } },
+//        id: 2 } }
+//
+//setNetwork (req)
+
+//console.log(req.query.params.channelName)
+//console.log(config[req.query.params.channelName])
+//console.log(config[req.query.params.channelName]['chainCode'])
+//console.log(config[req.query.params.channelName]['chainCode'][req.query.params.chaincode.name])
