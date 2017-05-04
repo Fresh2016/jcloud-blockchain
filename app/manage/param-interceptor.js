@@ -10,7 +10,7 @@ var rf=require("fs");
  * @param req
  */
 exports.filterParams =function(req,res){
-    if(null!=req.params){
+    if(isEmptyObject(req.params)){
         //todo 第二个参数必须是 Channelname ，如果不是，就需要调整
         var originalUrl = req.originalUrl;
         var originalList = originalUrl.split("/");
@@ -107,3 +107,15 @@ function setNetwork(req,res){
         logger.error('setNetwork error %s',JSON.stringify(err));
     }
 }
+
+/**
+ * 是否空对象
+ * @param e
+ * @returns {boolean}
+ */
+function isEmptyObject(e) {
+    for (var t in e)
+        return false;
+    return true
+}
+
