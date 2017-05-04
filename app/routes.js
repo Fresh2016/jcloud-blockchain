@@ -36,6 +36,7 @@ module.exports = function(app) {
 
 	//param Interceptor
 	app.use(function(req, res, next) {
+		req.query.params =  JSON.parse(req.query.params);
 		interClient.filterParams(req, res);
 		next();
 	});
@@ -46,7 +47,7 @@ module.exports = function(app) {
 		console.log('API: query chain latest state');
 		console.dir(req.query);
 		//req.query.params['channelName'] = req.params.channelname;
-		queryClient.queryTransaction(req.query.rpctime, JSON.parse(req.query.params))
+		queryClient.queryTransaction(req.query.rpctime, req.query.params)
 		.then((result) => {
 			res.json(result);
 		}).catch((err) => {
@@ -60,7 +61,7 @@ module.exports = function(app) {
 		console.log('API: query blocks heights or information');
 		console.dir(req.query);
 		//req.query.params['channelName'] = req.params.channelname;
-		queryClient.queryBlocks(req.query.rpctime, JSON.parse(req.query.params))
+		queryClient.queryBlocks(req.query.rpctime, req.query.params)
 		.then((result) => {
 			console.log(result);
 			res.json(result);

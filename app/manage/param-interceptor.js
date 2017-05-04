@@ -1,5 +1,5 @@
 var ClientUtils = require('fabric-client/lib/utils.js');
-var config =require('../config/channel/channel.js');
+var config =require('../config/channel/channel.js').getConfig();
 var logger = ClientUtils.getLogger('param-interceptor');
 var rf=require("fs");
 // Fabric client imports

@@ -30,6 +30,14 @@ var channel={
 
 
 
-module.exports = function(mode) {
-    return channel[mode];
-};
+//module.exports = function(mode) {
+//    return channel[mode];
+//};
+
+
+exports.getConfig= function(mode) {
+    if(mode){
+        return channel[mode];
+    }
+    return channel;
+}
