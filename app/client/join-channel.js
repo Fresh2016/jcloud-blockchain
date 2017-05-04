@@ -27,7 +27,6 @@ var setup = require('./setup.js');
 var util = require('./util.js');
 
 var logger = ClientUtils.getLogger('join-channel');
-var ORGS = util.ORGS;
 
 module.exports.joinChannel = joinChannel;
 
@@ -45,13 +44,13 @@ function finishJoinByOrg(responses) {
 }
 
 
-function joinChannel() {
+function joinChannel(params) {
 	logger.info('\n\n***** Hyperledger fabric client: join channel *****');
-	
+	var ORGS = util.getNetwork(params);
 	var orgs = util.getOrgs(ORGS);
 	logger.info('There are %s organizations: %s. Going to join channel one by one.', orgs.length, orgs);
 
-	return exe.executeTheNext(orgs, joinChannelByOrg, 'Join Channel')
+	return exe.executeTheNext(orgs, joinChannelByOrg, params, 'Join Channel')
 	.catch((err) => {
 		logger.error('Failed to join channel with error:  %s', err);
 		// Failure back and accept further err processing
@@ -61,18 +60,20 @@ function joinChannel() {
 
 
 // As different org holds different certs, only peers in the same org can join the channel in once operation
-function joinChannelByOrg(org) {
+function joinChannelByOrg(org, params) {
 	logger.info('Calling peers in organization "%s" to join the channel', org);
 
 	// client and chain should be claimed here
 	var client = new hfc();
 	var eventhubs = [];
-	var chain = setup.setupChainByOrg(client, ORGS, org, eventhubs, true);
+	var channel = util.getChannel(params);
+	var ORGS = util.getNetwork(params);
+	var chain = setup.setupChainByOrg(client, channel, ORGS, org, eventhubs, true);
 
-	return Submitter.getSubmitter(client, org, logger)
+	return Submitter.getSubmitter(client, ORGS, org, logger)
 	.then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
-		return sendJoinProposal(chain, admin, eventhubs);
+		return sendJoinProposal(chain, channel, admin, eventhubs);
  
 	}).catch((err) => {
 		logger.error('Failed to join channel with error:  %s', err);
@@ -82,7 +83,7 @@ function joinChannelByOrg(org) {
 }
 
 
-function sendJoinProposal(chain, admin, eventhubs) {
+function sendJoinProposal(chain, channel, admin, eventhubs) {
 	var nonce = ClientUtils.getNonce()
 	var tx_id = hfc.buildTransactionID(nonce, admin);
 	var targets = chain.getPeers();
@@ -96,7 +97,7 @@ function sendJoinProposal(chain, admin, eventhubs) {
 
 	var eventPromises = [];
 	eventhubs.forEach((eh) => {
-		Listener.addPromise(eventPromises, 'block', eh, tx_id);
+		Listener.addPromise(eventPromises, 'block', eh, tx_id, channel);
 	});	
 
 	var sendPromise = chain.joinChannel(request);

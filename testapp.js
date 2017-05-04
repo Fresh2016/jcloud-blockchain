@@ -3,6 +3,7 @@ joinClient = require('./app/client/join-channel.js');
 installClient = require('./app/client/install-chaincode.js');
 invokeClient = require('./app/client/invoke-transaction.js');
 queryClient = require('./app/client/query.js');
+var manager = require('./app/manage/create-client.js');// FIXME:should be some other file
 
 
 var params_instantiate_transaction = {
@@ -129,7 +130,8 @@ function execute(opr_num_list) {
 	.then(() => {
 		console.log('\n\n***** TESTAPP: Start testing *****\n\n');
 		if (isToDo('create', opr_num_list)) {
-			return createClient.createChannel();
+//			params = manager.??// FIXME:should be some filter interface from manager
+			return createClient.createChannel(params);
 		} else {
 			return 'Skipped'
 		}
@@ -137,7 +139,8 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: create channel result %s', JSON.stringify(result));
 		if (isToDo('join', opr_num_list)) {
-			return joinClient.joinChannel();
+//			params = manager.??// FIXME:should be some filter interface from manager
+			return joinClient.joinChannel(params);
 		} else {
 			return 'Skipped'
 		}
@@ -145,7 +148,8 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: join channel result %s', JSON.stringify(result));
 		if (isToDo('install', opr_num_list)) {
-			return installClient.installChaincode();
+//			params = manager.??// FIXME:should be some filter interface from manager
+			return installClient.installChaincode(params);
 		} else {
 			return 'Skipped'
 		}
@@ -153,6 +157,7 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: install chaincode result %s', JSON.stringify(result));
 		if (isToDo('instantiate', opr_num_list)) {
+//			params = manager.??// FIXME:should be some filter interface from manager
 			return invokeClient.instantiateChaincode(params_instantiate_transaction.rpctime, params_instantiate_transaction.params);
 		} else {
 			return 'Skipped'
@@ -161,6 +166,7 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: instantiate chaincode result %s', JSON.stringify(result));
 		if (isToDo('upgrade', opr_num_list)) {
+//			params = manager.??// FIXME:should be some filter interface from manager
 			return invokeClient.upgradeChaincode(params_upgrade_transaction.rpctime, params_upgrade_transaction.params);
 		} else {
 			return 'Skipped'
@@ -169,6 +175,7 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: upgrade chaincode result %s', JSON.stringify(result));
 		if (isToDo('invoke', opr_num_list)) {
+//			params = manager.??// FIXME:should be some filter interface from manager
 			return invokeClient.invokeChaincode(params_invoke_transaction.rpctime, params_invoke_transaction.params)
 		} else {
 			return 'Skipped'
@@ -178,6 +185,7 @@ function execute(opr_num_list) {
 		//TODO:eventhub断开
 		console.log('TESTAPP: invoke chaincode result %s', JSON.stringify(result));
 		if (isToDo('query', opr_num_list)) {
+//			params = manager.??// FIXME:should be some filter interface from manager
 			return queryClient.queryTransaction(request_query_transaction.params.rpctime, request_query_transaction.params.params)
 		} else {
 			return 'Skipped'
@@ -186,6 +194,7 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: queryTransaction result %s', JSON.stringify(result));
 		if (isToDo('query', opr_num_list)) {
+//			params = manager.??// FIXME:should be some filter interface from manager
 			return queryClient.queryTransactionHistory(request_query_transaction.params.rpctime, request_query_transaction.params.params);
 		} else {
 			return 'Skipped'
@@ -194,6 +203,7 @@ function execute(opr_num_list) {
 //	}).then((result) => {
 //		console.log('TESTAPP: queryTransactionHistory result %s', JSON.stringify(result));
 //		if (isToDo('query', opr_num_list)) {
+//			params = manager.??// FIXME:should be some filter interface from manager
 //			return queryClient.isTransactionSucceed(response[0].TransactionId);
 //		} else {
 //			return 'Skipped'
@@ -202,7 +212,8 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: isTransactionSucceed result %s', JSON.stringify(result));
 		if (isToDo('query', opr_num_list)) {
-			return queryClient.queryPeers('mychannel');
+//			params = manager.??// FIXME:should be some filter interface from manager
+			return queryClient.queryPeers(params);
 		} else {
 			return 'Skipped'
 		}
@@ -210,7 +221,8 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: queryPeers result %s', JSON.stringify(result));
 		if (isToDo('query', opr_num_list)) {
-			return queryClient.queryOrderers('mychannel');
+//			params = manager.??// FIXME:should be some filter interface from manager
+			return queryClient.queryOrderers(params);
 		} else {
 			return 'Skipped'
 		}
@@ -218,6 +230,7 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: queryOrderers result %s', JSON.stringify(result));
 		if (isToDo('query', opr_num_list)) {
+//			params = manager.??// FIXME:should be some filter interface from manager
 			return queryClient.queryBlocks(request_query_blocknum.params.rpctime, request_query_blocknum.params.params);
 		} else {
 			return 'Skipped'
@@ -226,6 +239,7 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: queryBlocks number result %s', JSON.stringify(result));
 		if (isToDo('query', opr_num_list)) {
+//			params = manager.??// FIXME:should be some filter interface from manager
 			return queryClient.queryBlocks(request_query_blockInfo.params.rpctime, request_query_blockInfo.params.params);
 		} else {
 			return 'Skipped'

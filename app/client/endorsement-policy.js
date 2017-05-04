@@ -16,50 +16,101 @@
 
 var util = require('./util.js');
 
-var ORGS = util.ORGS;
-var orgList = util.getOrgs(ORGS);
 
 const MEMBER = 'member';
 const ADMIN = 'admin';
 
+module.exports.getPolicy = getPolicy;
 
-var ONE_OF_TWO_ORG_MEMBER = generateEndorsementPolicy(
-	generatePolicy(
-		'1-of', generateSignedList([], [0, 1])
-	)
-);
+function getPolicy(params, type) {
 
-var TWO_OF_TWO_ORG_MEMBER = generateEndorsementPolicy(
-	generatePolicy(
-		'2-of', generateSignedList([], [0, 1])
-	)
-);
+	var network = util.getNetwork(params);
 
-var ONE_OF_TWO_ORG_MEMBER_AND_ADMIN = generateEndorsementPolicy(
-	generatePolicy(
-		'2-of', generateSignedList(
-			[
-			 	generatePolicy(
-		 			'1-of', generateSignedList([], [0, 1])
-			 	)
-			],
-			[2]
-		)
-	)
-);
+	if ('ONE_OF_TWO_ORG_MEMBER' === type) {
+		return generateEndorsementPolicy(network, 
+					generatePolicy(
+						'1-of', generateSignedList([], [0, 1])
+					)
+				);
 
-var ONE_OF_ADMIN_ORG_OR_BOTH_MEMBER = generateEndorsementPolicy(
-	generatePolicy(
-		'1-of', generateSignedList(
-			[
-			 	generatePolicy(
-			 		'2-of', generateSignedList([], [0, 1])
-			 	)
-			],
-			[2]
-		)
-	)
-);
+	} else if ('TWO_OF_TWO_ORG_MEMBER' === type) {
+		return generateEndorsementPolicy(network, 
+					generatePolicy(
+						'2-of', generateSignedList([], [0, 1])
+					)
+				);
+
+	} else if ('ONE_OF_TWO_ORG_MEMBER_AND_ADMIN' === type) {
+		return generateEndorsementPolicy(network, 
+					generatePolicy(
+						'2-of', generateSignedList(
+							[
+							 	generatePolicy(
+						 			'1-of', generateSignedList([], [0, 1])
+							 	)
+							],
+							[2]
+						)
+					)
+				);
+
+	} else if ('ONE_OF_ADMIN_ORG_OR_BOTH_MEMBER' === type) {
+		return generateEndorsementPolicy(network, 
+					generatePolicy(
+						'1-of', generateSignedList(
+							[
+							 	generatePolicy(
+							 		'2-of', generateSignedList([], [0, 1])
+							 	)
+							],
+							[2]
+						)
+					)
+				);
+
+	} else {
+		return null;
+	}
+}
+
+//to be deleted
+//var ONE_OF_TWO_ORG_MEMBER = generateEndorsementPolicy(
+//		generatePolicy(
+//			'1-of', generateSignedList([], [0, 1])
+//		)
+//	);
+//
+//var TWO_OF_TWO_ORG_MEMBER = generateEndorsementPolicy(
+//	generatePolicy(
+//		'2-of', generateSignedList([], [0, 1])
+//	)
+//);
+//
+//var ONE_OF_TWO_ORG_MEMBER_AND_ADMIN = generateEndorsementPolicy(
+//	generatePolicy(
+//		'2-of', generateSignedList(
+//			[
+//			 	generatePolicy(
+//		 			'1-of', generateSignedList([], [0, 1])
+//			 	)
+//			],
+//			[2]
+//		)
+//	)
+//);
+//
+//var ONE_OF_ADMIN_ORG_OR_BOTH_MEMBER = generateEndorsementPolicy(
+//	generatePolicy(
+//		'1-of', generateSignedList(
+//			[
+//			 	generatePolicy(
+//			 		'2-of', generateSignedList([], [0, 1])
+//			 	)
+//			],
+//			[2]
+//		)
+//	)
+//);
 
 
 //console.dir(ONE_OF_TWO_ORG_MEMBER.policy);
@@ -68,15 +119,17 @@ var ONE_OF_ADMIN_ORG_OR_BOTH_MEMBER = generateEndorsementPolicy(
 //console.dir(ONE_OF_ADMIN_ORG_OR_BOTH_MEMBER.policy);
 //console.dir(ONE_OF_ADMIN_ORG_OR_BOTH_MEMBER.policy['1-of'][0]);
 
-module.exports.ONE_OF_TWO_ORG_MEMBER = ONE_OF_TWO_ORG_MEMBER;
-module.exports.TWO_OF_TWO_ORG_MEMBER = TWO_OF_TWO_ORG_MEMBER;
-module.exports.ONE_OF_TWO_ORG_MEMBER_AND_ADMIN = ONE_OF_TWO_ORG_MEMBER_AND_ADMIN;
-module.exports.ONE_OF_ADMIN_ORG_OR_BOTH_MEMBER = ONE_OF_ADMIN_ORG_OR_BOTH_MEMBER;
+//module.exports.ONE_OF_TWO_ORG_MEMBER = ONE_OF_TWO_ORG_MEMBER;
+//module.exports.TWO_OF_TWO_ORG_MEMBER = TWO_OF_TWO_ORG_MEMBER;
+//module.exports.ONE_OF_TWO_ORG_MEMBER_AND_ADMIN = ONE_OF_TWO_ORG_MEMBER_AND_ADMIN;
+//module.exports.ONE_OF_ADMIN_ORG_OR_BOTH_MEMBER = ONE_OF_ADMIN_ORG_OR_BOTH_MEMBER;
 
 
-function generateEndorsementPolicy(policy) {
+function generateEndorsementPolicy(network, policy) {
+	var orgList = util.getOrgs(network);
+
 	return {
-		identities: getOrgMembersAndAdmins(ORGS, orgList, ['org1']),
+		identities: getOrgMembersAndAdmins(network, orgList, ['org1']),
 		policy: policy
 	};
 }
@@ -89,11 +142,11 @@ function generatePolicy(expr, signedList) {
 }
 
 
-function generateRole(role, org) {
+function generateRole(network, role, org) {
 	return {
 		role: {
 			name: role,
-			mspId: util.getMspid(ORGS, org)
+			mspId: util.getMspid(network, org)
 		}
 	};
 }
@@ -107,20 +160,20 @@ function generateSignedList(signedList, list) {
 }
 
 
-function getOrgMembersAndAdmins(ORGS, orgList, adminList) {
+function getOrgMembersAndAdmins(network, orgList, adminList) {
 	var identities = [];
 	orgList.forEach((org) => {
-		pushRole(identities, MEMBER, org);
+		pushRole(network, identities, MEMBER, org);
 	});
 	adminList.forEach((org) => {
-		pushRole(identities, ADMIN, org);
+		pushRole(network, identities, ADMIN, org);
 	});
 	return identities;
 }
 
 
-function pushRole(identities, role, org){
-	identities.push(generateRole(role, org));
+function pushRole(network, identities, role, org){
+	identities.push(generateRole(network, role, org));
 }
 
 

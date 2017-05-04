@@ -24,7 +24,6 @@ var util = require('./util.js');
 
 ClientUtils.setConfigSetting('hfc-logging', '{"debug": "console"}');
 var logger = ClientUtils.getLogger('create-channel');
-var ORGS = util.ORGS;
 
 //Only for creating a key value store with org name, not used in create-channel
 var defaultOrg = 'org1';
@@ -32,29 +31,31 @@ var defaultSleepTime = 1000;
 
 module.exports.createChannel = createChannel;
 
-function createChannel() {
+function createChannel(params) {
 	logger.info('\n\n***** Hyperledger fabric client: create channel *****');
 
 	// client and chain should be claimed here
 	var client = new hfc();
+	var ORGS = util.getNetwork(params);
 	var orderer = setup.newOrderer(client, ORGS.orderer);
 
 	// this is a transaction, will just use org1's identity to
 	// submit the request
 	var org = defaultOrg;
 
-	return Submitter.getSubmitter(client, org, logger)
+	return Submitter.getSubmitter(client, ORGS, org, logger)
 	.then((admin) => {
 
 		logger.info('Successfully enrolled user \'admin\'');
 
 		// read in the envelope to send to the orderer
-		return util.readFile(util.txFilePath);
+//		return util.readFile(util.getTxFilePath(params));
+		return util.getTxFileData(params);
 		
 	}).then((txFileData) => {
 		var request = {
 			envelope : txFileData,
-			name : util.channel,
+			name : util.getChannel(params),
 			orderer : orderer
 		};
 		printRequest(logger, request);
