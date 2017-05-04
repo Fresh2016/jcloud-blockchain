@@ -25,6 +25,7 @@
 invokeClient = require('./client/invoke-transaction.js');
 queryClient = require('./client/query.js');
 manageClient = require('./manage/create-client.js');
+interClient = require('./manage/param-interceptor.js');
 module.exports = function(app) {
 
 	console.log('Inside routes.js');
@@ -32,12 +33,19 @@ module.exports = function(app) {
 	var that = this;
 	this.blockHead = 'init value in routes.js';
 	this.traceInfo = 'init value in routes.js';
-	
+
+	//param Interceptor
+	app.use(function(req, res, next) {
+		interClient.filterParams(req, res);
+		next();
+	});
+
+
 	// API: query chain latest state
 	app.get('/v1/:channelname?', function(req, res) {
 		console.log('API: query chain latest state');
 		console.dir(req.query);
-		req.query.params['channelName'] = req.params.channelname;
+		//req.query.params['channelName'] = req.params.channelname;
 		queryClient.queryTransaction(req.query.rpctime, JSON.parse(req.query.params))
 		.then((result) => {
 			res.json(result);
@@ -51,7 +59,7 @@ module.exports = function(app) {
 	app.get('/v1/:channelname?/blocks', function(req, res) {
 		console.log('API: query blocks heights or information');
 		console.dir(req.query);
-		req.query.params['channelName'] = req.params.channelname;
+		//req.query.params['channelName'] = req.params.channelname;
 		queryClient.queryBlocks(req.query.rpctime, JSON.parse(req.query.params))
 		.then((result) => {
 			console.log(result);
@@ -97,7 +105,7 @@ module.exports = function(app) {
 	app.post('/v1/:channelname?', function(req, res) {
 		console.log('API: invoke transaction');
 		console.dir(req.body);
-		req.query.params['channelName'] = req.params.channelname;
+		//req.query.params['channelName'] = req.params.channelname;
 		invokeClient.invokeChaincode(req.body.rpctime, req.body.params)
 		.then((result) => {
 			console.dir(result);
@@ -120,7 +128,12 @@ module.exports = function(app) {
 	//			res.json(err);
 	//		});
 	//});
-
+	//app.all('/v2/test', function(req, res) {
+	//	//interClient.filterParams(req, res)
+	//	//console.dir(req.body);
+	//	console.log('%%%%%%%%%%%%%%%%');
+	//	return res.json("123")
+	//});
 };
 
 
