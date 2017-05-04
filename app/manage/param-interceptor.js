@@ -11,15 +11,17 @@ hfc.addConfigFile('./app/channel/network.json');
  * @param req
  */
 exports.filterParams =function(req,res){
-    if(req.params){
-        if( null!=req.params.channelname && ""!=req.params.channelname){
+        if(req.params&& null!=req.params.channelname && ""!=req.params.channelname){
+            if(req.query.params){
+                setNetwork(req,res);
+                setChaincodePath(req,res);
+                setTxFileData(req,res);
+            }else{
+                req.query.params ={}
+            }
             req.query.params['channelName'] = req.params.channelname;
-
-            setNetwork(req,res);
-            setChaincodePath(req,res);
-            setTxFileData(req,res);
         }
-    }
+
 }
 /**
  * 校验是否存在channelName
