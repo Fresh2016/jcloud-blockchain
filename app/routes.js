@@ -36,7 +36,9 @@ module.exports = function(app) {
 
 	//param Interceptor
 	app.use(function(req, res, next) {
-		req.query.params =  JSON.parse(req.query.params);
+		var params = req.query.params || req.body.params
+		req.query.params =  JSON.parse(params);
+		console.log('——————————————————'+req.params.channelnam);
 		interClient.filterParams(req, res);
 		next();
 	});

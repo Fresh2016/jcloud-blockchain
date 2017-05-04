@@ -1,10 +1,9 @@
 var ClientUtils = require('fabric-client/lib/utils.js');
-var config =require('../config/channel/channel.js').getConfig();
+var config =require('./data/channel.js').getConfig();
+var network =require('./data/network.js').getData();
 var logger = ClientUtils.getLogger('param-interceptor');
 var rf=require("fs");
-// Fabric client imports
-var hfc = require('fabric-client');
-hfc.addConfigFile('./app/channel/network.json');
+
 
 /**
  * Parameter filter
@@ -38,7 +37,7 @@ function vifchannelName(req){
 function setTxFileData(req,res){
     try{
         var  txFilePath =config[req.query.params['channelName']].txFilePath;
-        var data=rf.readFileSync("txFilePath","utf-8");
+        var data=rf.readFileSync(txFilePath,"utf-8");
         req.params.txFileData = data;
     }catch(err) {
         logger.error('setTxFileData error %s',JSON.stringify(err));
@@ -65,21 +64,32 @@ function setChaincodePath(req,res){
  */
 function setNetwork(req,res){
     try{
+        if(!config[req.query.params['channelName']]){
+            return res.json("channelName is null")
+        }
+        if(!config[req.query.params['channelName']]['chainCode']){
+            return res.json("chainCode is null")
+        }
+        if(!config[req.query.params['channelName']]['chainCode'][req.query.params.chaincode.name]){
+            return res.json("chainCode is null")
+        }
         var  peerList =config[req.query.params['channelName']]['chainCode'][req.query.params.chaincode.name].peerList;
+
         req.query.params.network = {};
-        req.query.params.network.orderer = hfc.getConfigSetting('orderer');
+        req.query.params.network.orderer = network.orderer;
         for(var i =0;i<peerList.length;i++){
-           var peer =  hfc.getConfigSetting(peerList[i]);
+           var peer =  network[peerList[i]];
             if(req.query.params.network[peer.assign]){
                 req.query.params.network[peer.assign]["num"] = req.query.params.network[peer.assign]["num"] +1;
                 var peerNum = "peer" +req.params.network[peer.assign]["num"];
                 req.query.params.network[peer.assign][peerNum] = peer;
             } else{
-                req.query.params.network[peer.assign] = hfc.getConfigSetting(peer.assign);
+                req.query.params.network[peer.assign] = network[peer.assign];
                 req.query.params.network[peer.assign]["peer1"] = peer;
                 req.query.params.network[peer.assign]["num"] =1;
             }
         }
+
     }catch(err) {
         logger.error('setNetwork error %s',JSON.stringify(err));
     }

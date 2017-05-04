@@ -1,4 +1,4 @@
-{
+var data={
   "orderer": {
     "url": "grpcs://202.77.131.6:7050",
     "server-hostname": "orderer0",
@@ -49,4 +49,11 @@
     "mspid": "Org2MSP",
     "ca": "https://202.77.131.6:8054"
   }
+}
+
+exports.getData= function(mode) {
+  if(mode){
+    return data[mode];
+  }
+  return data;
 }
