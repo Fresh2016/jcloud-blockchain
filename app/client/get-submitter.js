@@ -30,7 +30,6 @@ var ecdsaKey = require('fabric-client/lib/impl/ecdsa/key.js');
 
 const GAP = "################################################";
 
-var ORGS = util.ORGS;
 var testKey = null;
 
 //const defaultUserOrg = 'org1';
@@ -52,7 +51,7 @@ module.exports.getSubmitter = getSubmitter;
 /**
  * need to enroll it with CA server
  */
-function enrollFromServer(client, userOrg, logger, tlsOptions, username, resolve) {
+function enrollFromServer(client, ORGS, userOrg, logger, tlsOptions, username, resolve) {
 	var member = new User(username);
 	var password = defaultPwd;	
 
@@ -90,7 +89,7 @@ function enrollFromServer(client, userOrg, logger, tlsOptions, username, resolve
  *    \_ signcerts
  *       \_ admin.pem  <<== this is the signed certificate saved in PEM file
  */
-function enrollFromConfig(client, userOrg, logger, username, privKeyPEM, certPEM, resolve) {
+function enrollFromConfig(client, ORGS, userOrg, logger, username, privKeyPEM, certPEM, resolve) {
 	var member = new User(username);
 	var mspid = ORGS[userOrg].mspid;
 	var pemData;
@@ -126,7 +125,7 @@ function enrollFromConfig(client, userOrg, logger, username, privKeyPEM, certPEM
 }
 
 
-function getSubmitter(client, userOrg, logger) {
+function getSubmitter(client, ORGS, userOrg, logger) {
 	var username = defaultUsrname;
 	var loadFromConfig = false;
 
@@ -147,9 +146,9 @@ function getSubmitter(client, userOrg, logger) {
 			}
 
 			if (!loadFromConfig) {
-				return enrollFromServer(client, userOrg, logger, tlsOptions, username, resolve);
+				return enrollFromServer(client, ORGS, userOrg, logger, tlsOptions, username, resolve);
 			} else {
-				return enrollFromConfig(client, userOrg, logger, username, privKeyPEM, certPEM, resolve);
+				return enrollFromConfig(client, ORGS, userOrg, logger, username, privKeyPEM, certPEM, resolve);
 			}
 		});
 	});

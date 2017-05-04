@@ -29,10 +29,10 @@ module.exports.addPromise = addPromise;
 module.exports.disconnectEventhub = disconnectEventhub;
 
 
-function addPromise(eventPromises, type, eh, deployId) {
+function addPromise(eventPromises, type, eh, deployId, channel) {
 	let txPromise = new Promise((resolve, reject) => {
 		// set expireTime as 30s
-		registerEvent(eh, type, resolve, reject, defaultExpireTime, deployId);
+		registerEvent(eh, type, resolve, reject, defaultExpireTime, deployId, channel);
 	});
 	eventPromises.push(txPromise);
 	// So as to make eh.some stop adding duplicate listener
@@ -40,13 +40,13 @@ function addPromise(eventPromises, type, eh, deployId) {
 }
 
 
-function blockEventListener(eh, resolve, reject, handle, deployId, block) {
+function blockEventListener(eh, resolve, reject, handle, deployId, channel, block) {
 	logger.debug('Event listener got callback of tx id %s with block', deployId);
 	logger.debug('Clearning timeout setting and unregister event');
 	clearTimeout(handle);
 	eh.unregisterBlockEvent();
 	
-	if (checkChannelInBlockEvent(block)){
+	if (checkChannelInBlockEvent(channel, block)){
 		logger.debug('The new channel has been successfully joined on peer '+ eh.ep.addr);
 		resolve();
 	} else {
@@ -56,7 +56,7 @@ function blockEventListener(eh, resolve, reject, handle, deployId, block) {
 }
 
 
-function checkChannelInBlockEvent(block) {
+function checkChannelInBlockEvent(channel, block) {
 	// in real-world situations, a peer may have more than one channels so
 	// we must check that this block came from the channel we asked the peer to join
 	if(block.data.data.length === 1) {
@@ -68,7 +68,7 @@ function checkChannelInBlockEvent(block) {
 		var payload = commonProto.Payload.decode(envelope.payload);
 		var channel_header = commonProto.ChannelHeader.decode(payload.header.channel_header);
 
-		if (channel_header.channel_id === util.channel) {
+		if (channel_header.channel_id === channel) {
 			return true;
 		}
 		return false;
@@ -90,14 +90,14 @@ function disconnectEventhub(eventhubs) {
 }
 
 
-function registerEvent(eh, type, resolve, reject, expireTime, deployId) {
+function registerEvent(eh, type, resolve, reject, expireTime, deployId, channel) {
 	let handle = setTimeout(reject, expireTime);
 
 	logger.debug('Register %s event with deployId %s ', type, deployId);
 	
 	if ('block' === type) {
 		eh.registerBlockEvent((block) => {
-			blockEventListener(eh, resolve, reject, handle, deployId, block);
+			blockEventListener(eh, resolve, reject, handle, deployId, channel, block);
 		});
 	} else {
 		eh.registerTxEvent(deployId, (tx, code) => {

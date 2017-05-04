@@ -29,7 +29,6 @@ var Policy = require('./endorsement-policy.js');
 
 ClientUtils.setConfigSetting('request-timeout', 300000);
 var logger = ClientUtils.getLogger('invoke-chaincode');
-var ORGS = util.ORGS;
 
 var targets = [];
 
@@ -55,7 +54,7 @@ function commitTransaction(chain, endorsement, eventhubs, tx_id) {
 	// Use .some instead of .forEach, avoiding duplicate listeners with same tx id
 	//eventhubs.forEach((eh) => {
 	eventhubs.some((eh) => {
-		return Listener.addPromise(eventPromises, 'tx', eh, deployId);
+		return Listener.addPromise(eventPromises, 'tx', eh, deployId, null);
 	});	
 
 	var sendPromise = chain.sendTransaction(request);
@@ -110,11 +109,11 @@ function generateCommitRequest(endorsement) {
 
 function generateProposalRequest(params, nonce, tx_id) {
 	var request = {
-			chainId : params.channelName,
-			chaincodeId : params.chaincode.name,
-			chaincodeVersion : params.chaincode.version,
-			fcn : params.ctorMsg.functionName,
-			args : params.ctorMsg.args,
+			chainId : util.getChannel(params),
+			chaincodeId : util.getChaincodeId(params),
+			chaincodeVersion : util.getChaincodeVersion(params),
+			fcn : util.getFunctionName(params),
+			args : util.getFunctionArgs(params),
 			txId : tx_id,
 			nonce : nonce,
 			
@@ -124,7 +123,7 @@ function generateProposalRequest(params, nonce, tx_id) {
 	};
 
 	if ('init' == request.fcn) {
-		request.chaincodePath = util.chaincodePath;
+		request.chaincodePath = util.getChaincodePath(params);
 	}
 	
 	return request;
@@ -133,13 +132,13 @@ function generateProposalRequest(params, nonce, tx_id) {
 
 /*
 //for instantiate chaincode org by org, but now we do it in one instantiation
-function instantiateChaincode() {
+function instantiateChaincode(params) {
 	logger.info('\n\n***** Hyperledger fabric client: instantiate chaincode *****');
 	
 	var orgs = util.getOrgs(ORGS);
 	logger.info('There are %s organizations: %s. Going to instantiate chaincode one by one.', orgs.length, orgs);
 
-	return exe.executeTheNext(orgs, instantiateChaincodeByOrg, 'Instantiate Chaincode')
+	return exe.executeTheNext(orgs, instantiateChaincodeByOrg, params, 'Instantiate Chaincode')
 	.catch((err) => {
 		logger.error('Failed to instantiate chaincode with error:  %s', err);
 		// Failure back and accept further err processing
@@ -161,11 +160,12 @@ function instantiateChaincode(rpctime, params) {
 	// submit the request
 	var org = defaultOrg;
 	var enrolled_admin = null;
-	var channel = params.channelName;
+	var channel = util.getChannel(params);
+	var ORGS = util.getNetwork(params);
 
 	var chain = setup.setupChainWithAllPeers(client, channel, ORGS, eventhubs);
 	
-	return Submitter.getSubmitter(client, org, logger)
+	return Submitter.getSubmitter(client, ORGS, org, logger)
 	.then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
 		enrolled_admin = admin;
@@ -202,7 +202,8 @@ function invokeChaincode(rpctime, params) {
 	var tx_id = { value : null };
 	var eventhubs = [];
 	var enrolled_admin = null;
-	var channel = params.channelName;
+	var channel = util.getChannel(params);
+	var ORGS = util.getNetwork(params);
 	
 	return setup.getAlivePeer(ORGS, org)
 	.then((peerInfo) => {
@@ -212,7 +213,7 @@ function invokeChaincode(rpctime, params) {
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
 		chain = readyChain;
-		return Submitter.getSubmitter(client, org, logger);
+		return Submitter.getSubmitter(client, ORGS, org, logger);
 
 	}).then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
@@ -306,11 +307,12 @@ function upgradeChaincode(rpctime, params) {
 	// submit the request
 	var org = defaultOrg;
 	var enrolled_admin = null;
-	var channel = params.channelName;
+	var channel = util.getChannel(params);
+	var ORGS = util.getNetwork(params);
 
 	var chain = setup.setupChainWithAllPeers(client, channel, ORGS, eventhubs);
 
-	return Submitter.getSubmitter(client, org, logger)
+	return Submitter.getSubmitter(client, ORGS, org, logger)
 	.then((admin) => {
 		logger.info('Successfully enrolled user \'admin\'');
 		enrolled_admin = admin;

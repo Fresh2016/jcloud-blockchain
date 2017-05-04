@@ -21,17 +21,17 @@ var logger = ClientUtils.getLogger('execute-recursively');
 module.exports.executeTheNext = executeTheNext;
 
 
-function executeTheNext(orgs, functionByOrg, actionString) {
+function executeTheNext(orgs, functionByOrg, functionParams, actionString) {
 	// Get orgs executing some action one by one until all orgs done
 	// e.g. functionByOrg is joinChannelByOrg and actionString is 'Join Channel'
 	let org = pop(orgs);
 	
-	return functionByOrg(org)
+	return functionByOrg(org, functionParams)
 	.then((response) => {
 		logger.info('Organization %s successfully %s', org, actionString);
 		logger.debug('Get success responses: %j', response);
 		if (0 < orgs.length) {
-			return executeTheNext(orgs, functionByOrg, actionString);
+			return executeTheNext(orgs, functionByOrg, functionParams, actionString);
 		} else {
 			logger.info('END of %s.', actionString);
 			return new Promise((resolve, reject) => resolve(response));

@@ -27,7 +27,6 @@ var setup = require('./setup.js');
 var util = require('./util.js');
 
 var logger = ClientUtils.getLogger('query-chaincode');
-var ORGS = util.ORGS;
 
 var nonce = null;
 var targets = [];
@@ -115,11 +114,11 @@ function encapsulateQueryResponse(response_payloads) {
 
 function generateProposalRequest(params, nonce, tx_id) {
 	var request = {
-			chainId : params.channelName,
-			chaincodeId : params.chaincode.name,
-			chaincodeVersion : params.chaincode.version,
-			fcn : params.ctorMsg.functionName,
-			args : params.ctorMsg.args,
+			chainId : util.getChannel(params),
+			chaincodeId : util.getChaincodeId(params),
+			chaincodeVersion : util.getChaincodeVersion(params),
+			fcn : util.getFunctionName(params),
+			args : util.getFunctionArgs(params),
 			txId : tx_id,
 			nonce : nonce
 	};
@@ -168,6 +167,7 @@ function isTransactionSucceed(transactionId) {
 	// this is a query, will just use org2's identity to
 	// submit the request
 	var org = defaultOrg;
+	var ORGS = util.getNetwork(params);
 	
 	return setup.getAlivePeer(ORGS, org)
 	.then((peerInfo) => {
@@ -177,7 +177,7 @@ function isTransactionSucceed(transactionId) {
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
 		chain = readyChain;
-		return Submitter.getSubmitter(client, org, logger);
+		return Submitter.getSubmitter(client, ORGS, org, logger);
 
 	}).then((admin) => {		
 		logger.info('Successfully enrolled user \'admin\'');
@@ -344,7 +344,8 @@ function queryBlocks(rpctime, params) {
 	// this is a query, will just use org2's identity to
 	// submit the request
 	var org = defaultOrg;
-	var channel = params.channelName;
+	var channel = util.getChannel(params);
+	var ORGS = util.getNetwork(params);
 	var blockNum = params.blockNum;
 	
 	var options = { 
@@ -367,7 +368,7 @@ function queryBlocks(rpctime, params) {
 		
 	}).then((keyValueStore) => {
 		client.setStateStore(keyValueStore);
-		return Submitter.getSubmitter(client, org, logger);
+		return Submitter.getSubmitter(client, ORGS, org, logger);
 
 	}).then((admin) => {	
 		logger.debug('Successfully enrolled user \'admin\'');
@@ -427,7 +428,8 @@ function queryBlocks(rpctime, params) {
 
 
 function queryConfig(channelName) {
-// TODO: channel name is fixed from config file and should be passed from REST request
+	// FIXME: channelName should be in format of params
+	// TODO: channel name is fixed from config file and should be passed from REST request
 	// TODO: care only 1 orderer. should be order cluster status when we have
 	logger.info('\n\n***** Hyperledger fabric client: query configuration of channel: %s *****', channelName);
 
@@ -438,6 +440,7 @@ function queryConfig(channelName) {
 	// this is a query, will just use org2's identity to
 	// submit the request
 	var org = defaultOrg;
+	var ORGS = util.getNetwork(params);
 	var ordererStatus = {
 			name: '',
 			status: 'DOWN'
@@ -453,7 +456,7 @@ function queryConfig(channelName) {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
 		chain = readyChain;
 		ordererStatus.name = chain.getOrderers()[0].getUrl();
-		return Submitter.getSubmitter(client, org, logger);
+		return Submitter.getSubmitter(client, ORGS, org, logger);
 
 	}).then((admin) => {		
 		logger.info('Successfully enrolled user \'admin\'');
@@ -477,6 +480,7 @@ function queryConfig(channelName) {
 
 function queryOrderers(channelName) {
 	// TODO: channel name is fixed from config file and should be passed from REST request
+	// FIXME: channelName should be in format of params
 	logger.info('\n\n***** Hyperledger fabric client: query orderer status of channel: %s *****', channelName);
 	return module.exports.queryConfig(channelName);
 }
@@ -484,14 +488,16 @@ function queryOrderers(channelName) {
 
 function queryPeers(channelName) {
 	// TODO: channel name is fixed from config file and should be passed from REST request
+	// FIXME: channelName should be in format of params
 	logger.info('\n\n***** Hyperledger fabric client: query peer status of channel: %s *****', channelName);
 
+	var ORGS = util.getNetwork(params);
 	var orgs = util.getOrgs(ORGS);
 	logger.info('There are %s organizations: %s. Going to query peers one by one.', orgs.length, orgs);
 	queriedChannelName = channelName;
 	queryPeerResult = initialPeerStatus();
 
-	return exe.executeTheNext(orgs, queryPeersByOrg, 'Query Peers')
+	return exe.executeTheNext(orgs, queryPeersByOrg, params, 'Query Peers')
 	.catch((err) => {
 		logger.error('Failed to query peers with error:  %s', err);
 		// Failure back and accept further err processing
@@ -508,10 +514,11 @@ function queryPeersByOrg(org) {
 	// client and chain should be claimed here
 	var client = new hfc();
 	var eventhubs = [];
+	var ORGS = util.getNetwork(params);
 
 	var chain = setup.setupChainByOrg(client, queriedChannelName, ORGS, org, eventhubs, true);
 
-	return Submitter.getSubmitter(client, org, logger)
+	return Submitter.getSubmitter(client, ORGS, org, logger)
 	.then((admin) => {	
 		logger.info('Successfully enrolled user \'admin\'');
 
@@ -551,7 +558,7 @@ function queryTransaction(rpctime, params) {
 	// this is a query, will just use org2's identity to
 	// submit the request
 	var org = defaultOrg;
-	var channel = params.channelName;
+	var channel = util.getChannel(params);
 	
 	var block_result = {};
 	var the_user = null;
@@ -564,7 +571,7 @@ function queryTransaction(rpctime, params) {
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
 		chain = readyChain;
-		return Submitter.getSubmitter(client, org, logger);
+		return Submitter.getSubmitter(client, ORGS, org, logger);
 
 	}).then((admin) => {	
 		logger.info('Successfully enrolled user \'admin\'');
@@ -619,7 +626,7 @@ function queryTransactionHistory(rpctime, params) {
 	// this is a query, will just use org2's identity to
 	// submit the request
 	var org = defaultOrg;
-	var channel = params.channelName;
+	var channel = util.getChannel(params);
 
 	var the_user = null;
 
@@ -631,7 +638,7 @@ function queryTransactionHistory(rpctime, params) {
 	}).then((readyChain) => {
 		logger.debug('Successfully setup chain %s', readyChain.getName());
 		chain = readyChain;
-		return Submitter.getSubmitter(client, org, logger);
+		return Submitter.getSubmitter(client, ORGS, org, logger);
 
 	}).then((admin) => {		
 		logger.info('Successfully enrolled user \'admin\'');

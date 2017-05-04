@@ -24,20 +24,33 @@ var KEYUTIL = jsrsa.KEYUTIL;
 // Fabric client imports
 var hfc = require('fabric-client');
 
-// Channel and chaincode settings
-// TODO: should be managed by manager and stored in DB
-module.exports.txFilePath = './app/config/mychannel.tx';
-module.exports.chaincodePath = 'github.com/trace';
-module.exports.channel = 'mychannel';
-module.exports.chaincodeId = 'trace1';
-module.exports.chaincodeVersion = 'v0';
+// TODO: to be deleted
+//Read config.json information
+//hfc.addConfigFile('./app/config/config.json');
+//module.exports.ORGS = hfc.getConfigSetting('test-network');
 
-// Read config.json information
-hfc.addConfigFile('./app/config/config.json');
-module.exports.ORGS = hfc.getConfigSetting('test-network');
 
 
 // Function exports:
+//Channel and chaincode settings
+//TODO: should be managed by manager and stored in DB
+//module.exports.txFilePath = './app/config/mychannel.tx';
+//module.exports.getChaincodePath = 'github.com/trace';
+//module.exports.getChannel = 'mychannel';
+//module.exports.getChaincodeId = 'trace1';
+//module.exports.getChaincodeVersion = 'v0';
+module.exports.getChannel = getChannel;
+module.exports.getChaincodePath = getChaincodePath;
+module.exports.getChaincodeId = getChaincodeId;
+module.exports.getChaincodeVersion = getChaincodeVersion;
+module.exports.getFunctionName = getFunctionName;
+module.exports.getFunctionArgs = getFunctionArgs;
+module.exports.getNetwork = getNetwork;
+module.exports.getTxFileData = getTxFileData;
+//TODO: to be removed
+module.exports.getTxFilePath = getTxFilePath;
+
+// Utilities
 module.exports.cleanupDir = cleanupDir;
 module.exports.checkProposalResponses = checkProposalResponses;
 module.exports.getCaRoots = getCaRoots;
@@ -47,6 +60,7 @@ module.exports.getOrgs = getOrgs;
 module.exports.getOrgNameByOrg = getOrgNameByOrg;
 module.exports.getUniqueVersion = getUniqueVersion;
 module.exports.getValueOfJson = getValueOfJson;
+//TODO: to be deleted
 module.exports.readFile = readFile;
 module.exports.storePathForOrg = storePathForOrg;
 module.exports.throwError = throwError;
@@ -167,8 +181,6 @@ function existsSync(absolutePath /*string*/) {
 
 // Read CA root pem files
 function getCaRoots(nodeInfo) {
-//	var caRootsPath = ORGS.orderer.tls_cacerts;
-	
 	var caRootsPath = getCaRootsPath(nodeInfo);
 	let data = readFileSync(caRootsPath);
 	return Buffer.from(data).toString();
@@ -176,7 +188,52 @@ function getCaRoots(nodeInfo) {
 
 
 function getCaRootsPath(nodeInfo) {
-	return nodeInfo.tls_cacerts;//nodeInfo.['tls_cacerts']
+	return nodeInfo.tls_cacerts;
+}
+
+
+function getChannel(params) {
+	return params.channelName;
+}
+
+
+function getChaincodePath(params) {
+	return params.chaincode.path;
+}
+
+
+function getChaincodeId(params) {
+	return params.chaincode.name;
+}
+
+
+function getChaincodeVersion(params) {
+	return params.chaincode.version;
+}
+
+
+function getFunctionName(params) {
+	return params.ctorMsg.functionName;
+}
+
+
+function getFunctionArgs(params) {
+	return params.ctorMsg.args;
+}
+
+
+function getNetwork(params) {
+	return params.network;
+}
+
+
+function getTxFileData(params) {
+	return params.txFileData;
+}
+
+
+function getTxFilePath(params) {
+	return './app/config/mychannel.tx';
 }
 
 

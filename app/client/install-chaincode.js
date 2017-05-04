@@ -27,7 +27,6 @@ var setup = require('./setup.js');
 var util = require('./util.js');
 
 var logger = ClientUtils.getLogger('install-chaincode');
-var ORGS = util.ORGS;
 
 // Temporarily set GOPATH to chaincode_repo
 process.env.GOPATH = path.join(__dirname, '/chaincode_repo');
@@ -35,13 +34,14 @@ process.env.GOPATH = path.join(__dirname, '/chaincode_repo');
 module.exports.installChaincode = installChaincode;
 
 
-function installChaincode() {
+function installChaincode(params) {
 	logger.info('\n\n***** Hyperledger fabric client: install chaincode *****');
 	
+	var ORGS = util.getNetwork(params);
 	var orgs = util.getOrgs(ORGS);
 	logger.info('There are %s organizations: %s. Going to install chaincode one by one.', orgs.length, orgs);
 
-	return exe.executeTheNext(orgs, installChaincodeByOrg, 'Install Chaincode')
+	return exe.executeTheNext(orgs, installChaincodeByOrg, params, 'Install Chaincode')
 	.catch((err) => {
 		logger.error('Failed to install chaincode with error:  %s', err);
 		// Failure back and accept further err processing
@@ -50,14 +50,16 @@ function installChaincode() {
 };
 
 
-function installChaincodeByOrg(org) {
+function installChaincodeByOrg(org, params) {
 	logger.info('Calling peers in organization "%s" to install chaincode', org);
 
 	// Different org uses different client
 	var client = new hfc();
-	var chain = setup.setupChainByOrg(client, ORGS, org, null, false);//TODO:, eventhubs, true
+	var channel = util.getChannel(params);
+	var ORGS = util.getNetwork(params);
+	var chain = setup.setupChainByOrg(client, channel, ORGS, org, null, false);//TODO:, eventhubs, true
 
-	return Submitter.getSubmitter(client, org, logger)
+	return Submitter.getSubmitter(client, ORGS, org, logger)
 	.then((admin) => {	
 		logger.info('Successfully enrolled user \'admin\'');
 		chain.initialize();
@@ -88,9 +90,9 @@ function sendInstallProposal(client, chain, admin) {
 
 	var request = {
 		targets: targets,
-		chaincodePath: util.chaincodePath,
-		chaincodeId: util.chaincodeId,
-		chaincodeVersion: util.chaincodeVersion,
+		chaincodePath: util.getChaincodePath(params),
+		chaincodeId: util.getChaincodeId(params),
+		chaincodeVersion: util.getChaincodeVersion(params),
 		txId: tx_id,
 		nonce: nonce
 	};
