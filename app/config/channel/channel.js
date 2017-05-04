@@ -1,7 +1,7 @@
 var channel={
      list:["mychannel"],
      mychannel:{
-         chanCode:{
+         chainCode:{
              supplychain: {
                  name:"supplychain",
                  version:"v0",

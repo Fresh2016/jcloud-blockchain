@@ -52,7 +52,7 @@ function setTxFileData(req,res){
  */
 function setChaincodePath(req,res){
     try{
-        var  chaincodePath =config[req.query.params['channelName']]['chanCode'][req.query.params.chaincode.name].path;
+        var  chaincodePath =config[req.query.params['channelName']]['chainCode'][req.query.params.chaincode.name].path;
         req.params.chaincode.path = chaincodePath;
     }catch(err) {
         logger.error('setChaincodePath error %s',JSON.stringify(err));
@@ -65,7 +65,7 @@ function setChaincodePath(req,res){
  */
 function setNetwork(req,res){
     try{
-        var  peerList =config[req.query.params['channelName']]['chanCode'][req.query.params.chaincode.name].peerList;
+        var  peerList =config[req.query.params['channelName']]['chainCode'][req.query.params.chaincode.name].peerList;
         req.query.params.network = {};
         req.query.params.network.orderer = hfc.getConfigSetting('orderer');
         for(var i =0;i<peerList.length;i++){
