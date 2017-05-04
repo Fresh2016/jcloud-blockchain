@@ -1,9 +1,10 @@
-createClient = require('./app/client/create-channel.js');
-joinClient = require('./app/client/join-channel.js');
-installClient = require('./app/client/install-chaincode.js');
-invokeClient = require('./app/client/invoke-transaction.js');
-queryClient = require('./app/client/query.js');
-var manager = require('./app/manage/create-client.js');// FIXME:should be some other file
+var createClient = require('./app/client/create-channel.js');
+var joinClient = require('./app/client/join-channel.js');
+var installClient = require('./app/client/install-chaincode.js');
+var invokeClient = require('./app/client/invoke-transaction.js');
+var queryClient = require('./app/client/query.js');
+var manager = require('./app/manage/create-client.js');
+var interClient = require('./app/manage/param-interceptor.js');
 
 
 var params_instantiate_transaction = {
@@ -20,13 +21,13 @@ var params_instantiate_transaction = {
 	};
 var params_upgrade_transaction = JSON.parse(JSON.stringify(params_instantiate_transaction));
 params_upgrade_transaction.params.chaincode.version = 'v1';
-var params_invoke_transaction = {
+
+var paramsInvokeTransaction = {
 		rpctime : '2017-04-17 10:00:00',
 		params : {
 			type : 1,
-			channelName : "mychannel",
 			chaincode : {
-				name : 'trace1',
+				name : 'trace',
 				version : 'v0'
 			},
 			ctorMsg : {
@@ -57,6 +58,12 @@ var params_query_blockInfo = {
 		blockNum : 1
 };
 
+var requestInvokeTransaction = {
+		params : {
+			channelname: "mychannel"
+		},
+		query : paramsInvokeTransaction
+	};
 var request_query_transaction = {
         params : {
 			rpctime : '2017-04-17 10:00:00',
@@ -176,7 +183,10 @@ function execute(opr_num_list) {
 		console.log('TESTAPP: upgrade chaincode result %s', JSON.stringify(result));
 		if (isToDo('invoke', opr_num_list)) {
 //			params = manager.??// FIXME:should be some filter interface from manager
-			return invokeClient.invokeChaincode(params_invoke_transaction.rpctime, params_invoke_transaction.params)
+			console.dir(requestInvokeTransaction);
+			interClient.filterParams(requestInvokeTransaction, null);
+			console.dir(requestInvokeTransaction);
+//			return invokeClient.invokeChaincode(paramsInvokeTransaction.rpctime, paramsInvokeTransaction.params)
 		} else {
 			return 'Skipped'
 		}
@@ -408,7 +418,7 @@ queryClient.queryTransaction(request_query_transaction.params.rpctime, request_q
 
 
 /*
-invokeClient.invokeChaincode(params_invoke_transaction.rpctime, params_invoke_transaction.params)
+invokeClient.invokeChaincode(paramsInvokeTransaction.rpctime, paramsInvokeTransaction.params)
 .catch((err) => {
 	console.log('Return without executing invoking');
 	return false;
