@@ -41,7 +41,7 @@ function setTxFileData(req,res){
         var data=rf.readFileSync("txFilePath","utf-8");
         req.params.txFileData = data;
     }catch(err) {
-        logger.error('setTxFileData error');
+        logger.error('setTxFileData error %s',JSON.stringify(err));
     }
 }
 
@@ -55,7 +55,7 @@ function setChaincodePath(req,res){
         var  chaincodePath =config[req.query.params['channelName']]['chanCode'][req.query.params.chaincode.name].path;
         req.params.chaincode.path = chaincodePath;
     }catch(err) {
-        logger.error('setChaincodePath error');
+        logger.error('setChaincodePath error %s',JSON.stringify(err));
     }
 }
 /**
@@ -81,6 +81,6 @@ function setNetwork(req,res){
             }
         }
     }catch(err) {
-        logger.error('setNetwork error');
+        logger.error('setNetwork error %s',JSON.stringify(err));
     }
 }
