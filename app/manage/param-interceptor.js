@@ -11,18 +11,9 @@ var rf=require("fs");
  */
 exports.filterParams =function(req,res){
     if(isEmptyObject(req.params)){
-        //todo 第二个参数必须是 Channelname ，如果不是，就需要调整
-        var originalUrl = req.originalUrl;
-        var originalList = originalUrl.split("/");
-        var reqChannelname = originalList[2];
-        var channelList = config.list;
-        if(channelList.indexOf(reqChannelname) <0){
-            return   res.json("channelname is not exist")
-        }else{
-            req.params.channelname = reqChannelname;
-        }
-
+    	setChannel(req,res);
     }
+    
     var params = req.query.params || req.body.params;
     if(null!=params){
         if(typeof(params) !="object"){
@@ -30,9 +21,9 @@ exports.filterParams =function(req,res){
         }
 
         req.query.params['channelName'] = req.params.channelname;
-        setNetwork(req,res);
-        setChaincodePath(req,res);
-        setTxFileData(req,res);
+        // FIXME: errors in case of creating channel
+//        setNetwork(req,res);
+//        setChaincodePath(req,res);
     }else{
         req.query.params ={}
         req.query.params['channelName'] = req.params.channelname;
@@ -46,17 +37,53 @@ function vifchannelName(req){
   var channelName=req.query.params['channelName'];
 }
 
+
 /**
- * 设置txfile的data
+ * 设置Channel的名字、版本和Tx文件
  * @param req
  */
-function setTxFileData(req,res){
-    try{
-        var  txFilePath =config[req.query.params['channelName']].txFilePath;
-        var data=rf.readFileSync(txFilePath,"utf-8");
-        req.params.txFileData = data;
-    }catch(err) {
-        logger.error('setTxFileData error %s',JSON.stringify(err));
+function setChannel(req,res) {
+	try{
+        //todo 第二个参数必须是 Channelname ，如果不是，就需要调整
+        var originalUrl = req.originalUrl;
+        var originalList = originalUrl.split("/");
+    	if (2 === originalList.length) {
+    		logger.debug('Creating channel. About to set channel name and Tx file');
+            setChannelName(req, res, req.query.params.channel.name);
+            setTxFileData(req, res);
+
+    	} else if (3 === originalList.length) {
+    		logger.debug('Operating channel %s. About to set channel name in params', originalList[2]);
+            setChannelName(req, res, originalList[2]);
+
+    	} else {
+    		throw new Error('Original URL unrecognized');
+    	}
+		logger.debug('Channel set in params. Updated params: %j', req.query.params);
+
+    } catch(err) {
+        logger.error('setChannel error %s', JSON.stringify(err));
+    }
+}
+
+/**
+ * 设置Channel的名字
+ * @param req
+ */
+function setChannelName(req, res, reqChannelname) {
+   var channelList = config.list;
+
+   if (channelList.indexOf(reqChannelname) <0) {
+    	throw new Error("Config channelname not exist. Check content in ./data/network.js");
+    } else {
+    	if(isEmptyObject(req.params)) {
+    		req.params = {
+    				channelname : reqChannelname
+    		};
+    	} else {
+    		req.params.channelname = reqChannelname;
+    	}
+		logger.debug('Channel name set in params. Updated channel: %j', req.query.params.channel);
     }
 }
 
@@ -112,6 +139,23 @@ function setNetwork(req,res){
     }
 }
 
+
+/**
+ * 设置txfile的data
+ * @param req
+ */
+function setTxFileData(req,res){
+	try{
+		var txFilePath =config[req.params['channelname']].txFilePath;
+		var data=rf.readFileSync(txFilePath,"utf-8");
+		req.query.params.channel.txFileData = data;
+		logger.debug('Tx file data set in params. Updated channel: %j', req.query.params.channel);
+	} catch(err) {
+		logger.error('setTxFileData error %s', JSON.stringify(err));
+	}
+}
+
+
 /**
  * 是否空对象
  * @param e
@@ -120,7 +164,7 @@ function setNetwork(req,res){
 function isEmptyObject(e) {
     for (var t in e)
         return false;
-    return true
+    return true;
 }
 
 //var req = { params: { channelname: 'mychannel' },

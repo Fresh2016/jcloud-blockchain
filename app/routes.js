@@ -26,6 +26,8 @@ invokeClient = require('./client/invoke-transaction.js');
 queryClient = require('./client/query.js');
 manageClient = require('./manage/create-client.js');
 interClient = require('./manage/param-interceptor.js');
+
+
 module.exports = function(app) {
 
 	console.log('Inside routes.js');

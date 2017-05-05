@@ -7,13 +7,25 @@ var manager = require('./app/manage/create-client.js');
 var interClient = require('./app/manage/param-interceptor.js');
 
 
+var paramsCreateChannel = {
+		rpctime : '2017-04-17 10:00:00',
+		params : {
+			type : 1,
+			channel : {
+				name : 'mychannel',
+				version : 'v0'
+			},
+			network : {}
+		},
+		id : 2
+	};
 var params_instantiate_transaction = {
 		rpctime : '2017-04-17 10:00:00',
 		params : {
 			type : 1,
-			channelName : "mychannel",
+			channelName : 'mychannel',
 			chaincode : {
-				name : 'trace1',
+				name : 'trace',
 				version : 'v0'
 			}
 		},
@@ -32,7 +44,7 @@ var paramsInvokeTransaction = {
 			},
 			ctorMsg : {
 				functionName : 'iPostSkuBaseInfo',
-				args : ["skuId123", "vendortest", "traceCode123456", "hashabcd", "name123", "num123", "ext123", "sign123", "time123"]
+				args : ['skuId123', 'vendortest', 'traceCode123456', 'hashabcd', 'name123', 'num123', 'ext123', 'sign123', 'time123']
 			}
 		},
 		id : 2
@@ -40,9 +52,9 @@ var paramsInvokeTransaction = {
 
 var params_query_transaction = {
         type : 1,
-	    channelName : "mychannel",
+	    channelName : 'mychannel',
         chaincode : {
-        	name : 'trace1',
+        	name : 'trace',
         	version : 'v0',
         },
         ctorMsg : {
@@ -51,16 +63,22 @@ var params_query_transaction = {
         }
 	};
 var params_query_blocknum = {
-	    channelName : "mychannel"		
+	    channelName : 'mychannel'		
 };
 var params_query_blockInfo = {
-	    channelName : "mychannel",
+	    channelName : 'mychannel',
 		blockNum : 1
 };
 
+var requestCreateChannel = {
+		originalUrl : '/v1',
+//		params : {
+//		},
+		query : paramsCreateChannel
+	};
 var requestInvokeTransaction = {
 		params : {
-			channelname: "mychannel"
+			channelname: 'mychannel'
 		},
 		query : paramsInvokeTransaction
 	};
@@ -137,7 +155,9 @@ function execute(opr_num_list) {
 	.then(() => {
 		console.log('\n\n***** TESTAPP: Start testing *****\n\n');
 		if (isToDo('create', opr_num_list)) {
-//			params = manager.??// FIXME:should be some filter interface from manager
+			console.dir(requestCreateChannel);
+			var params = interClient.filterParams(requestCreateChannel, null);
+			console.dir(requestCreateChannel);
 			return createClient.createChannel(params);
 		} else {
 			return 'Skipped'
@@ -182,7 +202,6 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: upgrade chaincode result %s', JSON.stringify(result));
 		if (isToDo('invoke', opr_num_list)) {
-//			params = manager.??// FIXME:should be some filter interface from manager
 			console.dir(requestInvokeTransaction);
 			interClient.filterParams(requestInvokeTransaction, null);
 			console.dir(requestInvokeTransaction);
@@ -325,8 +344,8 @@ function translateNumToOperation(number) {
 
 /*
 //for clear docker container and images
-docker rm -f $(docker ps -a | grep supplychain | awk '{print $1 }')
-docker rmi -f $(docker images | grep supplychain | awk '{print $3 }')
+docker rm -f $(docker ps -a | grep trace | awk '{print $1 }')
+docker rmi -f $(docker images | grep trace | awk '{print $3 }')
 */
 
 
