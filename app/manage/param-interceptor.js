@@ -203,7 +203,7 @@ function setTxFileData(req, res) {
     try {
         var txFilePath = config[req.params['channelName']].txFilePath;
         var data = rf.readFileSync(txFilePath);
-        //req.query.params.channel.txFileData = data;
+        req.query.params.channel.txFileData = data;
         logger.debug('Tx file data set in params. Updated channel: %j', req.query.params.channel);
     } catch (err) {
         logger.error('setTxFileData error %s', JSON.stringify(err));
