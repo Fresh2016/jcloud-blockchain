@@ -15,7 +15,6 @@
  */
 
 var path = require('path');
-//var async = require('async');
 
 var hfc = require('fabric-client');
 var ClientUtils = require('fabric-client/lib/utils.js');
@@ -63,7 +62,7 @@ function installChaincodeByOrg(org, params) {
 	.then((admin) => {	
 		logger.info('Successfully enrolled user \'admin\'');
 		chain.initialize();
-		return sendInstallProposal(client, chain, admin);
+		return sendInstallProposal(client, chain, admin, params);
 
 	}).then((results) => {
 		var response = {
@@ -83,7 +82,7 @@ function installChaincodeByOrg(org, params) {
 }
 
 
-function sendInstallProposal(client, chain, admin) {
+function sendInstallProposal(client, chain, admin, params) {
 	var nonce = ClientUtils.getNonce()
 	var tx_id = hfc.buildTransactionID(nonce, admin);
 	var targets = chain.getPeers();

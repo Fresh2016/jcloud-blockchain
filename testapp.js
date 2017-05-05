@@ -18,7 +18,7 @@ var paramsCreateChannel = {
 		},
 		id : 2
 	};
-var params_instantiate_transaction = {
+var paramsInstallChaincode = {
 		rpctime : '2017-04-17 10:00:00',
 		params : {
 			type : 1,
@@ -30,8 +30,8 @@ var params_instantiate_transaction = {
 		},
 		id : 2
 	};
-var params_upgrade_transaction = JSON.parse(JSON.stringify(params_instantiate_transaction));
-params_upgrade_transaction.params.chaincode.version = 'v1';
+var paramsUpgradeTransaction = JSON.parse(JSON.stringify(paramsInstallChaincode));
+paramsUpgradeTransaction.params.chaincode.version = 'v1';
 
 var paramsInvokeTransaction = {
 		rpctime : '2017-04-17 10:00:00',
@@ -77,9 +77,23 @@ var requestCreateChannel = {
 // following create request or during initialization
 var requestJoinChannel = JSON.parse(JSON.stringify(requestCreateChannel));
 
+var requestInstallChaincode = {
+		params : {
+			channelName: 'mychannel'
+		},
+		query : paramsInstallChaincode
+	};
+var requestInstantiateChaincode = JSON.parse(JSON.stringify(requestInstallChaincode));
+var requestUpgradeChaincode = {
+		params : {
+			channelName: 'mychannel'
+		},
+		query : paramsUpgradeTransaction
+	};
+
 var requestInvokeTransaction = {
 		params : {
-			channelname: 'mychannel'
+			channelName: 'mychannel'
 		},
 		query : paramsInvokeTransaction
 	};
@@ -174,8 +188,8 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: join channel result %s', JSON.stringify(result));
 		if (isToDo('install', opr_num_list)) {
-//			params = manager.??// FIXME:should be some filter interface from manager
-			return installClient.installChaincode(params);
+			interClient.filterParams(requestInstallChaincode, null);
+			return installClient.installChaincode(requestInstallChaincode.query.params);
 		} else {
 			return 'Skipped'
 		}
