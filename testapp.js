@@ -197,8 +197,8 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: install chaincode result %s', JSON.stringify(result));
 		if (isToDo('instantiate', opr_num_list)) {
-//			params = manager.??// FIXME:should be some filter interface from manager
-			return invokeClient.instantiateChaincode(params_instantiate_transaction.rpctime, params_instantiate_transaction.params);
+			interClient.filterParams(requestInstantiateChaincode, null);
+			return invokeClient.instantiateChaincode(requestInstantiateChaincode.rpctime, requestInstantiateChaincode.query.params);
 		} else {
 			return 'Skipped'
 		}

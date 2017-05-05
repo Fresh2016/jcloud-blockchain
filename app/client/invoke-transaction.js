@@ -119,7 +119,7 @@ function generateProposalRequest(params, nonce, tx_id) {
 			
 			// Added in v1.0. 
 			// TODO: should be programmable.
-			'endorsement-policy': Policy.ONE_OF_TWO_ORG_MEMBER
+			'endorsement-policy': Policy.getPolicy(params, 'ONE_OF_TWO_ORG_MEMBER')
 	};
 
 	if ('init' == request.fcn) {
@@ -270,7 +270,9 @@ function processCommitResponse(responses, tx_id) {
 function sendInstantiateProposal(chain, admin, params, isUpgrade, tx_id) {
 	var nonce = ClientUtils.getNonce();
 	tx_id.value = hfc.buildTransactionID(nonce, admin);
-	params.functionName = 'init';
+	params.ctorMsg = {
+			functionName : 'init'
+	};
 
 	var request = generateProposalRequest(params, nonce, tx_id.value);
 	logger.debug('Sending instantiate proposal "%s"', JSON.stringify(request));
