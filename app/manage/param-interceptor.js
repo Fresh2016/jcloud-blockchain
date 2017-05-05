@@ -135,14 +135,14 @@ function setChaincodePath(req, res) {
     try {
 
         if(req.query.isCreate){
-            //todo 待定
-            if(isEmptyObject(req.query.params)){
-                req.query.params ={}
-            }
-            if(isEmptyObject(req.query.params.chaincode)){
-                req.query.params.chaincode ={}
-            }
-            req.query.params.chaincode.path ="";
+            ////todo 待定
+            //if(isEmptyObject(req.query.params)){
+            //    req.query.params ={}
+            //}
+            //if(isEmptyObject(req.query.params.chaincode)){
+            //    req.query.params.chaincode ={}
+            //}
+            //req.query.params.chaincode.path ="";
         }else{
             var chaincodePath = config[req.query.params['channelName']]['chainCode'][req.query.params.chaincode.name].path;
             req.query.params.chaincode.path = chaincodePath;
