@@ -14,8 +14,7 @@ var paramsCreateChannel = {
 			channel : {
 				name : 'mychannel',
 				version : 'v0'
-			},
-			network : {}
+			}
 		},
 		id : 2
 	};
@@ -72,10 +71,12 @@ var params_query_blockInfo = {
 
 var requestCreateChannel = {
 		originalUrl : '/v1',
-//		params : {
-//		},
 		query : paramsCreateChannel
 	};
+//FIXME: Join should not be a separate REST API but automatically done 
+// following create request or during initialization
+var requestJoinChannel = JSON.parse(JSON.stringify(requestCreateChannel));
+
 var requestInvokeTransaction = {
 		params : {
 			channelname: 'mychannel'
@@ -155,10 +156,8 @@ function execute(opr_num_list) {
 	.then(() => {
 		console.log('\n\n***** TESTAPP: Start testing *****\n\n');
 		if (isToDo('create', opr_num_list)) {
-			console.dir(requestCreateChannel);
-			var params = interClient.filterParams(requestCreateChannel, null);
-			console.dir(requestCreateChannel);
-			return createClient.createChannel(params);
+			interClient.filterParams(requestCreateChannel, null);
+			return createClient.createChannel(requestCreateChannel.query.params);
 		} else {
 			return 'Skipped'
 		}
@@ -166,8 +165,8 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: create channel result %s', JSON.stringify(result));
 		if (isToDo('join', opr_num_list)) {
-//			params = manager.??// FIXME:should be some filter interface from manager
-			return joinClient.joinChannel(params);
+			interClient.filterParams(requestJoinChannel, null);
+			return joinClient.joinChannel(requestJoinChannel.query.params);
 		} else {
 			return 'Skipped'
 		}

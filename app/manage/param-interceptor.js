@@ -24,7 +24,6 @@ exports.filterParams = function (req, res) {
             }
 
             req.query.params['channelName'] = req.params.channelName;
-            setTxFileData(req, res);
             setChaincodePath(req, res);
             setNetwork(req,res);
         } else {
@@ -83,6 +82,7 @@ function setChannel(req, res) {
             //创建逻辑
             req.query.isCreate=true;
             setChannelName(req, res, reqChannelname);
+            setTxFileData(req, res);
 
         } else if (3 === originalList.length) {
             // FIXME: should be removed when new certs work with correct channel name
@@ -203,7 +203,7 @@ function setTxFileData(req, res) {
     try {
         var txFilePath = config[req.params['channelName']].txFilePath;
         var data = rf.readFileSync(txFilePath);
-        //req.query.params.channel.txFileData = data;
+        req.query.params.channel.txFileData = data;
         logger.debug('Tx file data set in params. Updated channel: %j', req.query.params.channel);
     } catch (err) {
         logger.error('setTxFileData error %s', JSON.stringify(err));

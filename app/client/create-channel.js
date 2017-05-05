@@ -49,7 +49,6 @@ function createChannel(params) {
 		logger.info('Successfully enrolled user \'admin\'');
 
 		// read in the envelope to send to the orderer
-//		return util.readFile(util.getTxFilePath(params));
 		return util.getTxFileData(params);
 		
 	}).then((txFileData) => {

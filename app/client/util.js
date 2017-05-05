@@ -17,28 +17,13 @@
 // System imports
 var path = require('path');
 var fs = require('fs-extra');
-var os = require('os');
-var jsrsa = require('jsrsasign');
-var KEYUTIL = jsrsa.KEYUTIL;
 
 // Fabric client imports
 var hfc = require('fabric-client');
 
-// TODO: to be deleted
-//Read config.json information
-//hfc.addConfigFile('./app/config/config.json');
-//module.exports.ORGS = hfc.getConfigSetting('test-network');
-
-
 
 // Function exports:
 //Channel and chaincode settings
-//TODO: should be managed by manager and stored in DB
-//module.exports.txFilePath = './app/config/mychannel.tx';
-//module.exports.getChaincodePath = 'github.com/trace';
-//module.exports.getChannel = 'mychannel';
-//module.exports.getChaincodeId = 'trace1';
-//module.exports.getChaincodeVersion = 'v0';
 module.exports.getChannel = getChannel;
 module.exports.getChaincodePath = getChaincodePath;
 module.exports.getChaincodeId = getChaincodeId;
@@ -47,8 +32,6 @@ module.exports.getFunctionName = getFunctionName;
 module.exports.getFunctionArgs = getFunctionArgs;
 module.exports.getNetwork = getNetwork;
 module.exports.getTxFileData = getTxFileData;
-//TODO: to be removed
-module.exports.getTxFilePath = getTxFilePath;
 
 // Utilities
 module.exports.cleanupDir = cleanupDir;
@@ -60,7 +43,7 @@ module.exports.getOrgs = getOrgs;
 module.exports.getOrgNameByOrg = getOrgNameByOrg;
 module.exports.getUniqueVersion = getUniqueVersion;
 module.exports.getValueOfJson = getValueOfJson;
-//TODO: to be deleted
+//TODO: to be deleted after tls also passing from manager
 module.exports.readFile = readFile;
 module.exports.storePathForOrg = storePathForOrg;
 module.exports.throwError = throwError;
@@ -228,12 +211,7 @@ function getNetwork(params) {
 
 
 function getTxFileData(params) {
-	return params.txFileData;
-}
-
-
-function getTxFilePath(params) {
-	return './app/config/mychannel.tx';
+	return params.channel.txFileData;
 }
 
 
