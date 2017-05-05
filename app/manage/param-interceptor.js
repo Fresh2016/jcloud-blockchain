@@ -147,7 +147,7 @@ function setNetwork(req,res){
 function setTxFileData(req,res){
 	try{
 		var txFilePath =config[req.params['channelname']].txFilePath;
-		var data=rf.readFileSync(txFilePath,"utf-8");
+		var data=rf.readFileSync(txFilePath);
 		req.query.params.channel.txFileData = data;
 		logger.debug('Tx file data set in params. Updated channel: %j', req.query.params.channel);
 	} catch(err) {
