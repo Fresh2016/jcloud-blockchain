@@ -44,7 +44,7 @@ module.exports = function(app) {
 
 
 	// API: query chain latest state
-	app.get('/v1/:channelname?', function(req, res) {
+	app.get('/v1/:channelName?', function(req, res) {
 		console.log('API: query chain latest state');
 		console.dir(req.query);
 		//req.query.params['channelName'] = req.params.channelname;
@@ -58,7 +58,7 @@ module.exports = function(app) {
 	});	
 
 	// API: query block hight or information
-	app.get('/v1/:channelname?/blocks', function(req, res) {
+	app.get('/v1/:channelName?/blocks', function(req, res) {
 		console.log('API: query blocks heights or information');
 		console.dir(req.query);
 		//req.query.params['channelName'] = req.params.channelname;
@@ -74,7 +74,7 @@ module.exports = function(app) {
 
 
 	// API: query orderer list and status
-	app.get('/v1/:channelname?/orderers', function(req, res) {
+	app.get('/v1/:channelName?/orderers', function(req, res) {
 		console.log('API: query orderers status');
 		console.dir(req.query);
 		queryClient.queryOrderers(req.params.channelname)
@@ -89,7 +89,7 @@ module.exports = function(app) {
 	});	
 
 	// API: query peer list and status
-	app.get('/v1/:channelname?/peers', function(req, res) {
+	app.get('/v1/:channelName?/peers', function(req, res) {
 		console.log('API: query peers status');
 		console.dir(req.query);
 		queryClient.queryPeers(req.params.channelname)
@@ -104,7 +104,7 @@ module.exports = function(app) {
 	});	
 
 	// API: invoke transaction
-	app.post('/v1/:channelname?', function(req, res) {
+	app.post('/v1/:channelName?', function(req, res) {
 		console.log('API: invoke transaction');
 		console.dir(req.body);
 		//req.query.params['channelName'] = req.params.channelname;
