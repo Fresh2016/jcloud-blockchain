@@ -36,13 +36,13 @@ exports.createChannel =createChannel;
 function joinChannel(params){
     return   queryClient.queryPeers(params)
         .then((result) => {
-            //if(result[0]['status'] == 'UP'){
-            logger.debug('createChannel: Already join');
+            if(result[0]['status'] == 'UP'){
+                logger.debug('createChannel: Already join');
             return  new Promise((resolve, reject) => resolve("Already join"));
-            //}else{
-            //    var err ={msg:"status not is up"}
-            //    util.throwError(logger, err, channelName+'status not is up');
-            //}
+            }else{
+                var err ={msg:"status  is up"}
+                util.throwError(logger, err, channelName+'status not is DOWN"');
+            }
 
         }).catch((err) => {
             return  joinClient.joinChannel(params);
@@ -69,7 +69,8 @@ exports.installChaincode =installChaincode;
  * @returns {Promise.<T>|*|Observable}
  */
 function instantiateChaincode(params){
-    return  invokeClient.instantiateChaincode(params)
+    //todo rpctime 暂时写死
+    return  invokeClient.instantiateChaincode('2017-04-17 10:00:00',params)
         .catch((err) => {
             err.errName="installChaincodeError";
             logger.debug('instantiate failed %s',JSON.stringify(err));
