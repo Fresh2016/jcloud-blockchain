@@ -49,24 +49,49 @@ var paramsInvokeTransaction = {
 		id : 2
 	};
 
-var params_query_transaction = {
-        type : 1,
-	    channelName : 'mychannel',
-        chaincode : {
-        	name : 'trace',
-        	version : 'v0',
-        },
-        ctorMsg : {
-        	functionName : 'qGetSkuTransactionListByTraceCode',
-        	args : ['1111']
-        }
+var paramsQueryTransaction = {
+		rpctime : '2017-04-17 10:00:00',
+		params : {
+	        type : 1,
+	        chaincode : {
+	        	name : 'trace',
+	        	version : 'v0',
+	        },
+	        ctorMsg : {
+	        	functionName : 'qGetSkuTransactionListByTraceCode',
+	        	args : ['1111']
+	        }
+		},
+		id : 2
 	};
-var params_query_blocknum = {
-	    channelName : 'mychannel'		
+var paramsQueryBlocknum = {
+		rpctime : '2017-04-17 10:00:00',
+		params : {
+	        type : 1
+		},
+		id : 2
 };
-var params_query_blockInfo = {
-	    channelName : 'mychannel',
-		blockNum : 1
+var paramsQueryBlockInfo = {
+		rpctime : '2017-04-17 10:00:00',
+		params : {
+	        type : 1,
+			blockNum : 1
+		},
+		id : 2
+};
+var paramsQueryPeer = {
+		rpctime : '2017-04-17 10:00:00',
+		params : {
+	        type : 1
+		},
+		id : 2
+};
+var paramsQueryOrderer = {
+		rpctime : '2017-04-17 10:00:00',
+		params : {
+	        type : 1
+		},
+		id : 2
 };
 
 var requestCreateChannel = {
@@ -90,33 +115,41 @@ var requestUpgradeChaincode = {
 		},
 		query : paramsUpgradeTransaction
 	};
-
 var requestInvokeTransaction = {
 		params : {
 			channelName: 'mychannel'
 		},
 		query : paramsInvokeTransaction
 	};
-var request_query_transaction = {
-        params : {
-			rpctime : '2017-04-17 10:00:00',
-	        params : params_query_transaction,
-	        id : 2
-		}
+var requestQueryTransaction = {
+		params : {
+			channelName: 'mychannel'
+		},
+		query : paramsQueryTransaction
 	};
-var request_query_blocknum = {
-        params : {
-			rpctime : '2017-04-17 10:00:00',
-	        params : params_query_blocknum,
-	        id : 2
-		}
+var requestQueryBlocknum = {
+		params : {
+			channelName: 'mychannel'
+		},
+		query : paramsQueryBlocknum
 	};
-var request_query_blockInfo = {
-        params : {
-			rpctime : '2017-04-17 10:00:00',
-	        params : params_query_blockInfo,
-	        id : 2
-		}
+var requestQueryBlockInfo = {
+		params : {
+			channelName: 'mychannel'
+		},
+		query : paramsQueryBlockInfo
+	};
+var requestQueryPeer = {
+		params : {
+			channelName: 'mychannel'
+		},
+		query : paramsQueryPeer
+	};
+var requestQueryOrderer = {
+		params : {
+			channelName: 'mychannel'
+		},
+		query : paramsQueryOrderer
 	};
 
 
@@ -206,8 +239,12 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: instantiate chaincode result %s', JSON.stringify(result));
 		if (isToDo('upgrade', opr_num_list)) {
-//			params = manager.??// FIXME:should be some filter interface from manager
-			return invokeClient.upgradeChaincode(params_upgrade_transaction.rpctime, params_upgrade_transaction.params);
+			interClient.filterParams(requestUpgradeChaincode, null);
+			return installClient.installChaincode(requestUpgradeChaincode.query.params)
+					.then((result) => {
+						return invokeClient.upgradeChaincode(requestUpgradeChaincode.rpctime, requestUpgradeChaincode.query.params);
+					});
+
 		} else {
 			return 'Skipped'
 		}
@@ -215,10 +252,8 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: upgrade chaincode result %s', JSON.stringify(result));
 		if (isToDo('invoke', opr_num_list)) {
-			console.dir(requestInvokeTransaction);
 			interClient.filterParams(requestInvokeTransaction, null);
-			console.dir(requestInvokeTransaction);
-//			return invokeClient.invokeChaincode(paramsInvokeTransaction.rpctime, paramsInvokeTransaction.params)
+			return invokeClient.invokeChaincode(requestInvokeTransaction.rpctime, requestInvokeTransaction.query.params);
 		} else {
 			return 'Skipped'
 		}
@@ -227,8 +262,8 @@ function execute(opr_num_list) {
 		//TODO:eventhub断开
 		console.log('TESTAPP: invoke chaincode result %s', JSON.stringify(result));
 		if (isToDo('query', opr_num_list)) {
-//			params = manager.??// FIXME:should be some filter interface from manager
-			return queryClient.queryTransaction(request_query_transaction.params.rpctime, request_query_transaction.params.params)
+			interClient.filterParams(requestQueryTransaction, null);
+			return queryClient.queryTransaction(requestQueryTransaction.rpctime, requestQueryTransaction.query.params);
 		} else {
 			return 'Skipped'
 		}
@@ -236,8 +271,8 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: queryTransaction result %s', JSON.stringify(result));
 		if (isToDo('query', opr_num_list)) {
-//			params = manager.??// FIXME:should be some filter interface from manager
-			return queryClient.queryTransactionHistory(request_query_transaction.params.rpctime, request_query_transaction.params.params);
+			interClient.filterParams(requestQueryTransaction, null);
+			return queryClient.queryTransactionHistory(requestQueryTransaction.params.rpctime, requestQueryTransaction.query.params);
 		} else {
 			return 'Skipped'
 		}
@@ -254,8 +289,8 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: isTransactionSucceed result %s', JSON.stringify(result));
 		if (isToDo('query', opr_num_list)) {
-//			params = manager.??// FIXME:should be some filter interface from manager
-			return queryClient.queryPeers(params);
+			interClient.filterParams(requestQueryPeer, null);
+			return queryClient.queryPeers(requestQueryPeer.query.params);
 		} else {
 			return 'Skipped'
 		}
@@ -263,8 +298,8 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: queryPeers result %s', JSON.stringify(result));
 		if (isToDo('query', opr_num_list)) {
-//			params = manager.??// FIXME:should be some filter interface from manager
-			return queryClient.queryOrderers(params);
+			interClient.filterParams(requestQueryOrderer, null);
+			return queryClient.queryOrderers(requestQueryOrderer.query.params);
 		} else {
 			return 'Skipped'
 		}
@@ -272,8 +307,8 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: queryOrderers result %s', JSON.stringify(result));
 		if (isToDo('query', opr_num_list)) {
-//			params = manager.??// FIXME:should be some filter interface from manager
-			return queryClient.queryBlocks(request_query_blocknum.params.rpctime, request_query_blocknum.params.params);
+			interClient.filterParams(requestQueryBlocknum, null);
+			return queryClient.queryBlocks(requestQueryBlocknum.params.rpctime, requestQueryBlocknum.query.params);
 		} else {
 			return 'Skipped'
 		}
@@ -281,8 +316,8 @@ function execute(opr_num_list) {
 	}).then((result) => {
 		console.log('TESTAPP: queryBlocks number result %s', JSON.stringify(result));
 		if (isToDo('query', opr_num_list)) {
-//			params = manager.??// FIXME:should be some filter interface from manager
-			return queryClient.queryBlocks(request_query_blockInfo.params.rpctime, request_query_blockInfo.params.params);
+			interClient.filterParams(requestQueryBlockInfo, null);
+			return queryClient.queryBlocks(requestQueryBlockInfo.params.rpctime, requestQueryBlockInfo.query.params);
 		} else {
 			return 'Skipped'
 		}

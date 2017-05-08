@@ -24,6 +24,7 @@ var hfc = require('fabric-client');
 
 // Function exports:
 //Channel and chaincode settings
+module.exports.getBlockNum = getBlockNum;
 module.exports.getChannel = getChannel;
 module.exports.getChaincodePath = getChaincodePath;
 module.exports.getChaincodeId = getChaincodeId;
@@ -160,6 +161,11 @@ function existsSync(absolutePath /*string*/) {
 		return false;
 	}
 };
+
+
+function getBlockNum(params) {
+	return params.blockNum;
+}
 
 
 // Read CA root pem files

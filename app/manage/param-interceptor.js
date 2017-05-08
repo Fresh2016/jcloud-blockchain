@@ -13,18 +13,28 @@ var rf = require("fs");
  */
 exports.filterParams = function (req, res) {
     try {
+        logger.debug('Interceptor received request: %j', req);
+
         if (isEmptyObject(req.params)) {
             setChannel(req, res);
         }
         //设置query里面的channelName
         var params = req.query.params || req.body.params;
+        logger.debug('Interceptor gets parameters from request: %j', params);
+
         if (null != params) {
             if (typeof(params) != "object") {
                 req.query.params = JSON.parse(params);
             }
 
             req.query.params['channelName'] = req.params.channelName;
-            setChaincodePath(req, res);
+
+            if (null != params.chaincode) {
+                setChaincodePath(req, res);
+            } else {
+                req.query.isQueryBlock=true;
+            }
+
             setNetwork(req,res);
         } else {
             req.query.params = {}
@@ -148,7 +158,7 @@ function setChaincodePath(req, res) {
  */
 function setNetwork(req, res) {
     try {
-        if(req.query.isCreate){
+        if(req.query.isCreate || req.query.isQueryBlock){
             req.query.params.network = allNetWork;
         }else{
             if (null == config[req.query.params.channelName]) {

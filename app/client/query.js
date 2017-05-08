@@ -127,7 +127,7 @@ function generateProposalRequest(params, nonce, tx_id) {
 }
 
 
-function initialPeerStatus() {
+function initialPeerStatus(ORGS) {
 	var queryPeerResult = [];
 	var peers = setup.getPeerAll(ORGS);
 	try{
@@ -346,7 +346,7 @@ function queryBlocks(rpctime, params) {
 	var org = defaultOrg;
 	var channel = util.getChannel(params);
 	var ORGS = util.getNetwork(params);
-	var blockNum = params.blockNum;
+	var blockNum = util.getBlockNum(params);
 	
 	var options = { 
 			path: util.storePathForOrg(util.getOrgNameByOrg(ORGS, org)) 
@@ -427,7 +427,7 @@ function queryBlocks(rpctime, params) {
 }
 
 
-function queryConfig(channelName) {
+function queryConfig(params) {
 	// FIXME: channelName should be in format of params
 	// TODO: channel name is fixed from config file and should be passed from REST request
 	// TODO: care only 1 orderer. should be order cluster status when we have
@@ -440,6 +440,7 @@ function queryConfig(channelName) {
 	// this is a query, will just use org2's identity to
 	// submit the request
 	var org = defaultOrg;
+	var channelName = util.getChannel(params);
 	var ORGS = util.getNetwork(params);
 	var ordererStatus = {
 			name: '',
@@ -478,24 +479,25 @@ function queryConfig(channelName) {
 }
 
 
-function queryOrderers(channelName) {
+function queryOrderers(params) {
 	// TODO: channel name is fixed from config file and should be passed from REST request
 	// FIXME: channelName should be in format of params
-	logger.info('\n\n***** Hyperledger fabric client: query orderer status of channel: %s *****', channelName);
-	return module.exports.queryConfig(channelName);
+	logger.info('\n\n***** Hyperledger fabric client: query orderer status of channel: %s *****', util.getChannel(params));
+	return module.exports.queryConfig(params);
 }
 
 
-function queryPeers(channelName) {
+function queryPeers(params) {
 	// TODO: channel name is fixed from config file and should be passed from REST request
 	// FIXME: channelName should be in format of params
-	logger.info('\n\n***** Hyperledger fabric client: query peer status of channel: %s *****', channelName);
+	logger.info('\n\n***** Hyperledger fabric client: query peer status of channel: %s *****', util.getChannel(params));
 
+	var channel = util.getChannel(params);
 	var ORGS = util.getNetwork(params);
 	var orgs = util.getOrgs(ORGS);
 	logger.info('There are %s organizations: %s. Going to query peers one by one.', orgs.length, orgs);
-	queriedChannelName = channelName;
-	queryPeerResult = initialPeerStatus();
+	queriedChannelName = channel;
+	queryPeerResult = initialPeerStatus(ORGS);
 
 	return exe.executeTheNext(orgs, queryPeersByOrg, params, 'Query Peers')
 	.catch((err) => {
@@ -507,14 +509,15 @@ function queryPeers(channelName) {
 
 
 // As different org holds different certs, only peers in the same org can be queried in once operation
-function queryPeersByOrg(org) {
+function queryPeersByOrg(org, params) {
 	// TODO: channel name is fixed from config file and should be passed from REST request
 	logger.info('Calling peers in organization "%s" to query the peers', org);
 
 	// client and chain should be claimed here
 	var client = new hfc();
-	var eventhubs = [];
+	var channel = util.getChannel(params);
 	var ORGS = util.getNetwork(params);
+	var eventhubs = [];
 
 	var chain = setup.setupChainByOrg(client, queriedChannelName, ORGS, org, eventhubs, true);
 
@@ -559,6 +562,7 @@ function queryTransaction(rpctime, params) {
 	// submit the request
 	var org = defaultOrg;
 	var channel = util.getChannel(params);
+	var ORGS = util.getNetwork(params);
 	
 	var block_result = {};
 	var the_user = null;
@@ -627,6 +631,7 @@ function queryTransactionHistory(rpctime, params) {
 	// submit the request
 	var org = defaultOrg;
 	var channel = util.getChannel(params);
+	var ORGS = util.getNetwork(params);
 
 	var the_user = null;
 
