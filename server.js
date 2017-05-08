@@ -49,4 +49,4 @@ require('./app/routes.js')(app);
  */
 app.listen(port);
 console.log("App listening on port " + port);
-manageClient.initCreate();
+//manageClient.initCreate();
