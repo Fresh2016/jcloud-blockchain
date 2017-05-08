@@ -24,7 +24,8 @@ var channel={
 
              }
          },
-         txFilePath:"./app/manage/data/mychannel.tx"
+         txFilePath:"./app/manage/data/mychannel.tx",
+         version:"v0"
      }
 }
 

@@ -4,6 +4,7 @@ var netWorkinfo = require('./data/network.js');
 var network =netWorkinfo.getData();
 var allNetWork = netWorkinfo.getAllNetwork();
 var logger = ClientUtils.getLogger('param-interceptor');
+var manage = require('./create-client.js')
 var rf = require("fs");
 
 
@@ -13,6 +14,7 @@ var rf = require("fs");
  */
 exports.filterParams = function (req, res) {
     try {
+
         logger.debug('Interceptor received request: %j', req);
 
         if (isEmptyObject(req.params)) {
@@ -36,6 +38,10 @@ exports.filterParams = function (req, res) {
             }
 
             setNetwork(req,res);
+            //if(!req.query.isCreate){
+            //    vifchannelName(req,res);
+            //}
+
         } else {
             req.query.params = {}
             req.query.params['channelName'] = req.params.channelName;
@@ -64,11 +70,18 @@ exports.filterParams = function (req, res) {
 //    }
 }
 /**
- * 校验是否存在channelName
+ * 校验是否存在channel,不存在，重新创建
  * @param req
  */
-function vifchannelName(req) {
+function vifchannelName(req,res) {
     var channelName = req.query.params['channelName'];
+     manage.queryIsChannel(req.query.params)
+       .then((response) => {
+             setTxFileData(req, res);
+             manage.create(req.query.params);
+        }).catch((err) => {
+            logger.error('vifchannelName error %s', JSON.stringify(err));
+        });
 }
 
 
@@ -203,6 +216,12 @@ function setTxFileData(req, res) {
     try {
         var txFilePath = config[req.params['channelName']].txFilePath;
         var data = rf.readFileSync(txFilePath);
+        if(!req.query.params){
+            req.query.params ={}
+        }
+        if(!req.query.params.channel){
+            req.query.params.channel ={}
+        }
         req.query.params.channel.txFileData = data;
         logger.debug('Tx file data set in params. Updated channel: %j', req.query.params.channel);
     } catch (err) {
@@ -241,15 +260,15 @@ function isEmptyObject(e) {
 //        id: 2 } }
 //
 
-var req ={ originalUrl: '/v1',
-    params: { channelname: 'mychannel' },
-    query:
-    { rpctime: '2017-04-17 10:00:00',
-        params: { type: 1, channel: {
-            name : 'trace',
-            version : 'v0'
-        }, network: {} },
-        id: 2 } }
+//var req ={ originalUrl: '/v1',
+//    params: { channelname: 'mychannel' },
+//    query:
+//    { rpctime: '2017-04-17 10:00:00',
+//        params: { type: 1, channel: {
+//            name : 'trace',
+//            version : 'v0'
+//        }, network: {} },
+//        id: 2 } }
 
 //setChaincodePath(req);
 //setNetwork (req)

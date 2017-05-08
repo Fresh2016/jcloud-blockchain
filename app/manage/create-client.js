@@ -12,8 +12,8 @@ var logger = ClientUtils.getLogger('create-manage');
  * @returns {Promise.<T>|*|Observable}
  */
 
-function createChannel(channelName){
-    return  queryClient.queryOrderers(channelName)
+function createChannel(params){
+    return  queryClient.queryOrderers(params)
         .then((result) => {
             logger.debug('createChannel: Already create');
              //if(result[0]['status'] == 'UP'){
@@ -24,17 +24,17 @@ function createChannel(channelName){
              //}
 
         }).catch((err) => {
-             return createClient.createChannel();
+             return createClient.createChannel(params);
         });
 }
-//exports.createChannel =createChannel;
+exports.createChannel =createChannel;
 /**
  *  join Channel
  * @returns {Promise.<T>|*|Observable}
  */
 
-function joinChannel(channelName){
-    return   queryClient.queryPeers(channelName)
+function joinChannel(params){
+    return   queryClient.queryPeers(params)
         .then((result) => {
             //if(result[0]['status'] == 'UP'){
             logger.debug('createChannel: Already join');
@@ -45,17 +45,17 @@ function joinChannel(channelName){
             //}
 
         }).catch((err) => {
-            return  joinClient.joinChannel();
+            return  joinClient.joinChannel(params);
         });
 }
-//exports.joinChannel =joinChannel;
+exports.joinChannel =joinChannel;
 
 /**
  * installChaincode
  * @returns {Promise.<T>|*|Observable}
  */
-function installChaincode(){
-    return  installClient.installChaincode()
+function installChaincode(params){
+    return  installClient.installChaincode(params)
         .catch((err) => {
             err.errName="installChaincodeError";
             logger.debug(' install failed %s',JSON.stringify(err));
@@ -63,20 +63,20 @@ function installChaincode(){
             return new Promise((resolve, reject) => resolve(err));
         });
 }
-//exports.installChaincode =installChaincode;
+exports.installChaincode =installChaincode;
 /**
  *  instantiateChaincode
  * @returns {Promise.<T>|*|Observable}
  */
-function instantiateChaincode(){
-    return  invokeClient.instantiateChaincode()
+function instantiateChaincode(params){
+    return  invokeClient.instantiateChaincode(params)
         .catch((err) => {
             err.errName="installChaincodeError";
             logger.debug('instantiate failed %s',JSON.stringify(err));
             return new Promise((resolve, reject) => reject(err));
         });
 }
-//exports.instantiateChaincode =instantiateChaincode;
+exports.instantiateChaincode =instantiateChaincode;
 
 
 /**
@@ -85,23 +85,23 @@ function instantiateChaincode(){
  * @returns {Promise.<T>|*}
  */
 
-function create(channelName){
-  return   createChannel(channelName)
+function create(params){
+  return   createChannel(params)
         .then((response) => {
             logger.debug('createChannel: %j\n\n\n', response);
-            return joinChannel(channelName);
+            return joinChannel(params);
 
         }).then((response) => {
             logger.debug('joinChannel: %j\n\n\n', response);
-            return  installChaincode();
+            return  installChaincode(params);
         }).then((response) => {
           logger.debug('installChaincode: %j\n\n\n', response);
-          return  instantiateChaincode();
+          return  instantiateChaincode(params);
         }).then((response) => {
           logger.debug('instantiateChaincode: %j\n\n\n', response);
           return  new Promise((resolve, reject) => resolve("Create success"));
         }).catch((err) => {
-            logger.debug('Create failed %s',JSON.stringify(err));
+            logger.debug(' Create failed %s',JSON.stringify(err));
             return  new Promise((resolve, reject) => reject("Create failed"));
         });
 }
@@ -112,6 +112,17 @@ exports.create =create;
  * @param channelName
  */
 exports.initCreate =function(){
+    var paramsCreateChannel = {
+        rpctime : '2017-04-17 10:00:00',
+        params : {
+            type : 1,
+            channel : {
+                name : 'mychannel',
+                version : 'v0'
+            }
+        },
+        id : 2
+    };
     return  create('mychannel')
         .then((result) => {
             logger.debug('init success %s',JSON.stringify(result));
@@ -119,5 +130,29 @@ exports.initCreate =function(){
         }).catch((err) => {
               logger.debug('init failed %s',JSON.stringify(err));
             return false;
+        });
+}
+
+
+/**
+ * 查询 Channel是否存在
+ * @type {queryChannel}
+ */
+exports.queryIsChannel = queryIsChannel;
+function queryIsChannel(params){
+    console.log('queryIsChannel response: %j\n\n\n', JSON.stringify(params));
+    return   queryClient.queryOrderers(params)
+        .then((response) => {
+            //console.log('queryPeers response: %j\n\n\n', response);
+            return queryClient.queryPeers(params);
+
+        }).then((response) => {
+            //console.log('queryOrderers response: %j\n\n\n', response);
+            //console.log('### shiying is aaa ###');
+            return  new Promise((resolve, reject) => resolve(true));
+
+        }).catch((err) => {
+            console.log('Return without querying.');
+            return  new Promise((resolve, reject) => resolve(false));
         });
 }
