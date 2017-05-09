@@ -45,11 +45,12 @@ exports.filterParams = function (req, res) {
             req.query.params = {}
             req.query.params['channelName'] = req.params.channelName;
         }
+        logger.debug('Finish update request query params: %j', req.query.params);
 
 
     } catch (err) {
-        logger.error('filterParams error %s', JSON.stringify(err));
-        return   res.json("error")
+        logger.error('Error in updating request query params %s', JSON.stringify(err));
+        return res.json("Error in updating request query params");
     }
 
 
@@ -178,6 +179,8 @@ function setChaincodePath(req, res) {
             var chaincodePath = config[req.query.params['channelName']]['chainCode'][req.query.params.chaincode.name].path;
             req.query.params.chaincode.path = chaincodePath;;
         }
+
+        logger.debug('Chaincode path set in params. Updated chaincode: %j', req.query.params.chaincode);
     } catch (err) {
         logger.error('setChaincodePath error %s', JSON.stringify(err));
     }
@@ -220,6 +223,9 @@ function setNetwork(req, res) {
                 }
             }
         }
+
+        logger.debug('Network set in params. Updated network: %j', req.query.params.network);
+
     } catch (err) {
         logger.error('setNetwork error %s', JSON.stringify(err));
     }
