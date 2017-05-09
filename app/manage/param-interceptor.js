@@ -20,9 +20,8 @@ exports.filterParams = function (req, res) {
         if (isEmptyObject(req.params)) {
             setChannel(req, res);
         }
-        //设置query里面的channelName
-        var params = req.query.params || req.body.params;
-        logger.debug('Interceptor gets parameters from request: %j', params);
+        
+        var params = checkQueryParam(req);
 
         if (null != params) {
             if (typeof(params) != "object") {
@@ -38,9 +37,9 @@ exports.filterParams = function (req, res) {
             }
 
             setNetwork(req,res);
-            //if(!req.query.isCreate){
-            //    vifchannelName(req,res);
-            //}
+            if(!req.query.isCreate){
+                vifchannelName(req,res);
+            }
 
         } else {
             req.query.params = {}
@@ -69,6 +68,25 @@ exports.filterParams = function (req, res) {
 //        req.query.params['channelName'] = req.params.channelName;
 //    }
 }
+
+/**
+ * 校验是否存在req.query.params或者req.body.params,都赋值到req.query.params
+ * @param req
+ */
+function checkQueryParam(req) {
+	//设置query里面的channelName
+	var params = req.query.params || req.body.params;
+	logger.debug('Interceptor gets parameters from request: %j', params);
+
+	if (null == req.query.params) {
+		req.query.params = JSON.parse(JSON.stringify(params));
+	}
+	if (null == req.body.params) {
+		req.body.params = JSON.parse(JSON.stringify(params));
+	}
+	return params;
+}
+
 /**
  * 校验是否存在channel,不存在，重新创建
  * @param req
@@ -111,13 +129,13 @@ function setChannel(req, res) {
             // FIXME: should be removed when new certs work with correct channel name
             var tempChannelName = originalList[2].replace('supplychain', 'mychannel');
 
-            logger.debug('Operating channel %s. About to set channel name in params', originalList[2]);
-            setChannelName(req, res, originalList[2]);
+            logger.debug('Operating channel %s. About to set channel name in params', tempChannelName);
+            setChannelName(req, res, tempChannelName);
 
         } else {
             throw new Error('Original URL unrecognized');
         }
-        logger.debug('Channel set in params. Updated params: %j', req.query.params);
+        logger.debug('Channel set in params. Updated params: %j', req.params);
 
     } catch (err) {
         logger.error('setChannel error %s', JSON.stringify(err));
