@@ -38,8 +38,13 @@ module.exports = function(app) {
 
 	//param Interceptor
 	app.use(function(req, res, next) {
-		interClient.filterParams(req, res);
-		next();
+		interClient.filterParams(req, res)
+		.then((response) => {
+				next();
+		}).catch((err) => {
+			logger.error('Error in interceptor request  %s', JSON.stringify(err));
+			return res.json(err);
+		});
 	});
 
 

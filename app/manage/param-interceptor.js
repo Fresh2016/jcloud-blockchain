@@ -13,19 +13,38 @@ var rf = require("fs");
  * @param req
  */
 exports.filterParams = function (req, res) {
+    return setParams(req,res)
+     .then((response) => {
+            if(response && !req.query.isCreate){
+                return  vifchannelName(req,res);
+            }else{
+                return  new Promise((resolve, reject) => resolve(false));
+            }
+        }).catch((err) => {
+            logger.error('filterParams error %s', JSON.stringify(err));
+            return  new Promise((resolve, reject) => resolve(err));
+        });
+}
+/**
+ * 设置 Param参数
+ * @param req
+ * @param res
+ * @returns {Promise}
+ */
+function setParams(req,res) {
     try {
 
         logger.debug('Interceptor received request: %j', req);
-
-        if (isEmptyObject(req.params)) {
-            setChannel(req, res);
-        }
-        
         var params = checkQueryParam(req);
-
         if (null != params) {
             if (typeof(params) != "object") {
                 req.query.params = JSON.parse(params);
+            }else{
+                req.query.params = params;
+            }
+
+            if (isEmptyObject(req.params)) {
+                setChannel(req, res);
             }
 
             req.query.params['channelName'] = req.params.channelName;
@@ -41,33 +60,22 @@ exports.filterParams = function (req, res) {
 //                vifchannelName(req,res);
 //            }
 
+
         } else {
             req.query.params = {}
             req.query.params['channelName'] = req.params.channelName;
+            throw new Error('params is null');
         }
-        logger.debug('Finish update request query params: %j', req.query.params);
 
+        logger.debug('Finish update request query params: %j', req.query.params);
+        return  new Promise((resolve, reject) => resolve(true));
 
     } catch (err) {
         logger.error('Error in updating request query params %s', JSON.stringify(err));
-        return res.json("Error in updating request query params");
+        //return res.json("Error in updating request query params");
+        err.message = "Error in updating request query params";
+        return  new Promise((resolve, reject) => reject(err));
     }
-
-
-//    var params = req.query.params || req.body.params;
-//    if(null!=params){
-//        if(typeof(params) !="object"){
-//            req.query.params =  JSON.parse(params);
-//        }
-//
-//        req.query.params['channelName'] = req.params.channelName;
-//        // FIXME: errors in case of creating channel
-////        setNetwork(req,res);
-////        setChaincodePath(req,res);
-//    }else{
-//        req.query.params ={}
-//        req.query.params['channelName'] = req.params.channelName;
-//    }
 }
 
 /**
@@ -79,19 +87,12 @@ function checkQueryParam(req) {
 	var params = req.query.params || req.body.params;
 	logger.debug('Interceptor gets parameters from request: %j', params);
 
-	if (null == req.query) {
-		req.query = {};
-		req.query.params = JSON.parse(JSON.stringify(params));
-	} else if (null == req.query.params) {
+	if (null == req.query.params) {
 		req.query.params = JSON.parse(JSON.stringify(params));
 	}
-	if (null == req.body) {
-		req.body = {};
-		req.body.params = JSON.parse(JSON.stringify(params));
-	} else if (null == req.body.params) {
+	if (null == req.body.params) {
 		req.body.params = JSON.parse(JSON.stringify(params));
 	}
-	logger.info('checkQueryParam(req) returning: %j', params);
 	return params;
 }
 
@@ -100,17 +101,37 @@ function checkQueryParam(req) {
  * @param req
  */
 function vifchannelName(req,res) {
-    var channelName = req.query.params['channelName'];
-     manage.queryIsChannel(req.query.params)
+  return   manage.queryIsChannel(req.query.params)
        .then((response) => {
-             setTxFileData(req, res);
-             manage.create(req.query.params);
+             if(!response){
+                 return  reCreate(req, res);
+             }else{
+                 return  new Promise((resolve, reject) => resolve(true));
+             }
         }).catch((err) => {
             logger.error('vifchannelName error %s', JSON.stringify(err));
+          return  new Promise((resolve, reject) => resolve(false));
         });
 }
-
-
+/**
+ * 重新创建
+ * @param req
+ * @param res
+ * @returns {Promise.<T>|*|Observable}
+ */
+function reCreate(req, res){
+    return   setTxFileData(req, res)
+        .then((response) => {
+            if(response){
+                return manage.create(req.query.params);
+            }else{
+                return  new Promise((resolve, reject) => reject(false));
+            }
+        }).catch((err) => {
+            logger.error('vifchannelName error %s', JSON.stringify(err));
+            return  new Promise((resolve, reject) => reject(err));
+        });
+}
 /**
  * 设置Channel的名字、版本和Tx文件
  * @param req
@@ -128,6 +149,15 @@ function setChannel(req, res) {
             } else if (null != req.body.params && null != req.body.params.channel && null != req.body.params.channel.name) {
                 reqChannelname = req.body.params.channel.name;
             }
+            if(!reqChannelname){
+                //get请求的时候，需要截取
+                reqChannelname= originalList[2].replace('supplychain', 'mychannel');
+                if(reqChannelname.indexOf("?")>=0){
+                    reqChannelname =reqChannelname.split("?")[0];
+                }
+            }
+            logger.error('reqChannelnamereqChannelnamereqChannelnamereqChannelnamereqChannelnamereqChannelname  %s', reqChannelname);
+
             //创建逻辑
             req.query.isCreate=true;
             setChannelName(req, res, reqChannelname);
@@ -135,8 +165,11 @@ function setChannel(req, res) {
 
         } else if (3 === originalList.length) {
             // FIXME: should be removed when new certs work with correct channel name
+            //get请求的时候，需要截取
             var tempChannelName = originalList[2].replace('supplychain', 'mychannel');
-
+            if(tempChannelName.indexOf("?")>=0){
+                tempChannelName =tempChannelName.split("?")[0];
+            }
             logger.debug('Operating channel %s. About to set channel name in params', tempChannelName);
             setChannelName(req, res, tempChannelName);
 
@@ -245,18 +278,30 @@ function setNetwork(req, res) {
  */
 function setTxFileData(req, res) {
     try {
-        var txFilePath = config[req.params['channelName']].txFilePath;
-        var data = rf.readFileSync(txFilePath);
-        if(!req.query.params){
-            req.query.params ={}
+        var channelName = req.params['channelName'];
+
+        if(null == channelName || "" ==channelName){
+            channelName = req.query.params['channelName'];
         }
-        if(!req.query.params.channel){
-            req.query.params.channel ={}
+        channelName = channelName.replace('supplychain', 'mychannel');
+        if(channelName){
+            var txFilePath = config[req.query.params['channelName']].txFilePath;
+            var data = rf.readFileSync(txFilePath);
+            if(!req.query.params){
+                req.query.params ={}
+            }
+            if(!req.query.params.channel){
+                req.query.params.channel ={}
+            }
+            req.query.params.channel.txFileData = data;
+            logger.debug('Tx file data set in params. Updated channel: %j', req.query.params.channel);
+        }else{
+            throw new Error('channelName is null');
         }
-        req.query.params.channel.txFileData = data;
-        logger.debug('Tx file data set in params. Updated channel: %j', req.query.params.channel);
+        return  new Promise((resolve, reject) => resolve(true));
     } catch (err) {
         logger.error('setTxFileData error %s', JSON.stringify(err));
+        return  new Promise((resolve, reject) => reject(err));
     }
 }
 
