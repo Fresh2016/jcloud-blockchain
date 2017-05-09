@@ -17,9 +17,7 @@ exports.filterParams = function (req, res) {
 
         logger.debug('Interceptor received request: %j', req);
 
-        if (isEmptyObject(req.params)) {
-            setChannel(req, res);
-        }
+
         
         var params = req.query.params || req.body.params;
 
@@ -28,6 +26,10 @@ exports.filterParams = function (req, res) {
                 req.query.params = JSON.parse(params);
             }else{
                 req.query.params = params;
+            }
+
+            if (isEmptyObject(req.params)) {
+                setChannel(req, res);
             }
 
             req.query.params['channelName'] = req.params.channelName;
@@ -39,9 +41,9 @@ exports.filterParams = function (req, res) {
             }
 
             setNetwork(req,res);
-            if(!req.query.isCreate){
-                vifchannelName(req,res);
-            }
+            //if(!req.query.isCreate){
+            //    vifchannelName(req,res);
+            //}
 
         } else {
             req.query.params = {}
@@ -123,6 +125,14 @@ function setChannel(req, res) {
             } else if (null != req.body.params && null != req.body.params.channel && null != req.body.params.channel.name) {
                 reqChannelname = req.body.params.channel.name;
             }
+            if(!reqChannelname){
+                reqChannelname= originalList[2].replace('supplychain', 'mychannel');
+                if(reqChannelname.indexOf("?")>=0){
+                    reqChannelname =reqChannelname.split("?")[0];
+                }
+            }
+            logger.error('reqChannelnamereqChannelnamereqChannelnamereqChannelnamereqChannelnamereqChannelname  %s', reqChannelname);
+
             //创建逻辑
             req.query.isCreate=true;
             setChannelName(req, res, reqChannelname);
@@ -131,7 +141,9 @@ function setChannel(req, res) {
         } else if (3 === originalList.length) {
             // FIXME: should be removed when new certs work with correct channel name
             var tempChannelName = originalList[2].replace('supplychain', 'mychannel');
-
+            if(tempChannelName.indexOf("?")>=0){
+                tempChannelName =tempChannelName.split("?")[0];
+            }
             logger.debug('Operating channel %s. About to set channel name in params', tempChannelName);
             setChannelName(req, res, tempChannelName);
 
@@ -314,4 +326,3 @@ var req ={
 }
 var params = req.query.params || req.body.params;
 
-console.log(params)
