@@ -266,12 +266,14 @@ var param = {
 //        return false;
 //    });
 
-var params={"type":1,"chaincode":{"name":"supplychain0","version":"v0"},"ctorMsg":{"functionName":"queryTrade","args":["Sku", "TradeDate", "TraceInfo"]}};
+var params={"type":1,"chaincode":{"name":"supplychain","version":"v0"},"ctorMsg":{"functionName":"queryTrade","args":["Sku", "TradeDate", "TraceInfo"]}};
 params =JSON.stringify(params) ;
 
     request({
-            method: 'POST',
+            method: 'GET',
             uri : "http://localhost:8081/v1/supplychain?rpctime=2017-04-17 10:00:00&params="+params+"&id=2"
+            //method: 'post',
+            //uri : "http://localhost:8081/v1/supplychain",
             //json :
             //{
             //    "rpctime": "2017-04-17 10:00:00",

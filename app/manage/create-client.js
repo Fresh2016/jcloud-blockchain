@@ -148,9 +148,11 @@ function queryIsChannel(params){
             return queryClient.queryPeers(params);
 
         }).then((response) => {
-            //console.log('queryOrderers response: %j\n\n\n', response);
-            //console.log('### shiying is aaa ###');
-            return  new Promise((resolve, reject) => resolve(true));
+            if(response[0]['status'] == 'UP'){
+                return  new Promise((resolve, reject) => resolve(true));
+            }else{
+                return  new Promise((resolve, reject) => resolve(false));
+            }
 
         }).catch((err) => {
             console.log('Return without querying.');
