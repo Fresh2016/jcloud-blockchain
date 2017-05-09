@@ -106,9 +106,9 @@ module.exports = function(app) {
 	// API: invoke transaction
 	app.post('/v1/:channelName?', function(req, res) {
 		console.log('API: invoke transaction');
-		console.dir(req.body);
+		console.dir(req.query);
 		//req.query.params['channelName'] = req.params.channelname;
-		invokeClient.invokeChaincode(req.body.rpctime, req.body.params)
+		invokeClient.invokeChaincode(req.query.rpctime, req.query.params)
 		.then((result) => {
 			console.dir(result);
 			res.json(result);
