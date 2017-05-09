@@ -21,11 +21,13 @@ exports.filterParams = function (req, res) {
             setChannel(req, res);
         }
         
-        var params = checkQueryParam(req);
+        var params = req.query.params || req.body.params;
 
         if (null != params) {
             if (typeof(params) != "object") {
                 req.query.params = JSON.parse(params);
+            }else{
+                req.query.params = params;
             }
 
             req.query.params['channelName'] = req.params.channelName;
@@ -301,3 +303,15 @@ function isEmptyObject(e) {
 //console.log(config[req.query.params.channelName])
 //console.log(config[req.query.params.channelName]['chainCode'])
 //console.log(config[req.query.params.channelName]['chainCode'][req.query.params.chaincode.name])
+
+var req ={
+    query:{
+
+    },
+    body:{
+        params:123
+    }
+}
+var params = req.query.params || req.body.params;
+
+console.log(params)
