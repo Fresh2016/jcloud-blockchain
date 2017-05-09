@@ -35,7 +35,7 @@ function setParams(req,res) {
     try {
 
         logger.debug('Interceptor received request: %j', req);
-        var params = checkQueryParam(req);
+        var params = req.query.params || req.body.params;
         if (null != params) {
             if (typeof(params) != "object") {
                 req.query.params = JSON.parse(params);
@@ -56,9 +56,6 @@ function setParams(req,res) {
             }
 
             setNetwork(req,res);
-//            if(!req.query.isCreate){
-//                vifchannelName(req,res);
-//            }
 
 
         } else {
