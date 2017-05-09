@@ -270,26 +270,26 @@ var params={"type":1,"chaincode":{"name":"supplychain","version":"v0"},"ctorMsg"
 params =JSON.stringify(params) ;
 
     request({
-            method: 'GET',
-            uri : "http://localhost:8081/v1/supplychain?rpctime=2017-04-17 10:00:00&params="+params+"&id=2"
-            //method: 'post',
-            //uri : "http://localhost:8081/v1/supplychain",
-            //json :
-            //{
-            //    "rpctime": "2017-04-17 10:00:00",
-            //    "params": {
-            //        "type": 1,
-            //        "chaincode":{
-            //            "name":"trace",
-            //            "version":"v0"
-            //        },
-            //        "ctorMsg": {
-            //            "functionName":"iPostSkuBaseInfo",
-            //            "args":["skuId123", "vendortest", "traceCode123456", "hashabcd", "name123", "num123", "ext123", "sign123", "time123"]
-            //        }
-            //    },
-            //    "id": "2"
-            //}
+            //method: 'GET',
+            //uri : "http://localhost:8081/v1/supplychain?rpctime=2017-04-17 10:00:00&params="+params+"&id=2"
+            method: 'post',
+            uri : "http://localhost:8081/v1/supplychain",
+            json :
+            {
+                "rpctime": "2017-04-17 10:00:00",
+                "params": {
+                    "type": 1,
+                    "chaincode":{
+                        "name":"trace",
+                        "version":"v0"
+                    },
+                    "ctorMsg": {
+                        "functionName":"iPostSkuBaseInfo",
+                        "args":["skuId123", "vendortest", "traceCode123456", "hashabcd", "name123", "num123", "ext123", "sign123", "time123"]
+                    }
+                },
+                "id": "2"
+            }
 
         }, function(err,res,body){
             console.log(JSON.stringify(err))
