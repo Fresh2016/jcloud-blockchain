@@ -126,6 +126,7 @@ function setChannel(req, res) {
                 reqChannelname = req.body.params.channel.name;
             }
             if(!reqChannelname){
+                //get请求的时候，需要截取
                 reqChannelname= originalList[2].replace('supplychain', 'mychannel');
                 if(reqChannelname.indexOf("?")>=0){
                     reqChannelname =reqChannelname.split("?")[0];
@@ -140,6 +141,7 @@ function setChannel(req, res) {
 
         } else if (3 === originalList.length) {
             // FIXME: should be removed when new certs work with correct channel name
+            //get请求的时候，需要截取
             var tempChannelName = originalList[2].replace('supplychain', 'mychannel');
             if(tempChannelName.indexOf("?")>=0){
                 tempChannelName =tempChannelName.split("?")[0];
@@ -315,14 +317,3 @@ function isEmptyObject(e) {
 //console.log(config[req.query.params.channelName])
 //console.log(config[req.query.params.channelName]['chainCode'])
 //console.log(config[req.query.params.channelName]['chainCode'][req.query.params.chaincode.name])
-
-var req ={
-    query:{
-
-    },
-    body:{
-        params:123
-    }
-}
-var params = req.query.params || req.body.params;
-
