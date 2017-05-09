@@ -21,13 +21,11 @@ exports.filterParams = function (req, res) {
             setChannel(req, res);
         }
         
-        var params = req.query.params || req.body.params;
+        var params = checkQueryParam(req);
 
         if (null != params) {
             if (typeof(params) != "object") {
                 req.query.params = JSON.parse(params);
-            }else{
-                req.query.params = params;
             }
 
             req.query.params['channelName'] = req.params.channelName;
@@ -39,9 +37,9 @@ exports.filterParams = function (req, res) {
             }
 
             setNetwork(req,res);
-            if(!req.query.isCreate){
-                vifchannelName(req,res);
-            }
+//            if(!req.query.isCreate){
+//                vifchannelName(req,res);
+//            }
 
         } else {
             req.query.params = {}
@@ -81,12 +79,19 @@ function checkQueryParam(req) {
 	var params = req.query.params || req.body.params;
 	logger.debug('Interceptor gets parameters from request: %j', params);
 
-	if (null == req.query.params) {
+	if (null == req.query) {
+		req.query = {};
+		req.query.params = JSON.parse(JSON.stringify(params));
+	} else if (null == req.query.params) {
 		req.query.params = JSON.parse(JSON.stringify(params));
 	}
-	if (null == req.body.params) {
+	if (null == req.body) {
+		req.body = {};
+		req.body.params = JSON.parse(JSON.stringify(params));
+	} else if (null == req.body.params) {
 		req.body.params = JSON.parse(JSON.stringify(params));
 	}
+	logger.info('checkQueryParam(req) returning: %j', params);
 	return params;
 }
 
@@ -303,15 +308,3 @@ function isEmptyObject(e) {
 //console.log(config[req.query.params.channelName])
 //console.log(config[req.query.params.channelName]['chainCode'])
 //console.log(config[req.query.params.channelName]['chainCode'][req.query.params.chaincode.name])
-
-var req ={
-    query:{
-
-    },
-    body:{
-        params:123
-    }
-}
-var params = req.query.params || req.body.params;
-
-console.log(params)

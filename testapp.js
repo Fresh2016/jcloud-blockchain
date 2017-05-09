@@ -1,3 +1,6 @@
+var PromisePool = require('es6-promise-pool');
+var request = require('request');
+
 var createClient = require('./app/client/create-channel.js');
 var joinClient = require('./app/client/join-channel.js');
 var installClient = require('./app/client/install-chaincode.js');
@@ -22,7 +25,6 @@ var paramsInstallChaincode = {
 		rpctime : '2017-04-17 10:00:00',
 		params : {
 			type : 1,
-			channelName : 'mychannel',
 			chaincode : {
 				name : 'trace',
 				version : 'v0'
@@ -103,52 +105,36 @@ var requestCreateChannel = {
 var requestJoinChannel = JSON.parse(JSON.stringify(requestCreateChannel));
 
 var requestInstallChaincode = {
-		params : {
-			channelName: 'mychannel'
-		},
+		originalUrl : "/v1/supplychain",
 		query : paramsInstallChaincode
 	};
 var requestInstantiateChaincode = JSON.parse(JSON.stringify(requestInstallChaincode));
 var requestUpgradeChaincode = {
-		params : {
-			channelName: 'mychannel'
-		},
+		originalUrl : "/v1/supplychain",
 		query : paramsUpgradeTransaction
 	};
 var requestInvokeTransaction = {
-		params : {
-			channelName: 'mychannel'
-		},
+		originalUrl : "/v1/supplychain",
 		query : paramsInvokeTransaction
 	};
 var requestQueryTransaction = {
-		params : {
-			channelName: 'mychannel'
-		},
+		originalUrl : "/v1/supplychain",
 		query : paramsQueryTransaction
 	};
 var requestQueryBlocknum = {
-		params : {
-			channelName: 'mychannel'
-		},
+		originalUrl : "/v1/supplychain",
 		query : paramsQueryBlocknum
 	};
 var requestQueryBlockInfo = {
-		params : {
-			channelName: 'mychannel'
-		},
+		originalUrl : "/v1/supplychain",
 		query : paramsQueryBlockInfo
 	};
 var requestQueryPeer = {
-		params : {
-			channelName: 'mychannel'
-		},
+		originalUrl : "/v1/supplychain",
 		query : paramsQueryPeer
 	};
 var requestQueryOrderer = {
-		params : {
-			channelName: 'mychannel'
-		},
+		originalUrl : "/v1/supplychain",
 		query : paramsQueryOrderer
 	};
 
@@ -163,173 +149,90 @@ if (process.argv.length<=2 || '-h' == process.argv[2] || '-help' == process.argv
     console.log('       $ node testapp.js -a\n');
 
     console.log('       # Test create channel and join channel:');
-    console.log('       $ node testapp.js -l 1,2');
+    console.log('       $ node testapp.js -l 1,2\n');
 
-    console.log('       # Test create invoke:');
-    console.log('       $ node testapp.js -l 7');
+    console.log('       # Test invoke transaction:');
+    console.log('       $ node testapp.js -l 6\n');
+
+    console.log('       # Test query transaction:');
+    console.log('       $ node testapp.js -l 7\n');
+
+    console.log('       # Test invoke concurrency performance:');
+    console.log('       $ node testapp.js -c 6\n');
 
     console.log('\n   Numbers and operation mapping:');
     console.log('       1: create channel');
     console.log('       2: join channel');
-    console.log('       3: install channel');
-    console.log('       4: instantiate channel');
-    console.log('       5: upgrade channel');
-    console.log('       6: invoke channel');
-    console.log('       7: query channel');
+    console.log('       3: install chaincode');
+    console.log('       4: instantiate chaincode');
+    console.log('       5: upgrade chaincode');
+    console.log('       6: invoke transaction');
+    console.log('       7: query transaction');
 
 } else if ('-a' == process.argv[2]) {
-	// Call execute() to do testing of all items
+	// Call testOperation() to do testing of all items
 	console.log('\nTesting all from end to end\n');
-	execute([1,2,3,4,5,6,7]);
+	testOperation([1,2,3,4,5,6,7]);
 
 } else if ('-l' == process.argv[2] && null != process.argv[3]) {
-	// Call execute() to do testing of selected items
-	opr_num_list = process.argv[3].split(',');
-	console.log('\nTesting operations of belowing:');
-	for (i in opr_num_list) {
-		console.log('       ' + translateNumToOperation(opr_num_list[i]));
-	}
-	execute(opr_num_list);
+	// Call testOperation() to do testing of selected items
+	opr_num_list = getOprList(process.argv[3], 'operations');
+	testOperation(opr_num_list);
+
+} else if ('-c' == process.argv[2] && null != process.argv[3]) {
+	// Call testOperation() to do testing of selected items
+	opr_num_list = getOprList(process.argv[3], 'concurrency performance');
+	testConcurrency(opr_num_list);
 
 } else {
 	console.log('\nIncorrect input args, using -h or -help for help.\n');
 }
 
 
-// Execute items in serial order
-// Only selected items are executed, while others are skipped
-function execute(opr_num_list) {
-	start()
-	.then(() => {
-		console.log('\n\n***** TESTAPP: Start testing *****\n\n');
-		if (isToDo('create', opr_num_list)) {
-			interClient.filterParams(requestCreateChannel, null);
-			return createClient.createChannel(requestCreateChannel.query.params);
-		} else {
-			return 'Skipped'
+function fillArrayWithNumbers(start, end, interval) {
+    var arr = Array.apply(null, Array(parseInt((end - start) / interval) + 1));
+    return arr.map(function (x, i) { return start + i * interval});
+}
+
+
+function getOprList(args, type) {
+	var opr_num_list = args.split(',');
+	console.log('\nTesting %s of belowing:', type);
+	for (i in opr_num_list) {
+		console.log('       ' + translateNumToOperation(opr_num_list[i]));
+	}
+	return opr_num_list;
+}
+
+
+function getStatistics(results) {
+	var theResults = results.slice(0, -1);
+	var nextResults = results.slice(1, results.length);
+	var performance = {};
+	var responseDelay = 0;
+	var interval = 0;
+	var validResponseNum = 1;
+	
+	for (let i in theResults) {
+		try {
+			theResult = theResults[i];
+			nextResult = nextResults[i];
+			validResponseNum++;
+			responseDelay = responseDelay + (theResult.responseTime - theResult.sendTime) / 1000.0;
+			interval = interval + (nextResult.sendTime - theResult.sendTime) / 1000.0;
+//			interval = interval + (nextResult.sendTime - theResult.sendTime) / (nextResult.operationIndex - theResult.operationIndex) / 1000.0;
+			
+		} catch (err) {
+			console.log('Error in getStatistics');
 		}
+	}
 
-	}).then((result) => {
-		console.log('TESTAPP: create channel result %s', JSON.stringify(result));
-		if (isToDo('join', opr_num_list)) {
-			interClient.filterParams(requestJoinChannel, null);
-			return joinClient.joinChannel(requestJoinChannel.query.params);
-		} else {
-			return 'Skipped'
-		}
-
-	}).then((result) => {
-		console.log('TESTAPP: join channel result %s', JSON.stringify(result));
-		if (isToDo('install', opr_num_list)) {
-			interClient.filterParams(requestInstallChaincode, null);
-			return installClient.installChaincode(requestInstallChaincode.query.params);
-		} else {
-			return 'Skipped'
-		}
-
-	}).then((result) => {
-		console.log('TESTAPP: install chaincode result %s', JSON.stringify(result));
-		if (isToDo('instantiate', opr_num_list)) {
-			interClient.filterParams(requestInstantiateChaincode, null);
-			return invokeClient.instantiateChaincode(requestInstantiateChaincode.rpctime, requestInstantiateChaincode.query.params);
-		} else {
-			return 'Skipped'
-		}
-
-	}).then((result) => {
-		console.log('TESTAPP: instantiate chaincode result %s', JSON.stringify(result));
-		if (isToDo('upgrade', opr_num_list)) {
-			interClient.filterParams(requestUpgradeChaincode, null);
-			return installClient.installChaincode(requestUpgradeChaincode.query.params)
-					.then((result) => {
-						return invokeClient.upgradeChaincode(requestUpgradeChaincode.rpctime, requestUpgradeChaincode.query.params);
-					});
-
-		} else {
-			return 'Skipped'
-		}
-
-	}).then((result) => {
-		console.log('TESTAPP: upgrade chaincode result %s', JSON.stringify(result));
-		if (isToDo('invoke', opr_num_list)) {
-			interClient.filterParams(requestInvokeTransaction, null);
-			return invokeClient.invokeChaincode(requestInvokeTransaction.rpctime, requestInvokeTransaction.query.params);
-		} else {
-			return 'Skipped'
-		}
-
-	}).then((result) => {
-		//TODO:eventhub断开
-		console.log('TESTAPP: invoke chaincode result %s', JSON.stringify(result));
-		if (isToDo('query', opr_num_list)) {
-			interClient.filterParams(requestQueryTransaction, null);
-			return queryClient.queryTransaction(requestQueryTransaction.rpctime, requestQueryTransaction.query.params);
-		} else {
-			return 'Skipped'
-		}
-
-	}).then((result) => {
-		console.log('TESTAPP: queryTransaction result %s', JSON.stringify(result));
-		if (isToDo('query', opr_num_list)) {
-			interClient.filterParams(requestQueryTransaction, null);
-			return queryClient.queryTransactionHistory(requestQueryTransaction.params.rpctime, requestQueryTransaction.query.params);
-		} else {
-			return 'Skipped'
-		}
-
-//	}).then((result) => {
-//		console.log('TESTAPP: queryTransactionHistory result %s', JSON.stringify(result));
-//		if (isToDo('query', opr_num_list)) {
-//			params = manager.??// FIXME:should be some filter interface from manager
-//			return queryClient.isTransactionSucceed(response[0].TransactionId);
-//		} else {
-//			return 'Skipped'
-//		}
-
-	}).then((result) => {
-		console.log('TESTAPP: isTransactionSucceed result %s', JSON.stringify(result));
-		if (isToDo('query', opr_num_list)) {
-			interClient.filterParams(requestQueryPeer, null);
-			return queryClient.queryPeers(requestQueryPeer.query.params);
-		} else {
-			return 'Skipped'
-		}
-
-	}).then((result) => {
-		console.log('TESTAPP: queryPeers result %s', JSON.stringify(result));
-		if (isToDo('query', opr_num_list)) {
-			interClient.filterParams(requestQueryOrderer, null);
-			return queryClient.queryOrderers(requestQueryOrderer.query.params);
-		} else {
-			return 'Skipped'
-		}
-
-	}).then((result) => {
-		console.log('TESTAPP: queryOrderers result %s', JSON.stringify(result));
-		if (isToDo('query', opr_num_list)) {
-			interClient.filterParams(requestQueryBlocknum, null);
-			return queryClient.queryBlocks(requestQueryBlocknum.params.rpctime, requestQueryBlocknum.query.params);
-		} else {
-			return 'Skipped'
-		}
-
-	}).then((result) => {
-		console.log('TESTAPP: queryBlocks number result %s', JSON.stringify(result));
-		if (isToDo('query', opr_num_list)) {
-			interClient.filterParams(requestQueryBlockInfo, null);
-			return queryClient.queryBlocks(requestQueryBlockInfo.params.rpctime, requestQueryBlockInfo.query.params);
-		} else {
-			return 'Skipped'
-		}
-
-	}).then((result) => {
-		console.log('TESTAPP: queryBlocks info result %s', JSON.stringify(result));
-		console.log('### shiying is aaa ###');
-
-	}).catch((err) => {
-		console.log('Quit with err: %s', err);
-		return false;
-	});	
+	performance.totalResponseDelay = responseDelay;
+	performance.totalInterval = interval;
+	performance.validResponseNum = validResponseNum;
+	performance.averageResponseDelay = responseDelay/(validResponseNum - 0.99);// Avoid Nan
+	performance.averageInterval = interval/(validResponseNum - 0.99);// Avoid Nan
+	return performance;
 }
 
 
@@ -344,8 +247,284 @@ function isToDo(operation, opr_num_list) {
 }
 
 
+function producePromises(operation, totalOperationNum, results) {
+	var count = 0;
+	var promiseProducer = function () {
+		if (count < totalOperationNum) {
+			count++;
+//			return produceOnePromise(operation, count, 'rest', results);
+			return produceOnePromise(operation, count, 'client', results);
+		} else {
+			return null;
+		}
+	};
+	return promiseProducer;
+}
+
+
+function produceOnePromise(operation, operationIndex, operationType, results) {
+	return new Promise((resolve, reject) => {
+		var sendTime = Date.now();
+
+		return 	start()
+		.then(() => {
+			if ('invoke' == operation && 'client' == operationType) {
+				interClient.filterParams(requestInvokeTransaction, null);
+				return invokeClient.invokeChaincode(requestInvokeTransaction.rpctime, requestInvokeTransaction.query.params);
+			} else if ('query' == operation && 'client' == operationType) {
+				interClient.filterParams(requestQueryTransaction, null);
+				return queryClient.queryTransaction(requestQueryTransaction.rpctime, requestQueryTransaction.query.params);
+			} else if ('invoke' == operation && 'rest' == operationType) {
+				return sendRequest('POST', 'http://localhost:8081/v1/supplychain', requestInvokeTransaction, operationIndex);
+			} else if ('query' == operation && 'rest' == operationType) {
+				return sendRequest('GET', 'http://localhost:8081/v1/supplychain', requestQueryTransaction, operationIndex);
+			} else {
+				return {};
+			}
+
+		}).then((result) => {
+			var responseTime = Date.now();
+		    result.operationIndex = operationIndex;
+		    result.sendTime = sendTime;
+		    result.responseTime = responseTime;
+		    if (result.status = 'success') {
+			    results.push(result);
+		    }
+			resolve();
+
+		}).catch((err) => {
+			console.log('Error in #%s %s', operationIndex, operation);
+			// Don't have to throw it. Fine to skip
+			resolve();
+		});
+	  });
+}
+
+
+function sendConcurrencyRequest(operation) {
+	// The total number of promises to process
+	var totalOperationNum = 1;
+	// The number of promises to process simultaneously, current version only allow 1
+	var concurrency = 5;
+	// Responses from all queries
+	var results = [];
+
+	// Create a pool. 
+	var promiseProducer = producePromises(operation, totalOperationNum, results);
+	var pool = new PromisePool(promiseProducer, concurrency);
+	 
+	// Start the pool. 
+	var poolPromise = pool.start();
+	// Wait for the pool to settle. 
+	return poolPromise.then((nothing) => {
+		console.log('All promises fulfilled. Going to calculate statistics.');
+		return getStatistics(results);
+	}, function (error) {
+		console.log('Some promise rejected: ' + error.message);
+	});
+	
+}
+
+
+function sendRequest(method, uri, reqJson, operationIndex) {
+	var option = {
+			headers :	{'content-type' : 'application/json'},
+			method :	method,
+			uri :		uri,
+			json :		reqJson.query
+		};
+
+    return new Promise(function(resolve, reject){
+        request(option, function (error, response, body) {
+            // in addition to parsing the value, deal with possible errors
+            if (error) {
+    			console.log('Request #%s get error: %s', operationIndex, JSON.stringify(error));
+    			reject(error);
+            }
+            try {
+                // JSON.parse() can throw an exception if not valid JSON
+        		console.log('Request #%s get response: %s', operationIndex, JSON.stringify(body));
+        		resolve(body);
+            } catch(error) {
+            	reject(error);
+            }
+        });
+    });
+
+}
+
+
 function start() {
 	return Promise.resolve();
+}
+
+
+//Execute concurrency performance test
+//Only selected items are executed, while others are skipped
+function testConcurrency(operation) {
+	start()
+	.then(() => {
+		console.log('\n\n***** TESTAPP: Start concurrency testing *****\n\n');
+		console.log('*****   DANGEROUS! DONNOT DO IT AT HOME  *****\n\n');
+		if (isToDo('invoke', opr_num_list)) {
+			return sendConcurrencyRequest('invoke');
+		} else {
+			return 'Skipped';
+		}
+
+	}).then((result) => {
+		console.log('TESTAPP: invoke channel concurrency performance %s', JSON.stringify(result));
+		if (isToDo('query', opr_num_list)) {
+			return sendConcurrencyRequest('query');
+		} else {
+			return 'Skipped';
+		}
+
+	}).then((result) => {
+		console.log('TESTAPP: query channel concurrency performance %s', JSON.stringify(result));
+		console.log('### shiying is aaa ###');
+
+	}).catch((err) => {
+		console.log('Quit with err: %s', err);
+		return false;
+	});	
+}
+
+
+//Execute items in serial order
+//Only selected items are executed, while others are skipped
+function testOperation(opr_num_list) {
+	start()
+	.then(() => {
+		console.log('\n\n***** TESTAPP: Start testing *****\n\n');
+		if (isToDo('create', opr_num_list)) {
+			interClient.filterParams(requestCreateChannel, null);
+			return createClient.createChannel(requestCreateChannel.query.params);
+		} else {
+			return 'Skipped';
+		}
+
+	}).then((result) => {
+		console.log('TESTAPP: create channel result %s', JSON.stringify(result));
+		if (isToDo('join', opr_num_list)) {
+			interClient.filterParams(requestJoinChannel, null);
+			return joinClient.joinChannel(requestJoinChannel.query.params);
+		} else {
+			return 'Skipped';
+		}
+
+	}).then((result) => {
+		console.log('TESTAPP: join channel result %s', JSON.stringify(result));
+		if (isToDo('install', opr_num_list)) {
+			interClient.filterParams(requestInstallChaincode, null);
+			return installClient.installChaincode(requestInstallChaincode.query.params);
+		} else {
+			return 'Skipped';
+		}
+
+	}).then((result) => {
+		console.log('TESTAPP: install chaincode result %s', JSON.stringify(result));
+		if (isToDo('instantiate', opr_num_list)) {
+			interClient.filterParams(requestInstantiateChaincode, null);
+			return invokeClient.instantiateChaincode(requestInstantiateChaincode.rpctime, requestInstantiateChaincode.query.params);
+		} else {
+			return 'Skipped';
+		}
+
+	}).then((result) => {
+		console.log('TESTAPP: instantiate chaincode result %s', JSON.stringify(result));
+		if (isToDo('upgrade', opr_num_list)) {
+			interClient.filterParams(requestUpgradeChaincode, null);
+			return installClient.installChaincode(requestUpgradeChaincode.query.params)
+					.then((result) => {
+						return invokeClient.upgradeChaincode(requestUpgradeChaincode.rpctime, requestUpgradeChaincode.query.params);
+					});
+
+		} else {
+			return 'Skipped';
+		}
+
+	}).then((result) => {
+		console.log('TESTAPP: upgrade chaincode result %s', JSON.stringify(result));
+		if (isToDo('invoke', opr_num_list)) {
+			interClient.filterParams(requestInvokeTransaction, null);
+			return invokeClient.invokeChaincode(requestInvokeTransaction.rpctime, requestInvokeTransaction.query.params);
+		} else {
+			return 'Skipped';
+		}
+
+	}).then((result) => {
+		//TODO:eventhub断开
+		console.log('TESTAPP: invoke chaincode result %s', JSON.stringify(result));
+		if (isToDo('query', opr_num_list)) {
+			interClient.filterParams(requestQueryTransaction, null);
+			return queryClient.queryTransaction(requestQueryTransaction.rpctime, requestQueryTransaction.query.params);
+		} else {
+			return 'Skipped';
+		}
+
+	}).then((result) => {
+		console.log('TESTAPP: queryTransaction result %s', JSON.stringify(result));
+		if (isToDo('query', opr_num_list)) {
+			interClient.filterParams(requestQueryTransaction, null);
+			return queryClient.queryTransactionHistory(requestQueryTransaction.params.rpctime, requestQueryTransaction.query.params);
+		} else {
+			return 'Skipped';
+		}
+
+//	}).then((result) => {
+//		console.log('TESTAPP: queryTransactionHistory result %s', JSON.stringify(result));
+//		if (isToDo('query', opr_num_list)) {
+//			params = manager.??// FIXME:should be some filter interface from manager
+//			return queryClient.isTransactionSucceed(response[0].TransactionId);
+//		} else {
+//			return 'Skipped';
+//		}
+
+	}).then((result) => {
+		console.log('TESTAPP: isTransactionSucceed result %s', JSON.stringify(result));
+		if (isToDo('query', opr_num_list)) {
+			interClient.filterParams(requestQueryPeer, null);
+			return queryClient.queryPeers(requestQueryPeer.query.params);
+		} else {
+			return 'Skipped';
+		}
+
+	}).then((result) => {
+		console.log('TESTAPP: queryPeers result %s', JSON.stringify(result));
+		if (isToDo('query', opr_num_list)) {
+			interClient.filterParams(requestQueryOrderer, null);
+			return queryClient.queryOrderers(requestQueryOrderer.query.params);
+		} else {
+			return 'Skipped';
+		}
+
+	}).then((result) => {
+		console.log('TESTAPP: queryOrderers result %s', JSON.stringify(result));
+		if (isToDo('query', opr_num_list)) {
+			interClient.filterParams(requestQueryBlocknum, null);
+			return queryClient.queryBlocks(requestQueryBlocknum.params.rpctime, requestQueryBlocknum.query.params);
+		} else {
+			return 'Skipped';
+		}
+
+	}).then((result) => {
+		console.log('TESTAPP: queryBlocks number result %s', JSON.stringify(result));
+		if (isToDo('query', opr_num_list)) {
+			interClient.filterParams(requestQueryBlockInfo, null);
+			return queryClient.queryBlocks(requestQueryBlockInfo.params.rpctime, requestQueryBlockInfo.query.params);
+		} else {
+			return 'Skipped';
+		}
+
+	}).then((result) => {
+		console.log('TESTAPP: queryBlocks info result %s', JSON.stringify(result));
+		console.log('### shiying is aaa ###');
+
+	}).catch((err) => {
+		console.log('Quit with err: %s', err);
+		return false;
+	});	
 }
 
 
@@ -397,112 +576,3 @@ docker rmi -f $(docker images | grep trace | awk '{print $3 }')
 */
 
 
-//========================TO BE DELETED=======================================
-/*
-createClient.createChannel()
-.then((result) => {
-	console.log('TESTAPP: create channel result %s', JSON.stringify(result));
-	return joinClient.joinChannel();
-}).then((result) => {
-	console.log('TESTAPP: join channel result %s', JSON.stringify(result));
-	console.log('shiying is aaaa.');
-}).catch((err) => {
-	console.log('Return without executing joining');
-	return false;
-});
-//*/
-
-
-/*
-joinClient.joinChannel()
-.catch((err) => {
-	console.log('Return without executing joining');
-	return false;
-});
-//*/
-
-
-/*
-//TODO：出bug了，两个org的数据不一致？
-installClient.installChaincode()
-.then(() => {
-	console.log('TESTAPP: install chaincode result ');
-	return invokeClient.instantiateChaincode();
-}).then((result) => {
-	console.log('TESTAPP: instantiate chaincode result %s', JSON.stringify(result));
-	console.log('shiying is aaaa.');
-}).catch((err) => {
-	console.log('Return without executing installing and instantiating');
-	return false;
-});
-//*/
-
-
-/*
-invokeClient.instantiateChaincode()
-.catch((err) => {
-	console.log('Return without executing installing and instantiating');
-	return false;
-});
-//*/
-
-
-/*
-queryClient.queryTransaction(request_query_transaction.params.rpctime, request_query_transaction.params.params)
-.then((result) => {
-	console.log('queryTransaction response: %j\n\n\n', response);	
-	return queryClient.queryTransactionHistory('');
-
-}).then((result) => {
-	console.log('queryTransactionHistory response: %j\n\n\n', response);
-	return queryClient.isTransactionSucceed(response[0].TransactionId);
-
-}).then((result) => {
-	console.log('isTransactionSucceed response: %j\n\n\n', response);
-	return queryClient.queryPeers('mychannel');
-
-}).then((result) => {
-	console.log('queryPeers response: %j\n\n\n', response);
-	return queryClient.queryOrderers('mychannel');
-
-}).then((result) => {
-	console.log('queryOrderers response: %j\n\n\n', response);
-	return queryClient.queryBlocks(request_query_blocknum.params.rpctime, request_query_blocknum.params.params);
-
-}).then((result) => {
-	console.log('queryBlocks number response: %j\n\n\n', response);
-	return queryClient.queryBlocks(request_query_blockInfo.params.rpctime, request_query_blockInfo.params.params);
-
-}).then((result) => {
-	console.log('queryBlocks info response: %j\n\n\n', response);
-	console.log('### shiying is aaa ###');
-
-}).catch((err) => {
-	console.log('Return without querying.');
-	return false;
-});
-//*/
-
-
-/*
-invokeClient.invokeChaincode(paramsInvokeTransaction.rpctime, paramsInvokeTransaction.params)
-.catch((err) => {
-	console.log('Return without executing invoking');
-	return false;
-});
-//*/
-
-
-/*
-installClient.installChaincode()
-.then(() => {
-	console.log('TESTAPP: install chaincode result ');
-	return invokeClient.upgradeChaincode();
-}).then((result) => {
-	console.log('TESTAPP: upgrade chaincode result %s', JSON.stringify(result));
-	console.log('shiying is aaaa.');
-}).catch((err) => {
-	console.log('Return without executing upgrading');
-	return false;
-});
-//*/
