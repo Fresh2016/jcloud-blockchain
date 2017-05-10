@@ -38,7 +38,8 @@ function setParams(req,res) {
         var params = req.query.params || req.body.params;
         if (null != params) {
             if (typeof(params) != "object") {
-                req.query.params = JSON.parse(params);
+                params =  JSON.parse(params);
+                req.query.params = params;
             }else{
                 req.query.params = params;
             }
@@ -230,6 +231,9 @@ function setChaincodePath(req, res) {
 function setNetwork(req, res) {
     try {
         if(req.query.isCreate || req.query.isQueryBlock){
+            if(!req.query.params){
+                req.query.params ={}
+            }
             req.query.params.network = allNetWork;
         }else{
             if (null == config[req.query.params.channelName]) {
@@ -251,7 +255,7 @@ function setNetwork(req, res) {
                 var peer = network[peerList[i]];
                 if (req.query.params.network[peer.assign]) {
                     req.query.params.network[peer.assign]["num"] = req.query.params.network[peer.assign]["num"] + 1;
-                    var peerNum = "peer" + req.params.network[peer.assign]["num"];
+                    var peerNum = "peer" +  req.query.params.network[peer.assign]["num"];
                     req.query.params.network[peer.assign][peerNum] = peer;
                 } else {
                     req.query.params.network[peer.assign] = network[peer.assign];
