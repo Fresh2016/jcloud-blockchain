@@ -286,7 +286,7 @@ function setTxFileData(req, res) {
         }
         channelName = channelName.replace('supplychain', 'mychannel');
         if(channelName){
-            var txFilePath = config[req.query.params['channelName']].txFilePath;
+            var txFilePath = config[channelName].txFilePath;
             var data = rf.readFileSync(txFilePath);
             if(!req.query.params){
                 req.query.params ={}
