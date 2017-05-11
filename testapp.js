@@ -176,12 +176,12 @@ if (process.argv.length<=2 || '-h' == process.argv[2] || '-help' == process.argv
 
 } else if ('-l' == process.argv[2] && null != process.argv[3]) {
 	// Call testOperation() to do testing of selected items
-	opr_num_list = getOprList(process.argv[3], 'operations');
+	var opr_num_list = getOprList(process.argv[3], 'operations');
 	testOperation(opr_num_list);
 
 } else if ('-c' == process.argv[2] && null != process.argv[3]) {
 	// Call testOperation() to do testing of selected items
-	opr_num_list = getOprList(process.argv[3], 'concurrency performance');
+	var opr_num_list = getOprList(process.argv[3], 'concurrency performance');
 	testConcurrency(opr_num_list);
 
 } else {
@@ -252,8 +252,8 @@ function producePromises(operation, totalOperationNum, results) {
 	var promiseProducer = function () {
 		if (count < totalOperationNum) {
 			count++;
-//			return produceOnePromise(operation, count, 'rest', results);
-			return produceOnePromise(operation, count, 'client', results);
+			return produceOnePromise(operation, count, 'rest', results);
+//			return produceOnePromise(operation, count, 'client', results);
 		} else {
 			return null;
 		}
@@ -303,7 +303,7 @@ function produceOnePromise(operation, operationIndex, operationType, results) {
 
 function sendConcurrencyRequest(operation) {
 	// The total number of promises to process
-	var totalOperationNum = 1;
+	var totalOperationNum = 100;
 	// The number of promises to process simultaneously, current version only allow 1
 	var concurrency = 5;
 	// Responses from all queries
@@ -338,12 +338,12 @@ function sendRequest(method, uri, reqJson, operationIndex) {
         request(option, function (error, response, body) {
             // in addition to parsing the value, deal with possible errors
             if (error) {
-    			console.log('Request #%s get error: %s', operationIndex, JSON.stringify(error));
+    			console.log('Request #%s, get statusCode: %s, get error: %s', operationIndex, response && response.statusCode, JSON.stringify(error));
     			reject(error);
             }
             try {
                 // JSON.parse() can throw an exception if not valid JSON
-        		console.log('Request #%s get response: %s', operationIndex, JSON.stringify(body));
+        		console.log('Request #%s, get statusCode: %s, get response: %s', operationIndex, response && response.statusCode, JSON.stringify(body));
         		resolve(body);
             } catch(error) {
             	reject(error);
@@ -361,7 +361,7 @@ function start() {
 
 //Execute concurrency performance test
 //Only selected items are executed, while others are skipped
-function testConcurrency(operation) {
+function testConcurrency(opr_num_list) {
 	start()
 	.then(() => {
 		console.log('\n\n***** TESTAPP: Start concurrency testing *****\n\n');
