@@ -31,9 +31,9 @@ import (
 //
 // The additional key is the ObjectType (aka ObjectName or Object). The keys  would be
 // keys: {"picname", "https://raw.githubusercontent.com/ITPeople-Blockchain/auction/v0.6/art/artchaincode/art1.png"}
-/////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////SKU的流转信息/////////////////////////////////////////////////////////////////////////////////////
 type SkuTraceRecordObj struct {
-	SkuId          string
+	SkuId          string//SKU编码
 	AddressHash    string
 	TraceCode      string //
 	StationType    string
@@ -48,7 +48,7 @@ type SkuTraceRecordObj struct {
 	EndTime        string
 	TimeStamp      string // This is the time stamp
 }
-
+//SKU认证信息
 type SkuAuthenticationTraceRecordObj struct {
 	SkuId          string
 	AddressHash    string
@@ -62,7 +62,7 @@ type SkuAuthenticationTraceRecordObj struct {
 	EndTime        string
 	TimeStamp      string // This is the time stamp
 }
-
+//SKU基础信息
 type SkuBaseInfoObj struct {
 	SkuId          string
 	VendorCode     string //
@@ -74,7 +74,7 @@ type SkuBaseInfoObj struct {
 	Signature      string // This is validated for a user registered record
 	TimeStamp      string // This is the time stamp
 }
-
+//账号信息
 type AccountInfoObj struct {
 	Name           string
 	AccountType    string
@@ -82,7 +82,7 @@ type AccountInfoObj struct {
 	OrgName        string
 	TimeStamp      string // This is the time stamp
 }
-
+//认证信息
 type CertificationAccountInfoObj struct {
 	Name           string
 	AccountType    string
@@ -90,7 +90,7 @@ type CertificationAccountInfoObj struct {
 	OrgName        string
 	TimeStamp      string // This is the time stamp
 }
-
+//SKU交易信息
 type SkuTransactionObj struct {
 	OrderId        string
 	SkuId          string
@@ -115,10 +115,13 @@ func InvokeFunction(fname string) func(stub shim.ChaincodeStubInterface, args []
 	InvokeFunc := map[string]func(stub shim.ChaincodeStubInterface, args []string) pb.Response{
 		"iPostAccountInfo":                     PostAccountInfo,
 		"iPostSkuTransaction":                  PostSkuTransaction,
+		"iPostSkuTransactionArrary":           PostSkuTransactionArrary,
 		"iPostCertificationAccountInfo":        PostCertificationAccountInfo,
 		"iPostSkuAuthenticationTraceRecord":    PostSkuAuthenticationTraceRecord,
 		"iPostSkuTraceRecord":                  PostSkuTraceRecord,
+		"iPostSkuTraceRecordArrary":           PostSkuTraceRecordArray,
 		"iPostSkuBaseInfo":                     PostSkuBaseInfo,
+		"iPostTransactionId":                   PostTransactionId,
 		"iUpdateAccountInfo":                   UpdateAccountInfo,
 		"iUpdateSkuTransaction":                UpdateSkuTransaction,
 		"iUpdateCertificationAccountInfo":      UpdateCertificationAccountInfo,
@@ -211,14 +214,13 @@ func (t *TraceChainCode) invoke(stub shim.ChaincodeStubInterface, function strin
 	// example:
 	// peer chaincode invoke -n test_trace -c '{"Function": "PostItem","Args":["b","a"]}' -o orderer0:7050
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 	InvokeRequest := InvokeFunction(function)
 	if InvokeRequest != nil {
 		response := InvokeRequest(stub, args)
 		return (response)
 	} else {
 		fmt.Println("Invoke() Invalid recType : ", args)
-		error_str := "Invoke() : Invalid recType : " + args[0]
+		error_str := "Invoke : Invalid recType : " +function+","+args[0]
 		return shim.Error(error_str)
 	}
 
@@ -517,6 +519,34 @@ func PostSkuTransaction(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 	}
 	return shim.Success(buff)
 }
+func PostSkuTransactionArrary(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+	records, err := CreateSkuTransactionObjArrary(args[0:]) //
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	for i := range records {
+		var record = records[i];
+		buff, err := SkuTransactionToJSON(record) //
+
+		if err != nil {
+			error_str := "PostSkuTransaction() : Failed Cannot create object buffer for write : " + args[1]
+			fmt.Println(error_str)
+			return shim.Error(error_str)
+		} else {
+			// Update the ledger with the Buffer Data
+			// err = stub.PutState(args[0], buff)
+			keys := []string{record.TraceCode, record.SkuId, record.OrderId, record.TransType}
+			err = UpdateObject(stub, "SkuTransactionObj", keys, buff)
+			if err != nil {
+				fmt.Println("PostSkuTransaction() : write error while inserting record")
+				return shim.Error("PostSkuTransaction() : write error while inserting record : Error - " + err.Error())
+			}
+		}
+	}
+
+	return shim.Success([]byte("OK"))
+}
 
 func CreateSkuTransactionObj(args []string) (SkuTransactionObj, error) {
 
@@ -529,6 +559,22 @@ func CreateSkuTransactionObj(args []string) (SkuTransactionObj, error) {
 	record = SkuTransactionObj{args[0], args[1], args[2], args[3], args[4],args[5], args[6], args[7], args[8], args[9]}
 	fmt.Println("CreateSkuTransactionObj() : SkuTransactionObj Object : ", record)
 	return record, nil
+}
+
+func CreateSkuTransactionObjArrary(args []string) ([]SkuTransactionObj, error) {
+
+	var records []SkuTransactionObj
+	// Check there are 1 Arguments
+	if len(args) != 1 {
+		fmt.Println("CreateSkuTransactionObjArrary(): Incorrect number of arguments. Expecting 1 ")
+		return records, errors.New("CreateSkuTransactionObjArrary(): Incorrect number of arguments. Expecting 1")
+	}
+	err := json.Unmarshal([]byte(args[0]),&records)
+	if (err!=nil) {
+		fmt.Println("Unmarshal to []SkuTransactionObj : ", args[0])
+		return records, errors.New("Unmarshal to []SkuTransactionObj : "+args[0])
+	}
+	return records, nil
 }
 
 
@@ -553,6 +599,31 @@ func SkuBaseInfoToJSON(accountInfo SkuBaseInfoObj) ([]byte, error) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func PostSkuBaseInfo(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+	record, err := CreateSkuBaseInfoObj(args[0:]) //
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	buff, err := SkuBaseInfoToJSON(record) //
+
+	if err != nil {
+		error_str := "PostSkuBaseInfo() : Failed Cannot create object buffer for write : " + args[1]
+		fmt.Println(error_str)
+		return shim.Error(error_str)
+	} else {
+		// Update the ledger with the Buffer Data
+		//keys := []string{record.TraceCode, record.SkuId, record.VendorCode}
+		keys := []string{record.SkuId}
+		err = UpdateObject(stub, "SkuBaseInfoObj", keys, buff)
+		if err != nil {
+			fmt.Println("PostSkuBaseInfo() : write error while inserting record")
+			return shim.Error("PostSkuBaseInfo() : write error while inserting record : Error - " + err.Error())
+		}
+	}
+	return shim.Success(buff)
+}
+
+func PostTransactionId(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
 	record, err := CreateSkuBaseInfoObj(args[0:]) //
 	if err != nil {
@@ -692,6 +763,35 @@ func PostSkuTraceRecord(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 	return shim.Success(buff)
 }
 
+func PostSkuTraceRecordArray(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+	records, err := CreateSkuTraceRecordObjArray(args) //
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	for i := range records{
+	    var record = records[i];
+		buff, err := SkuTraceRecordToJSON(record) //
+
+		if err != nil {
+			error_str := "PostSkuTraceRecord() : Failed Cannot create object buffer for write : " + args[1]
+			fmt.Println(error_str)
+			return shim.Error(error_str)
+		} else {
+			// Update the ledger with the Buffer Data
+			keys := []string{record.TraceCode, record.SkuId, record.AddressHash, record.StationType}
+			err = UpdateObject(stub, "SkuTraceRecordObj", keys, buff)
+			if err != nil {
+				fmt.Println("PostSkuTraceRecord() : write error while inserting record")
+				return shim.Error("PostSkuTraceRecord() : write error while inserting record : Error - " + err.Error())
+			}
+		}
+	}
+
+
+	return shim.Success([]byte("OK"))
+}
+
 func CreateSkuTraceRecordObj(args []string) (SkuTraceRecordObj, error) {
 
 	var record SkuTraceRecordObj
@@ -703,6 +803,22 @@ func CreateSkuTraceRecordObj(args []string) (SkuTraceRecordObj, error) {
 	record = SkuTraceRecordObj{args[0], args[1], args[2], args[3], args[4],args[5], args[6], args[7], args[8],args[9], args[10],args[11],args[12], args[13]}
 	fmt.Println("CreateSkuTraceRecordObj() : SkuTraceRecordObj Object : ", record)
 	return record, nil
+}
+
+func CreateSkuTraceRecordObjArray(args []string) ([]SkuTraceRecordObj, error) {
+
+	var records []SkuTraceRecordObj
+	// Check there are 11 Arguments
+	if len(args) != 1{
+		fmt.Println("CreateSkuTraceRecordObjArray(): Incorrect number of arguments. Expecting 1 ")
+		return records, errors.New("CreateSkuTraceRecordObjArray() : Incorrect number of arguments. Expecting 1 ")
+	}
+	err := json.Unmarshal([]byte(args[0]),&records)
+	if (err!=nil) {
+		fmt.Println("Unmarshal to []CreateSkuTraceRecordObj : ", args[0])
+		return records, errors.New("Unmarshal to []CreateSkuTraceRecordObj : "+args[0])
+	}
+	return records, nil
 }
 
 //////////////////////////////////////////////////////////
@@ -1142,7 +1258,6 @@ func GetSkuTraceRecordListByTraceCode(stub shim.ChaincodeStubInterface, args []s
 	return shim.Success(jsonRows)
 
 }
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // Get List of SKU trade record for an TraceCode

@@ -15,11 +15,12 @@ var rf = require("fs");
 exports.filterParams = function (req, res) {
     return setParams(req,res)
      .then((response) => {
-            if(response && !req.query.isCreate){
-                return  vifchannelName(req,res);
-            }else{
-                return  new Promise((resolve, reject) => resolve(false));
-            }
+//            if(response && !req.query.isCreate){
+//                return  vifchannelName(req,res);
+//            }else{
+//                return  new Promise((resolve, reject) => resolve(false));
+//            }
+            return  new Promise((resolve, reject) => resolve(false));
         }).catch((err) => {
             logger.error('filterParams error %s', JSON.stringify(err));
             return  new Promise((resolve, reject) => resolve(err));
