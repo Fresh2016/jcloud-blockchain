@@ -162,7 +162,7 @@ function setChannel(req, res) {
             setChannelName(req, res, reqChannelname);
             setTxFileData(req, res);
 
-        } else if (3 === originalList.length) {
+        } else if (originalList.length >=3) {
             // FIXME: should be removed when new certs work with correct channel name
             //get请求的时候，需要截取
             var tempChannelName = originalList[2].replace('supplychain', 'mychannel');
